@@ -11,12 +11,12 @@
 
 ## 팀 구성
 
-| 역할 | 담당자 |
+| 담당자 | 담당 서비스 | 주요 기능
 |---|---|
-| 회원/인증 (Member/Auth) | 지선 |
-| 주최자 (Organizer) | 기혁 |
-| 전체 관리자 (Super Admin) | 시환 |
-| 참가자 (Attendee) | 동욱 |
+| 지선 | Gateway, Member-Service | 인증/인가, 회원가입·로그인, API 라우팅
+| 기혁 | Conference-Service | 컨퍼런스·세션 등록/조회, 승인 연동
+| 동욱 | Reservation-Service | 세션 신청·결제·대기열·QR 발급
+| 시환 | 전체 관리자 기능 | 계정 발급, 컨퍼런스 승인, 정산 대시보드
 
 ## 실행 방법
 
