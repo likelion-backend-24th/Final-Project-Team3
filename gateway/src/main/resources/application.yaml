@@ -1,3 +1,9 @@
+server:
+  port: 8080
 spring:
   application:
     name: gateway
+
+services:
+  conference-service:
+    url: http://localhost:8082
