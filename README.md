@@ -12,7 +12,7 @@
 ## 팀 구성
 
 | 담당자 | 담당 서비스 | 주요 기능
-|---|---|
+|---|---|---|
 | 지선 | Gateway, Member-Service | 인증/인가, 회원가입·로그인, API 라우팅
 | 기혁 | Conference-Service | 컨퍼런스·세션 등록/조회, 승인 연동
 | 동욱 | Reservation-Service | 세션 신청·결제·대기열·QR 발급
