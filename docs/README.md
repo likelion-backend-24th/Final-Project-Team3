@@ -13,7 +13,7 @@
 | 아키텍처 | [https://www.notion.so/3cd73873401a80d9be4ee24c173805a4?source=copy_link] | 김지선, 차시환, 전기혁, 정동욱 | 없음 — Sprint Review 뒤 `docs/아키텍처.md` 생성 |
 | ERD | [https://www.notion.so/ERD-3cd73873401a80f7bb96d00743b0d10c?source=copy_link] | 김지선, 차시환, 전기혁, 정동욱 | 없음 — Sprint Review 뒤 `docs/ERD.md` 생성 |
 | API | [https://www.notion.so/API-3cd73873401a80bda31be290a53d6db4?source=copy_link] | 김지선, 차시환, 전기혁, 정동욱 | 없음 — Sprint Review 뒤 `docs/API.md` 생성 |
-| 권한 Matrix | [https://www.notion.so/3cd73873401a80d9b181c4bb3ffef6b6?source=copy_link] | [이름] | 없음 — Sprint Review 뒤 `docs/권한매트릭스.md` 생성 |
+| 권한 Matrix | [https://www.notion.so/3cd73873401a80d9b181c4bb3ffef6b6?source=copy_link] | 김지선, 차시환, 전기혁, 정동욱 | 없음 — Sprint Review 뒤 `docs/권한매트릭스.md` 생성 |
 | 시퀀스 | [https://www.notion.so/3cd73873401a8002a389e5ee51bebf20?source=copy_link] | 김지선, 차시환, 전기혁, 정동욱 | 없음 — Sprint Review 뒤 `docs/시퀀스.md` 생성 |
 | 테스트 전략 | [https://www.notion.so/3cd73873401a80a4814eebfdaca94034?source=copy_link] | 김지선, 차시환, 전기혁, 정동욱 | 없음 — Sprint Review 뒤 `docs/테스트전략.md` 생성 |
 | 테스트 체크리스트 | [https://www.notion.so/3cd73873401a80e6a4dbd348d8fc18e3?source=copy_link] | 김지선, 차시환, 전기혁, 정동욱 | 없음 — Sprint Review 뒤 `docs/테스트체크리스트.md` 생성 |
