@@ -1,3 +1,14 @@
 spring:
   application:
     name: conference-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/conference_service
+    username: ${CONFERENCE_DB_USER:conference_svc}
+    password: ${CONFERENCE_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
