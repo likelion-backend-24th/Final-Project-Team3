@@ -6,9 +6,10 @@ import com.example.conferenceservice.session.dto.SessionResponseDto;
 import com.example.conferenceservice.session.entity.Session;
 
 import java.util.List;
+import java.util.UUID;
 
 public record ConferenceDetailResponseDto (
-        Long id,
+        UUID id,
         Long organizerId,
         String title,
         ConferenceStatus status,

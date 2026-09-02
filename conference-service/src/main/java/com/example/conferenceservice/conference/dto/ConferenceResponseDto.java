@@ -3,8 +3,10 @@ package com.example.conferenceservice.conference.dto;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 
+import java.util.UUID;
+
 public record ConferenceResponseDto (
-        Long id,
+        UUID id,
         Long organizerId,
         String title,
         ConferenceStatus status,

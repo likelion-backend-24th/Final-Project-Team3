@@ -3,7 +3,7 @@ package com.example.conferenceservice.session.dto;
 import com.example.conferenceservice.session.entity.Session;
 
 public record SessionResponseDto(
-        Long id,
+        java.util.UUID id,
         String title,
         int capacity
 ) {
