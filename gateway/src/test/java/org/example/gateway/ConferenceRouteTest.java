@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,8 +23,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ConferenceRouteTest {
 
     private static final HttpServer STUB_SERVER = createStubServer();
-    private static final AtomicReference<String> RECEIVED_TRACE_ID = new AtomicReference<>();
-    private static final AtomicReference<String> RECEIVED_AUTH_HEADER = new AtomicReference<>();
+    private static final AtomicReference<List<String>> RECEIVED_TRACE_IDS = new AtomicReference<>();
+    private static final AtomicReference<List<String>> RECEIVED_AUTH_HEADERS = new AtomicReference<>();
 
     @Autowired
     RestTestClient restTestClient;
@@ -32,8 +33,8 @@ public class ConferenceRouteTest {
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
             server.createContext("/api/conferences", exchange -> {
-                RECEIVED_TRACE_ID.set(exchange.getRequestHeaders().getFirst("X-Trace-Id"));
-                RECEIVED_AUTH_HEADER.set(exchange.getRequestHeaders().getFirst("Authorization"));
+                RECEIVED_TRACE_IDS.set(exchange.getRequestHeaders().get("X-Trace-Id"));
+                RECEIVED_AUTH_HEADERS.set(exchange.getRequestHeaders().get("Authorization"));
                 byte[] body = "[]".getBytes();
                 exchange.sendResponseHeaders(200, body.length);
                 exchange.getResponseBody().write(body);
@@ -65,7 +66,21 @@ public class ConferenceRouteTest {
                 .exchange()
                 .expectStatus().is2xxSuccessful();
 
-        assertThat(RECEIVED_TRACE_ID.get()).isNotBlank();
-        assertThat(RECEIVED_AUTH_HEADER.get()).isEqualTo("Bearer test-token");
+        assertThat(RECEIVED_TRACE_IDS.get()).hasSize(1);
+        assertThat(RECEIVED_TRACE_IDS.get().get(0)).isNotBlank();
+
+        assertThat(RECEIVED_AUTH_HEADERS.get()).containsExactly("Bearer test-token");
+    }
+
+    @Test
+    void 클라이언트가_보낸_Trace_Id는_Gateway가_새로_발급한_값으로_덮어쓴다() {
+        restTestClient.get()
+                .uri("/api/conferences")
+                .header("X-Trace-Id", "spoofed-trace-id")
+                .exchange()
+                .expectStatus().is2xxSuccessful();
+
+        assertThat(RECEIVED_TRACE_IDS.get()).hasSize(1);
+        assertThat(RECEIVED_TRACE_IDS.get().get(0)).isNotEqualTo("spoofed-trace-id");
     }
 }
