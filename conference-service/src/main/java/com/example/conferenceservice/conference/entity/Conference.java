@@ -21,7 +21,7 @@ public class Conference {
 
     // 논리적 FK - Member-Service의 organizer PK를 값으로만 보관
     @Column(name = "organizer_id", nullable = false)
-    private Long organizerId;
+    private UUID organizerId;
 
     @Column(nullable = false)
     private String title;

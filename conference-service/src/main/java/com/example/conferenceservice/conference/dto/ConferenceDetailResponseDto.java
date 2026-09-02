@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public record ConferenceDetailResponseDto (
         UUID id,
-        Long organizerId,
+        UUID organizerId,
         String title,
         ConferenceStatus status,
         int capacity,

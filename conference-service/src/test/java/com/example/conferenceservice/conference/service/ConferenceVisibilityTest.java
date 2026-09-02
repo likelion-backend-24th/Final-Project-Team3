@@ -47,7 +47,7 @@ class ConferenceVisibilityTest {
     @Test
     void listConferences_onlyQueriesApprovedConferences() {
         Conference approved = Conference.builder()
-                .id(UUID.randomUUID()).organizerId(10L).title("승인된 컨퍼런스")
+                .id(UUID.randomUUID()).organizerId(UUID.randomUUID()).title("승인된 컨퍼런스")
                 .status(ConferenceStatus.APPROVED).capacity(100)
                 .build();
         Pageable pageable = PageRequest.of(0, 10);
@@ -65,7 +65,7 @@ class ConferenceVisibilityTest {
     void getConference_whenApproved_returnsDetailWithSessions() {
         UUID conferenceId = UUID.randomUUID();
         Conference approved = Conference.builder()
-                .id(conferenceId).organizerId(10L).title("승인된 컨퍼런스")
+                .id(conferenceId).organizerId(UUID.randomUUID()).title("승인된 컨퍼런스")
                 .status(ConferenceStatus.APPROVED).capacity(100)
                 .build();
         Session session = Session.builder()
