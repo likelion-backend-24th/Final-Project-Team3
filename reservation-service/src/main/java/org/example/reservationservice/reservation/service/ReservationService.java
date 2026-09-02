@@ -9,6 +9,7 @@ import org.example.reservationservice.reservation.exception.ReservationErrorCode
 import org.example.reservationservice.reservation.repository.ReservationRepository;
 import org.example.reservationservice.reservation.repository.SessionCapacityLockRepository;
 import org.example.reservationservice.reservation.repository.WaitingQueueRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,16 +53,10 @@ public class ReservationService {
         queuedReservation.markAsQueued();
         reservationRepository.save(queuedReservation);
 
-        int nextPosition = waitingQueueRepository.findMaxPositionBySessionId(sessionId) + 1;
-        WaitingQueue waitingQueue = WaitingQueue.builder()
-                .reservationId(queuedReservation.getId())
-                .sessionId(sessionId)
-                .memberId(memberId)
-                .position(nextPosition)
-                .build();
-        waitingQueueRepository.save(waitingQueue);
+        // 재시도 로직이 있는 안전한 메서드로 대기열 등록
+        WaitingQueue waitingQueue = registerToQueueWithRetry(sessionId, queuedReservation.getId(), memberId);
 
-        return ReservationResult.queued(queuedReservation.getId(), nextPosition);
+        return ReservationResult.queued(queuedReservation.getId(), waitingQueue.getPosition());
     }
 
     private int getSessionCapacity(UUID sessionId) {
@@ -72,5 +67,24 @@ public class ReservationService {
         return waitingQueueRepository.findByReservationId(reservationId)
                 .map(WaitingQueue::getPosition)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+    }
+
+    private WaitingQueue registerToQueueWithRetry(UUID sessionId, UUID reservationId, UUID memberId) {
+        int maxRetries = 5;
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                int nextPosition = waitingQueueRepository.findMaxPositionBySessionId(sessionId) + 1;
+                WaitingQueue waitingQueue = WaitingQueue.builder()
+                        .reservationId(reservationId)
+                        .sessionId(sessionId)
+                        .memberId(memberId)
+                        .position(nextPosition)
+                        .build();
+                return waitingQueueRepository.saveAndFlush(waitingQueue);
+            } catch (DataIntegrityViolationException e) {
+                // 순번 충돌 -> 다음 순번으로 재시도
+            }
+        }
+        throw new IllegalStateException("대기열 등록 재시도 초과");
     }
 }

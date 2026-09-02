@@ -28,8 +28,16 @@ public class ReservationController {
                 request.memberId(),
                 request.headcount()
         );
+
+        String traceId = traceIdProvider.resolve(httpRequest);
+
+        if ("QUEUED".equals(result.getStatus())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.success("정원 초과로 대기열에 등록되었습니다", result, traceId));
+        }
+
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("예약 처리 완료", result, traceIdProvider.resolve(httpRequest)));
+                .body(ApiResponse.success("예약 처리 완료", result, traceId));
     }
 
     @GetMapping("/{reservationId}/queue-position")

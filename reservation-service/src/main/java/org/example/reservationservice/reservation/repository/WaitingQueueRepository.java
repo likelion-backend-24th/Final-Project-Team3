@@ -16,4 +16,9 @@ public interface WaitingQueueRepository extends JpaRepository<WaitingQueue, UUID
 
     // 예약 ID로 대기열 항목 조회 (순번 조회 API용)
     Optional<WaitingQueue> findByReservationId(UUID reservationId);
+
+    @Query(value = "SELECT COALESCE(MAX(position), 0) + 1 FROM waiting_queue " +
+            "WHERE session_id = :sessionId FOR UPDATE",
+            nativeQuery = true)
+    int getNextPositionForUpdate(@Param("sessionId") UUID sessionId);
 }
