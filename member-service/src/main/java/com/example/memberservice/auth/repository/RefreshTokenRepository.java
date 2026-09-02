@@ -1,6 +1,6 @@
-package com.example.memberservice.repository;
+package com.example.memberservice.auth.repository;
 
-import com.example.memberservice.entity.RefreshToken;
+import com.example.memberservice.auth.entity.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

@@ -1,4 +1,4 @@
-package com.example.memberservice.entity;
+package com.example.memberservice.auth.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;

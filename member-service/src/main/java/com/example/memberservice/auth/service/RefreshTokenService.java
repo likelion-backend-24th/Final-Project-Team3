@@ -1,7 +1,8 @@
-package com.example.memberservice.service;
+package com.example.memberservice.auth.service;
 
-import com.example.memberservice.entity.RefreshToken;
-import com.example.memberservice.repository.RefreshTokenRepository;
+import com.example.memberservice.auth.entity.RefreshToken;
+import com.example.memberservice.auth.repository.RefreshTokenRepository;
+import com.example.memberservice.exception.InvalidRefreshTokenException;
 import com.github.f4b6a3.uuid.UuidCreator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

@@ -1,8 +1,8 @@
-package com.example.memberservice.controller;
+package com.example.memberservice.member.controller;
 
-import com.example.memberservice.dto.SignupRequest;
-import com.example.memberservice.dto.SignupResponse;
-import com.example.memberservice.service.MemberService;
+import com.example.memberservice.member.dto.SignupRequest;
+import com.example.memberservice.member.dto.SignupResponse;
+import com.example.memberservice.member.service.MemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

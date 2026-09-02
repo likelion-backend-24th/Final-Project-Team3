@@ -1,4 +1,4 @@
-package com.example.memberservice.dto;
+package com.example.memberservice.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;
 

@@ -1,4 +1,4 @@
-package com.example.memberservice.dto;
+package com.example.memberservice.member.dto;
 
 import java.util.UUID;
 

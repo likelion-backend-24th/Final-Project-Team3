@@ -1,6 +1,6 @@
-package com.example.memberservice.repository;
+package com.example.memberservice.member.repository;
 
-import com.example.memberservice.entity.Member;
+import com.example.memberservice.member.entity.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

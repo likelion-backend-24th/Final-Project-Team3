@@ -1,4 +1,4 @@
-package com.example.memberservice.entity;
+package com.example.memberservice.member.entity;
 
 import com.github.f4b6a3.uuid.UuidCreator;
 import jakarta.persistence.*;

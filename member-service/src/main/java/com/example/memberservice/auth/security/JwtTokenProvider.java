@@ -1,6 +1,6 @@
-package com.example.memberservice.security;
+package com.example.memberservice.auth.security;
 
-import com.example.memberservice.entity.Member;
+import com.example.memberservice.member.entity.Member;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
