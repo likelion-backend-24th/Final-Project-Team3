@@ -1,0 +1,64 @@
+name: Reservation Service CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'reservation-service/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'reservation-service/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root1234
+          MYSQL_DATABASE: reservation_service
+          MYSQL_USER: reservation_svc
+          MYSQL_PASSWORD: reservation1234
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    defaults:
+      run:
+        working-directory: reservation-service
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build -x test
+
+      - name: Run tests
+        run: ./gradlew test
+        env:
+          RESERVATION_DB_USER: reservation_svc
+          RESERVATION_DB_PASSWORD: reservation1234
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: reservation-service/build/reports/tests/test
