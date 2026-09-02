@@ -2,13 +2,16 @@ package org.example.reservationservice.reservation.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.reservationservice.common.exception.BusinessException;
+import org.example.reservationservice.reservation.client.ConferenceServiceClient;
 import org.example.reservationservice.reservation.dto.ReservationResult;
 import org.example.reservationservice.reservation.entity.Reservation;
 import org.example.reservationservice.reservation.entity.WaitingQueue;
+import org.example.reservationservice.reservation.exception.ConferenceServiceUnavailableException;
 import org.example.reservationservice.reservation.exception.ReservationErrorCode;
 import org.example.reservationservice.reservation.repository.ReservationRepository;
 import org.example.reservationservice.reservation.repository.SessionCapacityLockRepository;
 import org.example.reservationservice.reservation.repository.WaitingQueueRepository;
+import org.hibernate.query.sql.internal.ParameterRecognizerImpl;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +25,7 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final WaitingQueueRepository waitingQueueRepository;
     private final SessionCapacityLockRepository sessionCapacityLockRepository;
+    private final ConferenceServiceClient conferenceServiceClient;
 
     @Transactional
     public ReservationResult createHoldOrQueue(UUID sessionId, UUID memberId, int headcount) {
@@ -60,6 +64,12 @@ public class ReservationService {
     }
 
     private int getSessionCapacity(UUID sessionId) {
+        // TODO: 기혁님 API 완성되면 아래 주석 해제하고 고정값 제거
+//         try {
+//             return conferenceServiceClient.getSessionCapacity(sessionId);
+//         } catch (ConferenceServiceUnavailableException e) {
+//             throw new BusinessException(ReservationErrorCode.CONFERENCE_SERVICE_UNAVAILABLE);
+//         }
         return 10;
     }
 
