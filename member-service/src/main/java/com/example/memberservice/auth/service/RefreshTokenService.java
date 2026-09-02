@@ -22,6 +22,7 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenRevoker refreshTokenRevoker;
 
     @Value("${jwt.refresh-token-validity-ms}")
     private long validityMs;
@@ -43,7 +44,7 @@ public class RefreshTokenService {
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.REFRESH_TOKEN_NOT_FOUND));
 
         if (found.isRevoked()) {
-            refreshTokenRepository.revokeAllByMemberId(found.getMemberId());
+            refreshTokenRevoker.revokeAll(found.getMemberId());
             throw new BusinessException(AuthErrorCode.REFRESH_TOKEN_REUSED);
         }
 
