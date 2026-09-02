@@ -2,8 +2,9 @@ package com.example.memberservice.auth.service;
 
 import com.example.memberservice.auth.dto.LoginRequest;
 import com.example.memberservice.auth.dto.LoginResponse;
+import com.example.memberservice.auth.exception.AuthErrorCode;
 import com.example.memberservice.auth.security.JwtTokenProvider;
-import com.example.memberservice.exception.InvalidCredentialsException;
+import com.example.memberservice.common.exception.BusinessException;
 import com.example.memberservice.member.entity.Member;
 import com.example.memberservice.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +25,10 @@ public class AuthService {
     @Transactional
     public LoginResponse login(LoginRequest request) {
         Member member = memberRepository.findByEmail(normalize(request.email()))
-                .orElseThrow(InvalidCredentialsException::new);
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_CREDENTIALS));
 
         if (!passwordEncoder.matches(request.password(), member.getPassword())) {
-            throw new InvalidCredentialsException();
+            throw new BusinessException(AuthErrorCode.INVALID_CREDENTIALS);
         }
 
         return issueTokens(member);
@@ -38,7 +39,7 @@ public class AuthService {
         RefreshTokenService.RotationResult result = refreshTokenService.rotate(rawRefreshToken);
 
         Member member = memberRepository.findById(result.memberId())
-                .orElseThrow(InvalidCredentialsException::new);
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_CREDENTIALS));
 
         String accessToken = jwtTokenProvider.generateAccessToken(member);
 

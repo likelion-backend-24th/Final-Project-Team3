@@ -1,8 +1,9 @@
 package com.example.memberservice.auth.service;
 
 import com.example.memberservice.auth.entity.RefreshToken;
+import com.example.memberservice.auth.exception.AuthErrorCode;
 import com.example.memberservice.auth.repository.RefreshTokenRepository;
-import com.example.memberservice.exception.InvalidRefreshTokenException;
+import com.example.memberservice.common.exception.BusinessException;
 import com.github.f4b6a3.uuid.UuidCreator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,15 +40,15 @@ public class RefreshTokenService {
     @Transactional
     public RotationResult rotate(String rawToken) {
         RefreshToken found = refreshTokenRepository.findByTokenHash(sha256(rawToken))
-                .orElseThrow(() -> new InvalidRefreshTokenException("존재하지 않는 토큰입니다."));
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.REFRESH_TOKEN_NOT_FOUND));
 
         if (found.isRevoked()) {
             refreshTokenRepository.revokeAllByMemberId(found.getMemberId());
-            throw new InvalidRefreshTokenException("이미 사용된 토큰입니다. 재로그인이 필요합니다.");
+            throw new BusinessException(AuthErrorCode.REFRESH_TOKEN_REUSED);
         }
 
         if (!found.isUsable(LocalDateTime.now())) {
-            throw new InvalidRefreshTokenException("만료된 토큰입니다.");
+            throw new BusinessException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
         }
 
         found.revoke();

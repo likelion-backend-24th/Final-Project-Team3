@@ -1,9 +1,10 @@
 package com.example.memberservice.member.service;
 
-import com.example.memberservice.exception.DuplicateEmailException;
+import com.example.memberservice.common.exception.BusinessException;
 import com.example.memberservice.member.dto.SignupRequest;
 import com.example.memberservice.member.dto.SignupResponse;
 import com.example.memberservice.member.entity.Member;
+import com.example.memberservice.member.exception.MemberErrorCode;
 import com.example.memberservice.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -23,14 +24,14 @@ public class MemberService {
     public SignupResponse signup(SignupRequest request) {
         String email = normalize(request.email());
         if (memberRepository.existsByEmail(email)) {
-            throw new DuplicateEmailException(email);
+            throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL, "이미 가입된 이메일입니다: " + email);
         }
 
         Member member = Member.newMember(email, passwordEncoder.encode(request.password()), request.name());
         try {
             memberRepository.save(member);
         } catch (DataIntegrityViolationException e) {
-            throw new DuplicateEmailException(email);
+            throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL, "이미 가입된 이메일입니다: " + email);
         }
 
         return new SignupResponse(member.getId(), member.getEmail(), member.getName(), member.getRole().name());
