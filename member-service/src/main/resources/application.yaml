@@ -1,3 +1,20 @@
+server:
+  port: 8081
 spring:
   application:
     name: member-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/member_service
+    username: ${MEMBER_DB_USER:member_svc}
+    password: ${MEMBER_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-validity-ms: 1800000         # 30 분
+  refresh-token-validity-ms: 1209600000     # 14일
