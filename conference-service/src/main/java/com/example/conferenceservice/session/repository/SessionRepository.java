@@ -5,8 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface SessionRepository extends JpaRepository<Session, Long> {
-    List<Session> findByConferenceId(Long conferenceId);
+public interface SessionRepository extends JpaRepository<Session, UUID> {
+    List<Session> findByConferenceId(UUID conferenceId);
 }

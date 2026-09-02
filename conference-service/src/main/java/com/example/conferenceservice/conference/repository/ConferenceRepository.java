@@ -8,10 +8,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface ConferenceRepository extends JpaRepository<Conference, Long> {
+public interface ConferenceRepository extends JpaRepository<Conference, UUID> {
     Page<Conference> findByStatus(ConferenceStatus status, Pageable pageable);
 
-    Optional<Conference> findByIdAndStatus(Long id, ConferenceStatus status);
+    Optional<Conference> findByIdAndStatus(UUID id, ConferenceStatus status);
 }

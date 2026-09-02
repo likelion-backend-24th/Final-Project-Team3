@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +29,7 @@ public class ConferenceService {
     }
 
     @Transactional(readOnly = true)
-    public ConferenceDetailResponseDto getConference(Long id) {
+    public ConferenceDetailResponseDto getConference(UUID id) {
         Conference conference = conferenceRepository.findByIdAndStatus(id, ConferenceStatus.APPROVED)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conference not found: " + id));
 
