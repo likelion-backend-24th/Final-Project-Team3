@@ -18,7 +18,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Session {
     @Id
-    UUID id;
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "conference_id", nullable = false)
