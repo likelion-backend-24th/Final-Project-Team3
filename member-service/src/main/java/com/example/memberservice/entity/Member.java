@@ -1,5 +1,6 @@
 package com.example.memberservice.entity;
 
+import com.github.f4b6a3.uuid.UuidCreator;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -9,6 +10,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "member")
@@ -17,8 +19,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private UUID id;
 
     @Column(nullable = false, unique = true, length = 255)
     private String email;
@@ -36,6 +37,13 @@ public class Member {
     @Column(nullable = false, updatable = false)
     @CreatedDate
     private LocalDateTime createdAt;
+
+    @PrePersist
+    private void assignId() {
+        if (this.id == null) {
+            this.id = UuidCreator.getTimeOrderedEpoch();
+        }
+    }
 
     @Builder
     private Member(String email, String password, String name, Role role) {

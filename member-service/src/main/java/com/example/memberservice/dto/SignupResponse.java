@@ -1,7 +1,9 @@
 package com.example.memberservice.dto;
 
+import java.util.UUID;
+
 public record SignupResponse(
-        Long memberId,
+        UUID memberId,
         String email,
         String name,
         String role
