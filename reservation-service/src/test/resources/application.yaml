@@ -1,13 +1,10 @@
-server:
-  port: 8083
-
 spring:
   application:
-    name: reservation-service
+    name: reservation-service-test
   datasource:
     url: jdbc:mysql://localhost:3306/reservation_service
-    username: ${RESERVATION_DB_USER:reservation_svc}
-    password: ${RESERVATION_DB_PASSWORD}
+    username: reservation_svc
+    password: reservation1234
   jpa:
     hibernate:
       ddl-auto: update
