@@ -64,13 +64,11 @@ public class ReservationService {
     }
 
     private int getSessionCapacity(UUID sessionId) {
-        // TODO: 기혁님 API 완성되면 아래 주석 해제하고 고정값 제거
-//         try {
-//             return conferenceServiceClient.getSessionCapacity(sessionId);
-//         } catch (ConferenceServiceUnavailableException e) {
-//             throw new BusinessException(ReservationErrorCode.CONFERENCE_SERVICE_UNAVAILABLE);
-//         }
-        return 10;
+        try {
+            return conferenceServiceClient.getSessionCapacity(sessionId);
+        } catch (ConferenceServiceUnavailableException e) {
+            throw new BusinessException(ReservationErrorCode.CONFERENCE_SERVICE_UNAVAILABLE);
+        }
     }
 
     public int getQueuePosition(UUID reservationId) {
