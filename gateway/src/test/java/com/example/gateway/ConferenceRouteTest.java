@@ -1,4 +1,4 @@
-package org.example.gateway;
+package com.example.gateway;
 
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterAll;
@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureRestTestClient
-public class ReservationRouteTest {
+public class ConferenceRouteTest {
 
     private static final HttpServer STUB_SERVER = createStubServer();
     private static final AtomicReference<List<String>> RECEIVED_TRACE_IDS = new AtomicReference<>();
@@ -32,7 +32,7 @@ public class ReservationRouteTest {
     private static HttpServer createStubServer() {
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
-            server.createContext("/api/reservations", exchange -> {
+            server.createContext("/api/conferences", exchange -> {
                 RECEIVED_TRACE_IDS.set(exchange.getRequestHeaders().get("X-Trace-Id"));
                 RECEIVED_AUTH_HEADERS.set(exchange.getRequestHeaders().get("Authorization"));
                 byte[] body = "[]".getBytes();
@@ -48,9 +48,9 @@ public class ReservationRouteTest {
     }
 
     @DynamicPropertySource
-    static void overrideReservationServiceUrl(DynamicPropertyRegistry registry) {
+    static void overrideConferenceServiceUrl(DynamicPropertyRegistry registry) {
         int port = STUB_SERVER.getAddress().getPort();
-        registry.add("services.reservation-service.url", () -> "http://localhost:" + port);
+        registry.add("services.conference-service.url", () -> "http://localhost:" + port);
     }
 
     @AfterAll
@@ -59,9 +59,9 @@ public class ReservationRouteTest {
     }
 
     @Test
-    void 게이트웨이가_요청을_reservationService로_전달한다() {
+    void 게이트웨이가_요청을_conferenceService로_전달한다() {
         restTestClient.get()
-                .uri("/api/reservations")
+                .uri("/api/conferences")
                 .header("Authorization", "Bearer test-token")
                 .exchange()
                 .expectStatus().is2xxSuccessful();
@@ -75,7 +75,7 @@ public class ReservationRouteTest {
     @Test
     void 클라이언트가_보낸_Trace_Id는_Gateway가_새로_발급한_값으로_덮어쓴다() {
         restTestClient.get()
-                .uri("/api/reservations")
+                .uri("/api/conferences")
                 .header("X-Trace-Id", "spoofed-trace-id")
                 .exchange()
                 .expectStatus().is2xxSuccessful();
