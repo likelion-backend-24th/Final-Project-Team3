@@ -1,7 +1,7 @@
 package com.example.conferenceservice.conference.service;
 
 import com.example.conferenceservice.common.exception.BusinessException;
-import com.example.conferenceservice.conference.dto.ConferenceDetailResponseDto;
+import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
@@ -75,7 +75,7 @@ class ConferenceVisibilityTest {
                 .willReturn(Optional.of(approved));
         given(sessionRepository.findByConferenceId(conferenceId)).willReturn(List.of(session));
 
-        ConferenceDetailResponseDto result = conferenceService.getConference(conferenceId);
+        ConferenceDetailResponse result = conferenceService.getConference(conferenceId);
 
         assertThat(result.title()).isEqualTo("승인된 컨퍼런스");
         assertThat(result.sessions()).hasSize(1);
