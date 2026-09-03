@@ -1,5 +1,6 @@
 package com.example.conferenceservice.conference.controller;
 
+import com.example.conferenceservice.auth.CustomUserDetails;
 import com.example.conferenceservice.common.TraceIdProvider;
 import com.example.conferenceservice.common.dto.ApiResponse;
 import com.example.conferenceservice.common.dto.Meta;
@@ -9,11 +10,15 @@ import com.example.conferenceservice.conference.dto.ConferenceRequest;
 import com.example.conferenceservice.conference.dto.ConferenceResponse;
 import com.example.conferenceservice.conference.service.ConferenceService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -40,9 +45,14 @@ public class ConferenceController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<ConferenceDetailResponse>> createConference(
-            @RequestBody ConferenceRequest request
-            ){
-        return null;
+    @PreAuthorize("hasRole('ORGANIZER')")
+    public ResponseEntity<ApiResponse<ConferenceResponse>> createConference(
+            @Valid @RequestBody ConferenceRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            HttpServletRequest httpRequest
+    ) {
+        ConferenceResponse response = conferenceService.applyConference(currentUser, request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("컨퍼런스 등록 신청 성공", response, traceIdProvider.resolve(httpRequest)));
     }
 }
