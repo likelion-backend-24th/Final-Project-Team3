@@ -4,11 +4,11 @@ on:
   push:
     branches: [main]
     paths:
-      - 'reservation-service/**'
+      - 'backend/reservation-service/**'
   pull_request:
     branches: [main]
     paths:
-      - 'reservation-service/**'
+      - 'backend/reservation-service/**'
 
 jobs:
   build-and-test:
@@ -32,7 +32,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: reservation-service
+        working-directory: backend/reservation-service
 
     steps:
       - name: Checkout code
@@ -61,4 +61,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: reservation-service/build/reports/tests/test
+          path: backend/reservation-service/build/reports/tests/test
