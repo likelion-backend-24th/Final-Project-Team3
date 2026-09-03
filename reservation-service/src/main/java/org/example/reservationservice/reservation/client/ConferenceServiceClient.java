@@ -1,6 +1,7 @@
 package org.example.reservationservice.reservation.client;
 
 import org.example.reservationservice.reservation.exception.ConferenceServiceUnavailableException;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -20,20 +21,22 @@ public class ConferenceServiceClient {
 
     public int getSessionCapacity(UUID sessionId) {
         try {
-            CapacityResponse response = restClient.get()
-                    .uri("/api/confences/{id}/capacity", sessionId)
+            ApiResponseEnvelope<SessionCapacityResponse> response = restClient.get()
+                    .uri("/api/sessions/{sessionId}/capacity", sessionId)
                     .retrieve()
-                    .body(CapacityResponse.class);
+                    .body(new ParameterizedTypeReference<>() {});
 
-            if (response == null) {
+            if (response == null || response.data() == null) {
                 throw new ConferenceServiceUnavailableException(sessionId, null);
             }
-            return response.capacity();
+            return response.data().capacity();
         } catch (RestClientException e) {
             throw new ConferenceServiceUnavailableException(sessionId, e);
         }
     }
 
-    // TODO: 기혁님 API 실제 응답 필드명에 맞춰 조정 필요
-    public record CapacityResponse(int capacity) {}
+    // conference-service의 공통 ApiResponse<T> 래핑 규약에 맞춘 최소 파싱용 DTO
+    public record ApiResponseEnvelope<T>(boolean success, T data, String message) {}
+
+    public record SessionCapacityResponse(UUID sessionId, int capacity) {}
 }
