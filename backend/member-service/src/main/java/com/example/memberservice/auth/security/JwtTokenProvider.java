@@ -1,6 +1,8 @@
 package com.example.memberservice.auth.security;
 
 import com.example.memberservice.member.entity.Member;
+import com.example.memberservice.member.entity.Role;
+import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,10 +29,16 @@ public class JwtTokenProvider {
 
     public String generateAccessToken(Member member) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        JwtBuilder builder = Jwts.builder()
                 .subject(String.valueOf(member.getId()))
                 .claim("email", member.getEmail())
-                .claim("role", member.getRole().name())
+                .claim("role", member.getRole().name());
+
+        if(member.getRole() == Role.ORGANIZER) {
+            builder.claim("organizerId", member.getId().toString());
+        }
+
+        return builder
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusMillis(validityMs)))
                 .signWith(key)
