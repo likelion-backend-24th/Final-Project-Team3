@@ -1,4 +1,4 @@
-package org.example.gateway;
+package com.example.gateway;
 
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
