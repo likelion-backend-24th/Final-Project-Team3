@@ -95,4 +95,11 @@ public class ReservationService {
         }
         throw new IllegalStateException("대기열 등록 재시도 초과");
     }
+
+    public boolean isQueuePositionReached(UUID reservationId) {
+        WaitingQueue queueEntry = waitingQueueRepository.findByReservationId(reservationId)
+                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+
+        return queueEntry.getPosition() == 1;
+    }
 }
