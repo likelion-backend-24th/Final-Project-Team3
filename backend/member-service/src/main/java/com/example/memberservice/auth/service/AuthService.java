@@ -23,7 +23,7 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
 
     @Transactional
-    public LoginResponse login(LoginRequest request) {
+    public AuthTokens login(LoginRequest request) {
         Member member = memberRepository.findByEmail(normalize(request.email()))
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_CREDENTIALS));
 
@@ -35,29 +35,34 @@ public class AuthService {
     }
 
     @Transactional
-    public LoginResponse reissue(String rawRefreshToken) {
+    public AuthTokens reissue(String rawRefreshToken) {
         RefreshTokenService.RotationResult result = refreshTokenService.rotate(rawRefreshToken);
 
         Member member = memberRepository.findById(result.memberId())
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_CREDENTIALS));
 
         String accessToken = jwtTokenProvider.generateAccessToken(member);
+        LoginResponse body = new LoginResponse(accessToken, "Bearer", jwtTokenProvider.getValidityMs() / 1000);
 
-        return new LoginResponse(
-                accessToken,
-                result.newRefreshToken(),
-                "Bearer",
-                jwtTokenProvider.getValidityMs() / 1000
-        );
+        return new AuthTokens(body, result.newRefreshToken());
     }
 
-    private LoginResponse issueTokens(Member member) {
+    private AuthTokens issueTokens(Member member) {
         String accessToken = jwtTokenProvider.generateAccessToken(member);
         String refreshToken = refreshTokenService.issue(member.getId());
-        return new LoginResponse(accessToken, refreshToken, "Bearer", jwtTokenProvider.getValidityMs() / 1000);
+        LoginResponse body = new LoginResponse(accessToken, "Bearer", jwtTokenProvider.getValidityMs() / 1000);
+
+        return new AuthTokens(body, refreshToken);
     }
 
     private String normalize(String email) {
         return email.strip().toLowerCase();
+    }
+
+    /**
+     * refreshToken은 응답 body가 아니라 HttpOnly 쿠키로 내려가므로,
+     * Controller가 쿠키를 만들 수 있게 body(LoginResponse)와 refreshToken을 분리해서 반환한다.
+     */
+    public record AuthTokens(LoginResponse body, String refreshToken) {
     }
 }

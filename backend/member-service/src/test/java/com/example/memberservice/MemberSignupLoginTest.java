@@ -1,8 +1,8 @@
 package com.example.memberservice;
 
 import com.example.memberservice.auth.dto.LoginRequest;
-import com.example.memberservice.auth.dto.RefreshRequest;
 import com.example.memberservice.member.dto.SignupRequest;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +15,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -57,7 +58,7 @@ class MemberSignupLoginTest {
     }
 
     @Test
-    void 가입한_계정으로_로그인하면_토큰_쌍을_발급받는다() throws Exception {
+    void 가입한_계정으로_로그인하면_액세스_토큰과_리프레시_쿠키를_발급받는다() throws Exception {
         signup("login@example.com", "password1234", "로그인");
 
         LoginRequest login = new LoginRequest("login@example.com", "password1234");
@@ -66,8 +67,11 @@ class MemberSignupLoginTest {
                         .content(objectMapper.writeValueAsString(login)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
-                .andExpect(jsonPath("$.data.refreshToken").isNotEmpty())
-                .andExpect(jsonPath("$.data.tokenType").value("Bearer"));
+                .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.data.refreshToken").doesNotExist())
+                .andExpect(cookie().exists("refreshToken"))
+                .andExpect(cookie().httpOnly("refreshToken", true))
+                .andExpect(cookie().path("refreshToken", "/api/auth"));
     }
 
     @Test
@@ -84,44 +88,41 @@ class MemberSignupLoginTest {
     }
 
     @Test
-    void refresh_token으로_재발급하면_새로운_토큰_쌍을_받는다() throws Exception {
+    void refresh_쿠키로_재발급하면_새로운_토큰_쌍을_받는다() throws Exception {
         signup("refresh@example.com", "password1234", "재발급");
-        String refreshToken = loginAndGetRefreshToken("refresh@example.com", "password1234");
+        Cookie refreshCookie = loginAndGetRefreshCookie("refresh@example.com", "password1234");
 
-        mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new RefreshRequest(refreshToken))))
+        mockMvc.perform(post("/api/auth/refresh").cookie(refreshCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
-                .andExpect(jsonPath("$.data.refreshToken").value(not(refreshToken)));
+                .andExpect(cookie().value("refreshToken", not(refreshCookie.getValue())));
     }
 
     @Test
-    void 이미_사용된_refresh_token을_재사용하면_401과_함께_전체_세션이_무효화된다() throws Exception {
-        signup("reuse@example.com", "password1234", "재사용");
-        String oldRefreshToken = loginAndGetRefreshToken("reuse@example.com", "password1234");
-        String rotateBody = objectMapper.writeValueAsString(new RefreshRequest(oldRefreshToken));
+    void refresh_쿠키가_없으면_401로_거부된다() throws Exception {
+        mockMvc.perform(post("/api/auth/refresh"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("AUTH_REFRESH_TOKEN_MISSING"));
+    }
 
-        MvcResult firstRotate = mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(rotateBody))
+    @Test
+    void 이미_사용된_refresh_쿠키를_재사용하면_401과_함께_전체_세션이_무효화된다() throws Exception {
+        signup("reuse@example.com", "password1234", "재사용");
+        Cookie oldRefreshCookie = loginAndGetRefreshCookie("reuse@example.com", "password1234");
+
+        MvcResult firstRotate = mockMvc.perform(post("/api/auth/refresh").cookie(oldRefreshCookie))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        JsonNode firstResult = objectMapper.readTree(firstRotate.getResponse().getContentAsString());
-        String newRefreshToken = firstResult.path("data").path("refreshToken").asText();
+        Cookie newRefreshCookie = firstRotate.getResponse().getCookie("refreshToken");
 
-        // 이미 폐기된 oldRefreshToken 재사용 -> 탐지되어 전체 세션 무효화
-        mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(rotateBody))
+        // 이미 폐기된 oldRefreshCookie 재사용 -> 탐지되어 전체 세션 무효화
+        mockMvc.perform(post("/api/auth/refresh").cookie(oldRefreshCookie))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("AUTH_REFRESH_TOKEN_REUSED"));
 
-        // 방금 정상 발급받은 newRefreshToken까지 같이 무효화됐는지 확인
-        mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new RefreshRequest(newRefreshToken))))
+        // 방금 정상 발급받은 newRefreshCookie까지 같이 무효화됐는지 확인
+        mockMvc.perform(post("/api/auth/refresh").cookie(newRefreshCookie))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -132,14 +133,13 @@ class MemberSignupLoginTest {
                 .andExpect(status().isCreated());
     }
 
-    private String loginAndGetRefreshToken(String email, String password) throws Exception {
+    private Cookie loginAndGetRefreshCookie(String email, String password) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginRequest(email, password))))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        JsonNode json = objectMapper.readTree(result.getResponse().getContentAsString());
-        return json.path("data").path("refreshToken").asText();
+        return result.getResponse().getCookie("refreshToken");
     }
 }

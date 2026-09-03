@@ -9,6 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -39,6 +40,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e, HttpServletRequest request) {
         String message = "%s: 잘못된 형식의 값입니다.".formatted(e.getName());
         return build(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", message, request);
+    }
+
+    @ExceptionHandler(MissingRequestCookieException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingRefreshTokenCookie(MissingRequestCookieException e, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, "AUTH_REFRESH_TOKEN_MISSING", "리프레시 토큰이 없습니다. 다시 로그인해주세요.", request);
     }
 
     @ExceptionHandler(Exception.class)
