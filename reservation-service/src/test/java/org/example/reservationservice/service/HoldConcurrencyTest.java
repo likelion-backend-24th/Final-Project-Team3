@@ -1,5 +1,6 @@
 package org.example.reservationservice.service;
 
+import org.example.reservationservice.reservation.client.ConferenceServiceClient;
 import org.example.reservationservice.reservation.entity.ReservationStatus;
 import org.example.reservationservice.reservation.entity.SessionCapacityLock;
 import org.example.reservationservice.reservation.repository.ReservationRepository;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 import java.util.UUID;
@@ -18,6 +20,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 
 @SpringBootTest
 class HoldConcurrencyTest {
@@ -31,6 +35,9 @@ class HoldConcurrencyTest {
     @Autowired
     private SessionCapacityLockRepository sessionCapacityLockRepository;
 
+    @MockitoBean
+    private ConferenceServiceClient conferenceServiceClient;
+
     @AfterEach
     void tearDown() {
         reservationRepository.deleteAll();
@@ -42,7 +49,8 @@ class HoldConcurrencyTest {
         // given
         UUID sessionId = UUID.randomUUID();
         int threadCount = 100;
-        int capacity = 10; // ReservationService.getSessionCapacity()의 고정값과 동일
+        int capacity = 10;
+        given(conferenceServiceClient.getSessionCapacity(any())).willReturn(capacity);
 
         // 세션 락 Row를 미리 만들어서 경쟁 상태 제거
 //        sessionCapacityLockRepository.save(new SessionCapacityLock(sessionId));
