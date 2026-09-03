@@ -4,6 +4,7 @@ import com.example.conferenceservice.common.TraceIdProvider;
 import com.example.conferenceservice.common.dto.ApiResponse;
 import com.example.conferenceservice.common.dto.Meta;
 import com.example.conferenceservice.common.dto.PageMeta;
+import com.example.conferenceservice.conference.dto.ConferenceCapacityResponseDto;
 import com.example.conferenceservice.conference.dto.ConferenceDetailResponseDto;
 import com.example.conferenceservice.conference.dto.ConferenceResponseDto;
 import com.example.conferenceservice.conference.service.ConferenceService;
@@ -38,5 +39,11 @@ public class ConferenceController {
     public ApiResponse<ConferenceDetailResponseDto> getConference(@PathVariable UUID id, HttpServletRequest request) {
         ConferenceDetailResponseDto conference = conferenceService.getConference(id);
         return ApiResponse.success("컨퍼런스 상세 조회 성공", conference, traceIdProvider.resolve(request));
+    }
+
+    @GetMapping("/{id}/capacity")
+    public ApiResponse<ConferenceCapacityResponseDto> getCapacity(@PathVariable UUID id, HttpServletRequest request) {
+        ConferenceCapacityResponseDto capacity = conferenceService.getCapacity(id);
+        return ApiResponse.success("세션 정원 조회 성공", capacity, traceIdProvider.resolve(request));
     }
 }

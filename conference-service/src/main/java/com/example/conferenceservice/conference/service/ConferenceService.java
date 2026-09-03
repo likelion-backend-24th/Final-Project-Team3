@@ -1,5 +1,6 @@
 package com.example.conferenceservice.conference.service;
 
+import com.example.conferenceservice.conference.dto.ConferenceCapacityResponseDto;
 import com.example.conferenceservice.conference.dto.ConferenceDetailResponseDto;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
@@ -30,10 +31,20 @@ public class ConferenceService {
 
     @Transactional(readOnly = true)
     public ConferenceDetailResponseDto getConference(UUID id) {
-        Conference conference = conferenceRepository.findByIdAndStatus(id, ConferenceStatus.APPROVED)
-                .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
-
+        Conference conference = findApprovedConference(id);
         List<Session> sessions = sessionRepository.findByConferenceId(id);
         return ConferenceDetailResponseDto.from(conference, sessions);
+    }
+
+    @Transactional(readOnly = true)
+    public ConferenceCapacityResponseDto getCapacity(UUID id) {
+        findApprovedConference(id);
+        List<Session> sessions = sessionRepository.findByConferenceId(id);
+        return ConferenceCapacityResponseDto.from(id, sessions);
+    }
+
+    private Conference findApprovedConference(UUID id) {
+        return conferenceRepository.findByIdAndStatus(id, ConferenceStatus.APPROVED)
+                .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
     }
 }
