@@ -1,6 +1,6 @@
 package com.example.conferenceservice.conference.service;
 
-import com.example.conferenceservice.conference.dto.ConferenceDetailResponseDto;
+import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
@@ -29,10 +29,10 @@ public class ConferenceService {
     }
 
     @Transactional(readOnly = true)
-    public ConferenceDetailResponseDto getConference(UUID id) {
+    public ConferenceDetailResponse getConference(UUID id) {
         Conference conference = findApprovedConference(id);
         List<Session> sessions = sessionRepository.findByConferenceId(id);
-        return ConferenceDetailResponseDto.from(conference, sessions);
+        return ConferenceDetailResponse.from(conference, sessions);
     }
 
     private Conference findApprovedConference(UUID id) {
