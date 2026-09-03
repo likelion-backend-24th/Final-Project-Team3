@@ -30,10 +30,13 @@ public class ConferenceService {
 
     @Transactional(readOnly = true)
     public ConferenceDetailResponseDto getConference(UUID id) {
-        Conference conference = conferenceRepository.findByIdAndStatus(id, ConferenceStatus.APPROVED)
-                .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
-
+        Conference conference = findApprovedConference(id);
         List<Session> sessions = sessionRepository.findByConferenceId(id);
         return ConferenceDetailResponseDto.from(conference, sessions);
+    }
+
+    private Conference findApprovedConference(UUID id) {
+        return conferenceRepository.findByIdAndStatus(id, ConferenceStatus.APPROVED)
+                .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
     }
 }
