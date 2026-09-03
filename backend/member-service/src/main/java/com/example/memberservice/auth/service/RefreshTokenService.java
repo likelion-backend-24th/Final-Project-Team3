@@ -5,6 +5,7 @@ import com.example.memberservice.auth.exception.AuthErrorCode;
 import com.example.memberservice.auth.repository.RefreshTokenRepository;
 import com.example.memberservice.common.exception.BusinessException;
 import com.github.f4b6a3.uuid.UuidCreator;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final RefreshTokenRevoker refreshTokenRevoker;
 
+    @Getter
     @Value("${jwt.refresh-token-validity-ms}")
     private long validityMs;
 
@@ -56,6 +58,12 @@ public class RefreshTokenService {
         String newRawToken = issue(found.getMemberId());
 
         return new RotationResult(found.getMemberId(), newRawToken);
+    }
+
+    @Transactional
+    public void revoke(String rawToken) {
+        refreshTokenRepository.findByTokenHash(sha256(rawToken))
+                .ifPresent(RefreshToken::revoke);
     }
 
     private String generateRawToken() {

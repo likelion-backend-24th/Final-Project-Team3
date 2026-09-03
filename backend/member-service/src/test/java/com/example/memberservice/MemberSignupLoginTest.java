@@ -10,7 +10,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.hamcrest.Matchers.not;
@@ -124,6 +123,43 @@ class MemberSignupLoginTest {
         // 방금 정상 발급받은 newRefreshCookie까지 같이 무효화됐는지 확인
         mockMvc.perform(post("/api/auth/refresh").cookie(newRefreshCookie))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void 로그아웃하면_리프레시_쿠키가_삭제되고_이후_해당_토큰으로_재발급할_수_없다() throws Exception {
+        signup("logout@example.com", "password1234", "로그아웃");
+        Cookie refreshCookie = loginAndGetRefreshCookie("logout@example.com", "password1234");
+
+        mockMvc.perform(post("/api/auth/logout").cookie(refreshCookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(cookie().value("refreshToken", ""))
+                .andExpect(cookie().maxAge("refreshToken", 0));
+
+        // 로그아웃으로 폐기된 토큰이므로 재사용 탐지 로직에 걸려 전체 세션이 무효화된다
+        mockMvc.perform(post("/api/auth/refresh").cookie(refreshCookie))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("AUTH_REFRESH_TOKEN_REUSED"));
+    }
+
+    @Test
+    void 리프레시_쿠키_없이_로그아웃해도_200으로_응답한다() throws Exception {
+        mockMvc.perform(post("/api/auth/logout"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void 이미_로그아웃한_토큰으로_다시_로그아웃해도_에러없이_처리된다() throws Exception {
+        signup("relogout@example.com", "password1234", "재로그아웃");
+        Cookie refreshCookie = loginAndGetRefreshCookie("relogout@example.com", "password1234");
+
+        mockMvc.perform(post("/api/auth/logout").cookie(refreshCookie))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/logout").cookie(refreshCookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
     private void signup(String email, String password, String name) throws Exception {

@@ -1,5 +1,6 @@
 package com.example.memberservice.common.exception;
 
+import com.example.memberservice.auth.exception.AuthErrorCode;
 import com.example.memberservice.common.TraceIdProvider;
 import com.example.memberservice.common.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -44,7 +45,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MissingRequestCookieException.class)
     public ResponseEntity<ApiResponse<Void>> handleMissingRefreshTokenCookie(MissingRequestCookieException e, HttpServletRequest request) {
-        return build(HttpStatus.UNAUTHORIZED, "AUTH_REFRESH_TOKEN_MISSING", "리프레시 토큰이 없습니다. 다시 로그인해주세요.", request);
+        AuthErrorCode ec = AuthErrorCode.REFRESH_TOKEN_MISSING;
+        return build(ec.getHttpStatus(), ec.getCode(), ec.getMessage(), request);
     }
 
     @ExceptionHandler(Exception.class)

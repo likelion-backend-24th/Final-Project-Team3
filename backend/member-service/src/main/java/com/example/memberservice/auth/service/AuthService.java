@@ -47,6 +47,15 @@ public class AuthService {
         return new AuthTokens(body, result.newRefreshToken());
     }
 
+    @Transactional
+    public void logout(String rawRefreshToken) {
+        refreshTokenService.revoke(rawRefreshToken);
+    }
+
+    public long getRefreshTokenValidityMs() {
+        return refreshTokenService.getValidityMs();
+    }
+
     private AuthTokens issueTokens(Member member) {
         String accessToken = jwtTokenProvider.generateAccessToken(member);
         String refreshToken = refreshTokenService.issue(member.getId());

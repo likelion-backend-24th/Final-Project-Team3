@@ -2,9 +2,12 @@ package com.example.memberservice.auth.controller;
 
 import com.example.memberservice.auth.dto.LoginRequest;
 import com.example.memberservice.auth.dto.LoginResponse;
+import com.example.memberservice.auth.exception.AuthErrorCode;
+import com.example.memberservice.auth.security.CookieProvider;
 import com.example.memberservice.auth.service.AuthService;
 import com.example.memberservice.common.TraceIdProvider;
 import com.example.memberservice.common.dto.ApiResponse;
+import com.example.memberservice.common.exception.BusinessException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -27,9 +32,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final TraceIdProvider traceIdProvider;
-
-    @Value("${jwt.refresh-token-validity-ms}")
-    private long refreshTokenValidityMs;
+    private final CookieProvider cookieProvider;
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(
@@ -49,6 +52,10 @@ public class AuthController {
             @CookieValue(REFRESH_TOKEN_COOKIE) String refreshToken,
             HttpServletRequest httpRequest
     ) {
+        if (refreshToken.isBlank()) {
+            throw new BusinessException(AuthErrorCode.REFRESH_TOKEN_MISSING);
+        }
+
         AuthService.AuthTokens tokens = authService.reissue(refreshToken);
         String traceId = traceIdProvider.resolve(httpRequest);
 
@@ -57,14 +64,23 @@ public class AuthController {
                 .body(ApiResponse.success("토큰이 재발급되었습니다.", tokens.body(), traceId));
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @CookieValue(value = REFRESH_TOKEN_COOKIE, required = false) String refreshToken,
+            HttpServletRequest httpRequest
+    ) {
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            authService.logout(refreshToken);
+        }
+        String traceId = traceIdProvider.resolve(httpRequest);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookieProvider.clearCookie(REFRESH_TOKEN_COOKIE).toString())
+                .body(ApiResponse.success("로그아웃되었습니다.", null, traceId));
+    }
+
     private ResponseCookie refreshTokenCookie(String refreshToken) {
-        return ResponseCookie.from(REFRESH_TOKEN_COOKIE, refreshToken)
-                .httpOnly(true)
-                .secure(true)
-                // 프론트가 다른 오리진(포트)에서 fetch로 호출하는 걸 가정 — Lax/Strict면 크로스 오리진 요청에 쿠키가 안 실림
-                .sameSite("None")
-                .path("/api/auth")
-                .maxAge(refreshTokenValidityMs / 1000)
-                .build();
+        Duration maxAge = Duration.ofMillis(authService.getRefreshTokenValidityMs());
+        return cookieProvider.createCookie(REFRESH_TOKEN_COOKIE, refreshToken, maxAge);
     }
 }

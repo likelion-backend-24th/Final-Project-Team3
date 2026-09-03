@@ -16,3 +16,7 @@ jwt:
   secret: test-only-secret-key-for-member-service-please-rotate-1234
   access-token-validity-ms: 1800000
   refresh-token-validity-ms: 1209600000
+
+cookie:
+  secure: false
+  same-site: None
