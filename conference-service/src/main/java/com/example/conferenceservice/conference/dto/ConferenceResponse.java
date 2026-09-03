@@ -5,7 +5,7 @@ import com.example.conferenceservice.conference.entity.ConferenceStatus;
 
 import java.util.UUID;
 
-public record ConferenceResponseDto (
+public record ConferenceResponse(
         UUID id,
         UUID organizerId,
         String title,
@@ -13,8 +13,8 @@ public record ConferenceResponseDto (
         int capacity
 )
 {
-    public static ConferenceResponseDto from(Conference conference) {
-        return new ConferenceResponseDto(
+    public static ConferenceResponse from(Conference conference) {
+        return new ConferenceResponse(
                 conference.getId(),
                 conference.getOrganizerId(),
                 conference.getTitle(),
