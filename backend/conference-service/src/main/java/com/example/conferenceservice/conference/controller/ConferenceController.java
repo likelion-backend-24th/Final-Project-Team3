@@ -5,6 +5,7 @@ import com.example.conferenceservice.common.dto.ApiResponse;
 import com.example.conferenceservice.common.dto.Meta;
 import com.example.conferenceservice.common.dto.PageMeta;
 import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
+import com.example.conferenceservice.conference.dto.ConferenceRequest;
 import com.example.conferenceservice.conference.dto.ConferenceResponse;
 import com.example.conferenceservice.conference.service.ConferenceService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,10 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -39,5 +37,12 @@ public class ConferenceController {
     public ResponseEntity<ApiResponse<ConferenceDetailResponse>> getConference(@PathVariable UUID id, HttpServletRequest request) {
         ConferenceDetailResponse conference = conferenceService.getConference(id);
         return ResponseEntity.ok(ApiResponse.success("컨퍼런스 상세 조회 성공", conference, traceIdProvider.resolve(request)));
+    }
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<ConferenceDetailResponse>> createConference(
+            @RequestBody ConferenceRequest request
+            ){
+        return null;
     }
 }
