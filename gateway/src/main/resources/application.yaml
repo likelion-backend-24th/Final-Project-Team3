@@ -5,5 +5,9 @@ spring:
     name: gateway
 
 services:
+  member-service:
+    url: http://localhost:8081
   conference-service:
     url: http://localhost:8082
+  reservation-service:
+    url: http://localhost:8083
