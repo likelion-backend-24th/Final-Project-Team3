@@ -4,12 +4,12 @@ import com.example.conferenceservice.session.entity.Session;
 
 import java.util.UUID;
 
-public record SessionCapacityResponseDto(
+public record SessionCapacityResponse(
         UUID sessionId,
         int capacity
 ) {
-    public static SessionCapacityResponseDto from(Session session) {
-        return new SessionCapacityResponseDto(
+    public static SessionCapacityResponse from(Session session) {
+        return new SessionCapacityResponse(
                 session.getId(),
                 session.getCapacity()
         );

@@ -3,7 +3,7 @@ package com.example.conferenceservice.session.service;
 import com.example.conferenceservice.common.exception.BusinessException;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
-import com.example.conferenceservice.session.dto.SessionCapacityResponseDto;
+import com.example.conferenceservice.session.dto.SessionCapacityResponse;
 import com.example.conferenceservice.session.entity.Session;
 import com.example.conferenceservice.session.exception.SessionErrorCode;
 import com.example.conferenceservice.session.repository.SessionRepository;
@@ -52,7 +52,7 @@ class SessionCapacityTest {
         given(sessionRepository.findByIdAndConference_Status(sessionId, ConferenceStatus.APPROVED))
                 .willReturn(Optional.of(session));
 
-        SessionCapacityResponseDto result = sessionService.getCapacity(sessionId);
+        SessionCapacityResponse result = sessionService.getCapacity(sessionId);
 
         assertThat(result.sessionId()).isEqualTo(sessionId);
         assertThat(result.capacity()).isEqualTo(30);
