@@ -1,6 +1,9 @@
 package com.example.conferenceservice.conference.service;
 
+import com.example.conferenceservice.auth.CustomUserDetails;
 import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
+import com.example.conferenceservice.conference.dto.ConferenceRequest;
+import com.example.conferenceservice.conference.dto.ConferenceResponse;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
@@ -22,6 +25,17 @@ import java.util.UUID;
 public class ConferenceService {
     private final ConferenceRepository conferenceRepository;
     private final SessionRepository sessionRepository;
+
+    @Transactional
+    public ConferenceResponse applyConference(CustomUserDetails currentUser, ConferenceRequest request) {
+        Conference conference = Conference.builder()
+                .organizerId(currentUser.getMemberId())
+                .title(request.title())
+                .capacity(request.capacity())
+                .status(ConferenceStatus.PENDING)
+                .build();
+        return ConferenceResponse.from(conferenceRepository.save(conference));
+    }
 
     @Transactional(readOnly = true)
     public Page<Conference> getConferences(Pageable pageable) {

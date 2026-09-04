@@ -1,3 +1,6 @@
+jwt:
+  secret: c426863e501f075ce718b4a9e2c5fb0c319f4bfd4f2bc4129992a0bf102b7db8
+
 spring:
   datasource:
     url: jdbc:h2:mem:conference_service;MODE=MySQL
