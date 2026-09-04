@@ -1,5 +1,6 @@
 package com.example.reservationservice.reservation.service;
 
+import com.example.reservationservice.reservation.entity.ReservationStatus;
 import lombok.RequiredArgsConstructor;
 import com.example.reservationservice.common.exception.BusinessException;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
@@ -16,6 +17,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -30,12 +32,18 @@ public class ReservationService {
     @Transactional
     public ReservationResult createHoldOrQueue(UUID sessionId, UUID memberId, int headcount) {
 
+        // 중복 신청 방지: 이미 HOLD 또는 QUEUED 상태로 신청한 이력이 있는지 확인
+        boolean alreadyReserved = reservationRepository.existsBySessionIdAndMemberIdAndStatusIn(
+                sessionId, memberId, List.of(ReservationStatus.HOLD, ReservationStatus.QUEUED));
+
+        if (alreadyReserved) {
+            throw new BusinessException(ReservationErrorCode.DUPLICATE_RESERVATION);
+        }
+
         int capacity = getSessionCapacity(sessionId);
 
-        // UPSERT로 Row 존재를 원자적으로 보장 (예외 발생 소지 자체가 없음)
         sessionCapacityLockRepository.ensureExists(sessionId);
 
-        // 조건부 UPDATE로 정원 체크와 증가를 원자적으로 처리
         int updatedRows = sessionCapacityLockRepository.tryIncrease(sessionId, headcount, capacity);
 
         if (updatedRows == 1) {
@@ -57,7 +65,6 @@ public class ReservationService {
         queuedReservation.markAsQueued();
         reservationRepository.save(queuedReservation);
 
-        // 재시도 로직이 있는 안전한 메서드로 대기열 등록
         WaitingQueue waitingQueue = registerToQueueWithRetry(sessionId, queuedReservation.getId(), memberId);
 
         return ReservationResult.queued(queuedReservation.getId(), waitingQueue.getPosition());
