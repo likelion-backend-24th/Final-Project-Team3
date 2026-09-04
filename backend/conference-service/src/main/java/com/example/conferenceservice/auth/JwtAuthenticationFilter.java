@@ -19,7 +19,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private static final String BEARER_PREFIX = "Bearer ";
+    private static final String BEARER_SCHEME = "Bearer";
 
     private final JwtTokenValidator jwtTokenValidator;
 
@@ -27,13 +27,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String token = extractToken(header);
 
-        if (header != null && header.startsWith(BEARER_PREFIX)) {
-            String token = header.substring(BEARER_PREFIX.length());
+        if (token != null) {
             authenticate(token);
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String extractToken(String header) {
+        if (header == null) {
+            return null;
+        }
+
+        int spaceIndex = header.indexOf(' ');
+        if (spaceIndex <= 0 || !BEARER_SCHEME.equalsIgnoreCase(header.substring(0, spaceIndex))) {
+            return null;
+        }
+
+        return header.substring(spaceIndex + 1).trim();
     }
 
     private void authenticate(String token) {
