@@ -4,6 +4,7 @@ import com.example.conferenceservice.auth.MemberRole;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
+import com.jayway.jsonpath.JsonPath;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.AfterEach;
@@ -94,7 +95,7 @@ class ConferenceApplicationAcceptanceTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
 
-        UUID conferenceId = extractId(response);
+        UUID conferenceId = UUID.fromString(JsonPath.read(response, "$.data.id"));
 
         mockMvc.perform(get("/api/conferences"))
                 .andExpect(status().isOk())
@@ -103,13 +104,6 @@ class ConferenceApplicationAcceptanceTest {
         mockMvc.perform(get("/api/conferences/{id}", conferenceId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("CONFERENCE_NOT_FOUND"));
-    }
-
-    private UUID extractId(String responseBody) {
-        String marker = "\"id\":\"";
-        int start = responseBody.indexOf(marker) + marker.length();
-        int end = responseBody.indexOf('"', start);
-        return UUID.fromString(responseBody.substring(start, end));
     }
 
     private String organizerToken() {
