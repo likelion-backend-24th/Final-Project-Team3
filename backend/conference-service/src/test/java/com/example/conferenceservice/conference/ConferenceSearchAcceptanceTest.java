@@ -10,6 +10,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -80,9 +81,13 @@ class ConferenceSearchAcceptanceTest {
     private Conference conference(ConferenceStatus status, String title) {
         return Conference.builder()
                 .organizerId(UUID.randomUUID())
+                .organizerName("주최자")
                 .title(title)
                 .status(status)
                 .capacity(100)
+                .startAt(LocalDateTime.now().plusDays(1))
+                .endAt(LocalDateTime.now().plusDays(2))
+                .location("서울")
                 .build();
     }
 }

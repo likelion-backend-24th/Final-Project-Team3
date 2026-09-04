@@ -6,6 +6,7 @@ import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
+import com.example.conferenceservice.conference.repository.ConferenceTagRepository;
 import com.example.conferenceservice.session.entity.Session;
 import com.example.conferenceservice.session.repository.SessionRepository;
 import org.junit.jupiter.api.Test;
@@ -35,19 +36,22 @@ class ConferenceVisibilityTest {
     private ConferenceRepository conferenceRepository;
 
     @Mock
+    private ConferenceTagRepository conferenceTagRepository;
+
+    @Mock
     private SessionRepository sessionRepository;
 
     private ConferenceService conferenceService;
 
     @org.junit.jupiter.api.BeforeEach
     void setUp() {
-        conferenceService = new ConferenceService(conferenceRepository, sessionRepository);
+        conferenceService = new ConferenceService(conferenceRepository, conferenceTagRepository, sessionRepository);
     }
 
     @Test
     void listConferences_onlyQueriesApprovedConferences() {
         Conference approved = Conference.builder()
-                .id(UUID.randomUUID()).organizerId(UUID.randomUUID()).title("승인된 컨퍼런스")
+                .id(UUID.randomUUID()).organizerId(UUID.randomUUID()).organizerName("주최자").title("승인된 컨퍼런스")
                 .status(ConferenceStatus.APPROVED).capacity(100)
                 .build();
         Pageable pageable = PageRequest.of(0, 10);
@@ -65,7 +69,7 @@ class ConferenceVisibilityTest {
     void getConference_whenApproved_returnsDetailWithSessions() {
         UUID conferenceId = UUID.randomUUID();
         Conference approved = Conference.builder()
-                .id(conferenceId).organizerId(UUID.randomUUID()).title("승인된 컨퍼런스")
+                .id(conferenceId).organizerId(UUID.randomUUID()).organizerName("주최자").title("승인된 컨퍼런스")
                 .status(ConferenceStatus.APPROVED).capacity(100)
                 .build();
         Session session = Session.builder()
@@ -74,6 +78,7 @@ class ConferenceVisibilityTest {
         given(conferenceRepository.findByIdAndStatus(conferenceId, ConferenceStatus.APPROVED))
                 .willReturn(Optional.of(approved));
         given(sessionRepository.findByConferenceId(conferenceId)).willReturn(List.of(session));
+        given(conferenceTagRepository.findByConferenceId(conferenceId)).willReturn(List.of());
 
         ConferenceDetailResponse result = conferenceService.getConference(conferenceId);
 
