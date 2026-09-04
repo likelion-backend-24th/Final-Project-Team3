@@ -6,7 +6,7 @@
 
 | 문서 | Notion 원본 URL | 담당자 | 최근 Git Snapshot(보존본) |
 |---|---|---|---|
-| 요구사항 | [https://www.notion.so/3cd73873401a8075b571cfd74f65236d?source=copy_link] | 김지선, 차시환, 전기혁, 정동욱 | 없음 — Sprint Review 뒤 `docs/요구사항.md` 생성 |
+| 요구사항 | [https://www.notion.so/3cd73873401a8075b571cfd74f65236d?source=copy_link] | 김지선, 차시환, 전기혁, 정동욱 | [`docs/요구사항.md`](./요구사항.md) |
 | 공통 완료 기준 | [https://www.notion.so/Definition_of_Done-3cd73873401a800999dcea3ad9079d9d?source=copy_link] | 김지선, 차시환, 전기혁, 정동욱 | 없음 — Sprint Review 뒤 `docs/Definition_of_Done.md` 생성 |
 | 화면 설계 | [https://www.notion.so/3cd73873401a80e7ad4ff56e62a83a8b?source=copy_link] | 김지선, 차시환, 전기혁, 정동욱 | 없음 — Sprint Review 뒤 `docs/화면설계.md` 생성 |
 | 서비스 경계 | [https://www.notion.so/3cd73873401a805da932d60b57917b75?source=copy_link] | 김지선, 차시환, 전기혁, 정동욱 | 없음 — Sprint Review 뒤 `docs/서비스경계.md` 생성 |
