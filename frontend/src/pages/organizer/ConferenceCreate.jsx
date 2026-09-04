@@ -6,16 +6,22 @@ import Button from '../../components/Button'
 import { createConference } from '../../api/conferences'
 import { ApiError } from '../../api/client'
 
-// 시안(주최자 - 컨퍼런스 등록)엔 있지만 Conference 엔티티엔 title/capacity뿐이라 저장은 안 되는 항목들 (배너 이미지는 제외 요청으로 뺌).
-// 화면은 시안대로 맞추되, 실제 등록 API(POST /api/conferences)엔 title/capacity만 보낸다.
-// 백엔드에 필드가 생기면 submit 쪽에 같이 실어 보내면 된다.
+// PR #57/#65로 conference-service에 organizerName/startAt/endAt/location/description/tags가
+// 전부 실제로 저장되게 됐다 (예전엔 title/capacity만 보냈음). 배너 이미지는 시안에 있었지만 제외 요청으로 안 만듦.
 const CATEGORY_TAGS = ['Software', 'AI', 'ML', 'Cloud', 'Security', 'Frontend', 'Backend', 'DevOps', 'Mobile', 'Data', 'Career', 'Startup']
+
+// datetime-local 인풋 값("2027-03-15T09:00")엔 초가 없어서 백엔드 LocalDateTime 파싱용으로 붙여준다.
+function toLocalDateTime(value) {
+  return value ? `${value}:00` : null
+}
 
 export default function ConferenceCreate() {
   const navigate = useNavigate()
+  const [organizerName, setOrganizerName] = useState('')
   const [title, setTitle] = useState('')
   const [capacity, setCapacity] = useState('')
-  const [dateRange, setDateRange] = useState('')
+  const [startAt, setStartAt] = useState('')
+  const [endAt, setEndAt] = useState('')
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
   const [tags, setTags] = useState([])
@@ -29,10 +35,24 @@ export default function ConferenceCreate() {
   const submit = async (e) => {
     e.preventDefault()
     setError('')
+
+    if (startAt && endAt && new Date(endAt) <= new Date(startAt)) {
+      setError('종료 일시는 시작 일시보다 늦어야 합니다.')
+      return
+    }
+
     setLoading(true)
     try {
-      // 날짜/장소/소개/배너/태그는 백엔드에 저장할 곳이 없어서 여기서 보내지 않는다.
-      await createConference({ title, capacity: Number(capacity) })
+      await createConference({
+        organizerName,
+        title,
+        capacity: Number(capacity),
+        startAt: toLocalDateTime(startAt),
+        endAt: toLocalDateTime(endAt),
+        location,
+        description: description || null,
+        tags,
+      })
       navigate('/organizer', { state: { justCreated: true } })
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '등록 신청에 실패했습니다.')
@@ -63,12 +83,38 @@ export default function ConferenceCreate() {
               required
             />
 
+            <TextField
+              label="주최기관명"
+              placeholder="예: 한국 개발자 협회"
+              value={organizerName}
+              onChange={(e) => setOrganizerName(e.target.value)}
+              required
+            />
+
             <div className="grid grid-cols-2 gap-4">
               <TextField
-                label="날짜 / 기간"
-                placeholder="예: 2027-03-15 ~ 2027-03-17"
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value)}
+                label="시작 일시"
+                type="datetime-local"
+                value={startAt}
+                onChange={(e) => setStartAt(e.target.value)}
+                required
+              />
+              <TextField
+                label="종료 일시"
+                type="datetime-local"
+                value={endAt}
+                onChange={(e) => setEndAt(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                label="개최 장소"
+                placeholder="예: COEX 그랜드볼룸, 서울"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                required
               />
               <TextField
                 label="정원"
@@ -80,13 +126,6 @@ export default function ConferenceCreate() {
                 required
               />
             </div>
-
-            <TextField
-              label="개최 장소"
-              placeholder="예: COEX 그랜드볼룸, 서울"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
 
             <label className="block">
               <span className="block mb-2 text-sm text-text">컨퍼런스 소개</span>
@@ -123,7 +162,6 @@ export default function ConferenceCreate() {
           {error && <p className="text-sm text-danger mt-4">{error}</p>}
 
           <div className="flex gap-3 mt-6">
-            {/* Link로 감싸면 취소 쪽 flex item 박스 모델이 미묘하게 달라져서 두 버튼 너비가 안 맞았음 — 버튼 자체를 flex item으로 맞춤 */}
             <Button type="button" variant="secondary" className="flex-1" onClick={() => navigate('/organizer')}>
               취소
             </Button>

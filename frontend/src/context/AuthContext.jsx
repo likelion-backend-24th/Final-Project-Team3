@@ -17,18 +17,9 @@ function claimsFromToken(token) {
   }
 }
 
-// ⚠️ 화면 미리보기 전용 더미 claims — 실제 로그인이 아니다.
-// 주최자 회원가입이 아직 백엔드에 없어서(Task 13-1, #31 미구현) 화면만 확인할 수 있게 만든 임시 우회 장치.
-// 실제 API 호출(예: 대시보드 컨퍼런스 조회)은 이 memberId/organizerId가 실존하지 않아 빈 값/에러로 나올 수 있다.
-const PREVIEW_CLAIMS = {
-  MEMBER: { memberId: 'preview-member', email: 'preview-member@techconf.dev', role: 'MEMBER', organizerId: null },
-  ORGANIZER: { memberId: 'preview-organizer', email: 'preview-organizer@techconf.dev', role: 'ORGANIZER', organizerId: 'preview-organizer' },
-}
-
 export function AuthProvider({ children }) {
   const [claims, setClaims] = useState(null)
   const [status, setStatus] = useState('loading') // loading | authenticated | anonymous
-  const [previewRole, setPreviewRole] = useState(null) // null | 'MEMBER' | 'ORGANIZER' — 미리보기 모드
 
   const applyToken = (token) => {
     setAccessToken(token)
@@ -56,7 +47,6 @@ export function AuthProvider({ children }) {
   }, [clearSession])
 
   const login = async (email, password) => {
-    setPreviewRole(null) // 실제 로그인하면 미리보기 모드는 해제
     const res = await loginApi(email, password)
     applyToken(res.data.accessToken)
     setStatus('authenticated')
@@ -64,7 +54,6 @@ export function AuthProvider({ children }) {
   }
 
   const logout = async () => {
-    setPreviewRole(null)
     try {
       await logoutApi()
     } finally {
@@ -72,16 +61,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // 미리보기 모드일 땐 실제 인증 없이 claims/status를 흉내낸다 (컴포넌트 쪽 코드는 몰라도 됨).
-  const value = {
-    status: previewRole ? 'authenticated' : status,
-    claims: previewRole ? PREVIEW_CLAIMS[previewRole] : claims,
-    login,
-    logout,
-    isAuthenticated: previewRole ? true : status === 'authenticated',
-    previewRole,
-    setPreviewRole,
-  }
+  const value = { status, claims, login, logout, isAuthenticated: status === 'authenticated' }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -1,15 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronDown, Sun } from 'lucide-react'
+import { Sun, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-
-// ⚠️ 미리보기 메뉴 — 주최자 회원가입이 아직 없어서(백엔드 Task 13-1 미구현) 화면만 보게 해주는 임시 스위처.
-// 실제 로그인이 아니라 claims를 흉내내는 것뿐이라, API 응답이 필요한 데이터(대시보드 목록 등)는 비어있거나 에러로 보일 수 있다.
-const PREVIEW_OPTIONS = [
-  { role: null, label: '방문자로 보기' },
-  { role: 'MEMBER', label: '참가자 화면 미리보기' },
-  { role: 'ORGANIZER', label: '주최자 화면 미리보기' },
-]
 
 // 로그인 전엔 '마이페이지'가 없다 (본인 예약 내역이라 방문자에겐 의미 없음).
 function participantNav(isAuthenticated) {
@@ -36,24 +27,12 @@ function isNavActive(item, pathname) {
 }
 
 export default function Header() {
-  const { status, claims, logout, previewRole, setPreviewRole } = useAuth()
+  const { status, claims, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const isOrganizer = claims?.role === 'ORGANIZER'
-  const nav = isOrganizer ? organizerNav : participantNav(status === 'authenticated')
-  const isRealAuth = status === 'authenticated' && !previewRole
-
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef(null)
-
-  useEffect(() => {
-    if (!menuOpen) return
-    const onClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
-    }
-    document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
-  }, [menuOpen])
+  const isAuthenticated = status === 'authenticated'
+  const nav = isOrganizer ? organizerNav : participantNav(isAuthenticated)
 
   const handleLogout = async () => {
     await logout()
@@ -94,51 +73,26 @@ export default function Header() {
           >
             <Sun size={16} />
           </button>
-          {isRealAuth ? (
-            <span className="inline-flex items-center gap-1 text-xs text-text-muted border border-border rounded-full px-3 py-1.5">
-              {roleLabel[claims?.role] ?? '참가자'}
-            </span>
-          ) : (
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setMenuOpen((v) => !v)}
-                className="inline-flex items-center gap-1 text-xs text-text-muted border border-border rounded-full px-3 py-1.5 hover:text-text hover:border-primary/40"
+
+          <span className="inline-flex items-center gap-1 text-xs text-text-muted border border-border rounded-full px-3 py-1.5">
+            {isAuthenticated ? (roleLabel[claims?.role] ?? '참가자') : '방문자'}
+          </span>
+
+          {isAuthenticated ? (
+            <>
+              <span
+                title={claims?.email}
+                className="w-9 h-9 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-semibold"
               >
-                {previewRole ? `${roleLabel[previewRole]} (미리보기)` : '방문자'}
-                <ChevronDown size={12} />
+                {claims?.email?.[0]?.toUpperCase() ?? '?'}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text border border-border rounded-lg px-3 py-2"
+              >
+                <LogOut size={14} /> 로그아웃
               </button>
-              {menuOpen && (
-                <div className="absolute right-0 mt-2 w-52 bg-surface border border-border rounded-lg py-1 shadow-lg z-20">
-                  <p className="px-3 py-1.5 text-[11px] text-text-faint">
-                    ⚠️ 화면 미리보기 — 실제 로그인 아님
-                  </p>
-                  {PREVIEW_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.label}
-                      onClick={() => {
-                        setPreviewRole(opt.role)
-                        setMenuOpen(false)
-                        navigate(opt.role === 'ORGANIZER' ? '/organizer' : opt.role === 'MEMBER' ? '/my' : '/')
-                      }}
-                      className={`w-full text-left px-3 py-2 text-sm ${
-                        previewRole === opt.role ? 'text-text bg-surface2' : 'text-text-muted hover:bg-surface2 hover:text-text'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {isRealAuth ? (
-            <button
-              onClick={handleLogout}
-              title="로그아웃"
-              className="w-9 h-9 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-semibold hover:bg-primary/30"
-            >
-              {claims?.email?.[0]?.toUpperCase() ?? '?'}
-            </button>
+            </>
           ) : (
             <Link to="/login">
               <button className="bg-primary hover:bg-primary-hover text-white text-sm font-medium px-4 py-2 rounded-lg">

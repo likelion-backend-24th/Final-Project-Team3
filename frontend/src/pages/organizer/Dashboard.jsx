@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { listConferences } from '../../api/conferences'
 import { useAuth } from '../../context/AuthContext'
@@ -8,6 +8,7 @@ import Button from '../../components/Button'
 
 export default function Dashboard() {
   const { claims } = useAuth()
+  const location = useLocation()
   const [conferences, setConferences] = useState(null)
   const [error, setError] = useState('')
 
@@ -33,6 +34,12 @@ export default function Dashboard() {
           </Button>
         </Link>
       </div>
+
+      {location.state?.justCreated && (
+        <p className="mb-6 text-sm text-success bg-success/10 rounded-lg px-3 py-2">
+          컨퍼런스 등록 신청이 완료됐어요. 전체관리자 승인 후 아래 목록에 표시됩니다.
+        </p>
+      )}
 
       <div className="grid grid-cols-3 gap-4 mb-10">
         <div className="bg-surface border border-border rounded-xl p-5">

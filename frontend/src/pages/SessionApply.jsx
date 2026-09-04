@@ -43,13 +43,13 @@ export default function SessionApply() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
-      <div className="max-w-xl">
+      <div className="max-w-xl mx-auto">
         <Link to={`/conferences/${conferenceId}`} className="text-sm text-text-muted hover:text-text">
           ‹ 세션 목록
         </Link>
       </div>
 
-      <div className="max-w-xl mt-4">
+      <div className="max-w-xl mx-auto mt-4">
         <h1 className="text-2xl font-semibold text-text mb-1">세션 신청</h1>
         {conferenceTitle && <p className="text-text-muted mb-6">{conferenceTitle}</p>}
 
