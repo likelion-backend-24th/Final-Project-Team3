@@ -132,7 +132,7 @@ public class ReservationService {
         }
 
         // 결제 처리 (지금은 Mock, 실제 PG 연동은 Story 17 이후)
-        reservation.markAsQueued();
+        reservation.markAsConfirmed();
 
         // QR 티켓 발급 (headcount만큼)
         List<QrTicket> tickets = new ArrayList<>();

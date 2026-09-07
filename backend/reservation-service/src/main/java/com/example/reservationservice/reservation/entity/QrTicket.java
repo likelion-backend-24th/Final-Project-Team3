@@ -23,7 +23,7 @@ public class QrTicket {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @Column(name = "reservation_id", nullable = false, columnDefinition = "BINARY(16")
+    @Column(name = "reservation_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID reservationId;
 
     @Column(nullable = false, unique = true, length = 64)

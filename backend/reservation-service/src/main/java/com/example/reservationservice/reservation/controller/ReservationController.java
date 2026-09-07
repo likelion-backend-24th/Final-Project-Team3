@@ -55,7 +55,7 @@ public class ReservationController {
 
     public record CreateHoldRequest(UUID sessionId, UUID memberId, int headcount) {}
 
-    @GetMapping("/{reservationId}/payment")
+    @PostMapping("/{reservationId}/payment")
     public ResponseEntity<ApiResponse<PaymentResult>> processPayment(
             @PathVariable UUID reservationId,
             @RequestBody PaymentRequest request,
