@@ -53,6 +53,22 @@ public class Conference {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
+    public boolean isPending() {
+        return this.status == ConferenceStatus.PENDING;
+    }
+
+    public void approve() {
+        this.status = ConferenceStatus.APPROVED;
+    }
+
+    public void reject(String reason) {
+        this.status = ConferenceStatus.REJECTED;
+        this.rejectionReason = reason;
+    }
+
     @PrePersist
     private void assignId() {
         if (this.id == null) {

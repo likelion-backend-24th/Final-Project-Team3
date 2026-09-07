@@ -64,6 +64,11 @@ public class ConferenceService {
     }
 
     @Transactional(readOnly = true)
+    public Page<Conference> getPendingConferences(Pageable pageable) {
+        return conferenceRepository.findByStatus(ConferenceStatus.PENDING, pageable);
+    }
+
+    @Transactional(readOnly = true)
     public ConferenceDetailResponse getConference(UUID id) {
         Conference conference = findApprovedConference(id);
         List<Session> sessions = sessionRepository.findByConferenceId(id);
