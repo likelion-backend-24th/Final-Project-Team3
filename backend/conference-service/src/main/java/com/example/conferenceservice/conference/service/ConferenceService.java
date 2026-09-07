@@ -4,6 +4,7 @@ import com.example.conferenceservice.auth.CustomUserDetails;
 import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
 import com.example.conferenceservice.conference.dto.ConferenceRequest;
 import com.example.conferenceservice.conference.dto.ConferenceResponse;
+import com.example.conferenceservice.conference.dto.RejectConferenceRequest;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.entity.ConferenceTag;
@@ -68,6 +69,26 @@ public class ConferenceService {
         return conferenceRepository.findByStatus(ConferenceStatus.PENDING, pageable);
     }
 
+    @Transactional
+    public ConferenceResponse approveConference(UUID id) {
+        Conference conference = findConference(id);
+        if (!conference.isPending()) {
+            throw new BusinessException(ConferenceErrorCode.CONFERENCE_ALREADY_DECIDED);
+        }
+        conference.approve();
+        return ConferenceResponse.from(conference);
+    }
+
+    @Transactional
+    public ConferenceResponse rejectConference(UUID id, RejectConferenceRequest request) {
+        Conference conference = findConference(id);
+        if (!conference.isPending()) {
+            throw new BusinessException(ConferenceErrorCode.CONFERENCE_ALREADY_DECIDED);
+        }
+        conference.reject(request.reason());
+        return ConferenceResponse.from(conference);
+    }
+
     @Transactional(readOnly = true)
     public ConferenceDetailResponse getConference(UUID id) {
         Conference conference = findApprovedConference(id);
@@ -98,6 +119,11 @@ public class ConferenceService {
 
     private Conference findApprovedConference(UUID id) {
         return conferenceRepository.findByIdAndStatus(id, ConferenceStatus.APPROVED)
+                .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
+    }
+
+    private Conference findConference(UUID id) {
+        return conferenceRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
     }
 }
