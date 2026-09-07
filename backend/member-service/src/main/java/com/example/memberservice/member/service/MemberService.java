@@ -32,7 +32,7 @@ public class MemberService {
 
         Member member = Member.newMember(email, passwordEncoder.encode(request.password()), request.name());
         try {
-            memberRepository.save(member);
+            memberRepository.saveAndFlush(member);
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL, "이미 가입된 이메일입니다: " + email);
         }
@@ -65,7 +65,7 @@ public class MemberService {
         );
 
         try {
-            memberRepository.save(member);
+            memberRepository.saveAndFlush(member);
         } catch (DataIntegrityViolationException e) {
             if(memberRepository.existsByEmail(email)){
                 throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL);

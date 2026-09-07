@@ -13,6 +13,6 @@ public class BusinessNoValidator {
         if (businessNo == null || businessNo.length() != BUSINESS_NO_LENGTH) {
             return false;
         }
-        return businessNo.chars().allMatch(Character::isDigit);
+        return businessNo.chars().allMatch(c -> c >= '0' && c <= '9');
     }
 }
