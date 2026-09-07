@@ -34,6 +34,12 @@ public class Member {
     @Column(nullable = false, length = 20)
     private Role role;
 
+    @Column(length = 100)
+    private String organizationName;
+
+    @Column(unique = true, length = 20)
+    private String businessNo;
+
     @Column(nullable = false, updatable = false)
     @CreatedDate
     private LocalDateTime createdAt;
@@ -46,11 +52,13 @@ public class Member {
     }
 
     @Builder
-    private Member(String email, String password, String name, Role role) {
+    private Member(String email, String password, String name, Role role, String organizationName, String businessNo) {
         this.email = email;
         this.password = password;
         this.name = name;
         this.role = role;
+        this.organizationName = organizationName;
+        this.businessNo = businessNo;
     }
 
     public static Member newMember(String email, String encodedPassword, String name) {
@@ -59,6 +67,17 @@ public class Member {
                 .password(encodedPassword)
                 .name(name)
                 .role(Role.MEMBER)
+                .build();
+    }
+
+    public static Member newOrganizer(String email, String encodedPassword, String name, String organizationName, String businessNo) {
+        return Member.builder()
+                .email(email)
+                .password(encodedPassword)
+                .name(name)
+                .role(Role.ORGANIZER)
+                .organizationName(organizationName)
+                .businessNo(businessNo)
                 .build();
     }
 }

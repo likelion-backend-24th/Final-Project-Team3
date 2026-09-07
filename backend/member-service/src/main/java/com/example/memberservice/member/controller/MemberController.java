@@ -2,6 +2,8 @@ package com.example.memberservice.member.controller;
 
 import com.example.memberservice.common.TraceIdProvider;
 import com.example.memberservice.common.dto.ApiResponse;
+import com.example.memberservice.member.dto.OrganizerSignupRequest;
+import com.example.memberservice.member.dto.OrganizerSignupResponse;
 import com.example.memberservice.member.dto.SignupRequest;
 import com.example.memberservice.member.dto.SignupResponse;
 import com.example.memberservice.member.service.MemberService;
@@ -33,5 +35,17 @@ public class MemberController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success("회원가입이 완료되었습니다.", response, traceId));
+    }
+
+    @PostMapping("/organizers/signup")
+    public ResponseEntity<ApiResponse<OrganizerSignupResponse>> signupOrganizer(
+            @Valid @RequestBody OrganizerSignupRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        OrganizerSignupResponse response = memberService.signupOrganizer(request);
+        String traceId = traceIdProvider.resolve(httpRequest);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success("주최자 회원가입이 완료되었습니다.", response, traceId));
     }
 }
