@@ -20,4 +20,4 @@ jwt:
   refresh-token-validity-ms: 1209600000     # 14일
 cookie:
   secure: ${COOKIE_SECURE:false}            # 운영 배포 시 COOKIE_SECURE=true 로 오버라이드
-  same-site: ${COOKIE_SAMESITE:None}        # 프론트가 같은 도메인으로 오면 Lax/Strict로 오버라이드
+  same-site: ${COOKIE_SAMESITE:Lax}         # 프론트가 다른 도메인이면 COOKIE_SECURE=true와 함께 None으로 명시적 오버라이드
