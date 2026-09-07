@@ -116,6 +116,47 @@ public class PaymentQrAcceptanceTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    @DisplayName("결제 완료 후 QR 티켓 목록을 조회할 수 있다")
+    void getQrTicketsAfterPayment() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+
+        MvcResult holdResult = mockMvc.perform(post("/api/reservations/hold")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createHoldJson(sessionId, UUID.randomUUID(), 3)))
+                .andReturn();
+
+        String reservationId = JsonPath.read(holdResult.getResponse().getContentAsString(), "$.data.reservationId");
+
+        mockMvc.perform(post("/api/reservations/{id}/payment", reservationId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"paymentMethod": "CARD", "amount": 30000}
+                    """));
+
+        mockMvc.perform(get("/api/reservations/{id}/qr-tickets", reservationId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(3));
+    }
+
+    @Test
+    @DisplayName("결제 미완료 상태에서 QR 조회 시 404를 반환한다")
+    void qrTicketsNotFoundBeforePayment() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+
+        MvcResult holdResult = mockMvc.perform(post("/api/reservations/hold")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createHoldJson(sessionId, UUID.randomUUID(), 1)))
+                .andReturn();
+
+        String reservationId = JsonPath.read(holdResult.getResponse().getContentAsString(), "$.data.reservationId");
+
+        mockMvc.perform(get("/api/reservations/{id}/qr-tickets", reservationId))
+                .andExpect(status().isNotFound());
+    }
+
     private String createHoldJson(UUID sessionId, UUID memberId, int headCount) {
         return """
                 {"sessionId": "%s", "memberId": "%s", "headcount": %d}
