@@ -1,6 +1,9 @@
 package com.example.reservationservice.reservation.service;
 
+import com.example.reservationservice.reservation.dto.PaymentResult;
+import com.example.reservationservice.reservation.entity.QrTicket;
 import com.example.reservationservice.reservation.entity.ReservationStatus;
+import com.example.reservationservice.reservation.repository.QrTicketRepository;
 import lombok.RequiredArgsConstructor;
 import com.example.reservationservice.common.exception.BusinessException;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
@@ -17,6 +20,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +32,7 @@ public class ReservationService {
     private final WaitingQueueRepository waitingQueueRepository;
     private final SessionCapacityLockRepository sessionCapacityLockRepository;
     private final ConferenceServiceClient conferenceServiceClient;
+    private final QrTicketRepository qrTicketRepository;
 
     @Transactional
     public ReservationResult createHoldOrQueue(UUID sessionId, UUID memberId, int headcount) {
@@ -108,5 +113,44 @@ public class ReservationService {
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
 
         return queueEntry.getPosition() == 1;
+    }
+
+    @Transactional
+    public PaymentResult processPayment(UUID reservationId, String paymentMethod, int amount) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+
+        if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
+            throw new BusinessException(ReservationErrorCode.ALREADY_CONFIRMED);
+        }
+
+        if (reservation.getStatus() == ReservationStatus.QUEUED) {
+            boolean reached = isQueuePositionReached(reservationId);
+            if (!reached) {
+                throw new BusinessException(ReservationErrorCode.QUEUE_POSITION_NOT_REACHED);
+            }
+        }
+
+        // 결제 처리 (지금은 Mock, 실제 PG 연동은 Story 17 이후)
+        reservation.markAsQueued();
+
+        // QR 티켓 발급 (headcount만큼)
+        List<QrTicket> tickets = new ArrayList<>();
+        for (int i = 0; i < reservation.getHeadcount(); i++) {
+            QrTicket ticket = QrTicket.builder()
+                    .reservationId(reservationId)
+                    .code(generateQrCode())
+                    .build();
+            qrTicketRepository.save(ticket);
+            tickets.add(ticket);
+        }
+
+        return PaymentResult.confirmed(reservationId, tickets.size());
+    }
+
+
+
+    private String generateQrCode() {
+        return UUID.randomUUID().toString().replace("-", "");
     }
 }

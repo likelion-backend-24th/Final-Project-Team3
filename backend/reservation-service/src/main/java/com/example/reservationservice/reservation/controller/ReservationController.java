@@ -1,5 +1,7 @@
 package com.example.reservationservice.reservation.controller;
 
+import com.example.reservationservice.reservation.dto.PaymentResult;
+import com.example.reservationservice.reservation.entity.QrTicket;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import com.example.reservationservice.common.TraceIdProvider;
@@ -9,7 +11,10 @@ import com.example.reservationservice.reservation.service.ReservationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.annotation.RequestScope;
 
+import javax.swing.plaf.PanelUI;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -49,4 +54,19 @@ public class ReservationController {
     }
 
     public record CreateHoldRequest(UUID sessionId, UUID memberId, int headcount) {}
+
+    @GetMapping("/{reservationId}/payment")
+    public ResponseEntity<ApiResponse<PaymentResult>> processPayment(
+            @PathVariable UUID reservationId,
+            @RequestBody PaymentRequest request,
+            HttpServletRequest httpRequest) {
+        PaymentResult result = reservationService.processPayment(
+                reservationId, request.paymentMethod(), request.amount());
+        return ResponseEntity.ok(
+                ApiResponse.success("결제 완료", result, traceIdProvider.resolve(httpRequest)));
+    }
+
+
+
+    public record PaymentRequest(String paymentMethod, int amount) {}
 }
