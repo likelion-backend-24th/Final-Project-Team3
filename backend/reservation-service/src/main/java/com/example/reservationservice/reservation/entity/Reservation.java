@@ -49,4 +49,8 @@ public class Reservation {
     public void markAsQueued() {
         this.status = ReservationStatus.QUEUED;
     }
+
+    public void markAsConfirmed() {
+        this.status = ReservationStatus.CONFIRMED;
+    }
 }

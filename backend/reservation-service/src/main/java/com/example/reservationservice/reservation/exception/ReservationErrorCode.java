@@ -13,7 +13,9 @@ public enum ReservationErrorCode implements ErrorCode {
     QUEUE_POSITION_NOT_REACHED(HttpStatus.FORBIDDEN, "RESERVATION_QUEUE_POSITION_NOT_REACHED", "대기열 순번이 되지 않아 결제에 진입할 수 없습니다."),
     SESSION_CAPACITY_EXCEEDED(HttpStatus.CONFLICT, "RESERVATION_SESSION_CAPACITY_EXCEEDED", "세션 정원이 초과되었습니다."),
     CONFERENCE_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "CONFERENCE_SERVICE_UNAVAILABLE", "정원 확인 서비스에 일시적으로 연결할 수 없습니다."),
-    DUPLICATE_RESERVATION(HttpStatus.CONFLICT, "RESERVATION_DUPLICATE", "이미 이세션에 신청하셨습니다.");
+    DUPLICATE_RESERVATION(HttpStatus.CONFLICT, "RESERVATION_DUPLICATE", "이미 이세션에 신청하셨습니다."),
+    ALREADY_CONFIRMED(HttpStatus.CONFLICT, "RESERVATION_ALREADY_CONFIRED", "이미 결제 완료 예약입니다."),
+    PAYMENT_NOT_COMPLETED(HttpStatus.NOT_FOUND, "RESERVATION_PAYMENT_NOT_COMPLETED", "결제 완료되지 않아 QR 티켓을 조회할 수 없습니다.");
 
 
     private final HttpStatus httpStatus;
