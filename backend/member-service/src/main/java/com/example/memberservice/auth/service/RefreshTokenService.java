@@ -45,16 +45,17 @@ public class RefreshTokenService {
         RefreshToken found = refreshTokenRepository.findByTokenHash(sha256(rawToken))
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.REFRESH_TOKEN_NOT_FOUND));
 
-        if (found.isRevoked()) {
+        if (found.isExpired(LocalDateTime.now())) {
+            throw new BusinessException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
+        }
+
+        int revokedRows = refreshTokenRepository.revokeIfActive(found.getId());
+        if (revokedRows == 0) {
+            // 이미 폐기된 토큰이 다시 제출됨 -> 재사용(탈취) 의심, 동시 레이스에서 진 경우도 여기로 들어옴
             refreshTokenRevoker.revokeAll(found.getMemberId());
             throw new BusinessException(AuthErrorCode.REFRESH_TOKEN_REUSED);
         }
 
-        if (!found.isUsable(LocalDateTime.now())) {
-            throw new BusinessException(AuthErrorCode.REFRESH_TOKEN_EXPIRED);
-        }
-
-        found.revoke();
         String newRawToken = issue(found.getMemberId());
 
         return new RotationResult(found.getMemberId(), newRawToken);

@@ -65,8 +65,7 @@ public class RefreshToken {
         this.revoked = true;
     }
 
-    // 폐기 여부, 만료 여부 판단
-    public boolean isUsable(LocalDateTime now) {
-        return !revoked && expiresAt.isAfter(now);
+    public boolean isExpired(LocalDateTime now) {
+        return expiresAt.isBefore(now);
     }
 }
