@@ -148,6 +148,17 @@ public class ReservationService {
         return PaymentResult.confirmed(reservationId, tickets.size());
     }
 
+    public List<QrTicket> getQrTickets(UUID reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+
+        if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
+            throw new BusinessException(ReservationErrorCode.PAYMENT_NOT_COMPLETED);
+        }
+
+        return qrTicketRepository.findByReservationId(reservationId);
+    }
+
 
 
     private String generateQrCode() {
