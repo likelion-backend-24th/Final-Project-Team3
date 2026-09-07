@@ -42,7 +42,12 @@ public class RouteConfig {
     @Bean
     public RouterFunction<ServerResponse> conferenceServiceRoute() {
         return route("conference-service")  // 라우트 이름
-                .route(RequestPredicates.path("/api/conferences/**"), http()) // 이 경로로 오는 요청은 그냥 그대로 전달
+                .route(
+                        RequestPredicates.path("/api/conferences/**")
+                                .or(RequestPredicates.path("/api/admin/conferences/**"))
+                                .or(RequestPredicates.path("/api/admin/sessions/**")),
+                        http()
+                ) // 이 경로로 오는 요청은 그냥 그대로 전달
                 .before(uri(conferenceServiceUrl)) // 전달할 대상 서버 주소 지정 (application.yaml의 services.conference-service.url 값)
                 .before(this::addTraceId) // 요청이 실제로 전달되기 전에 X-Trace-Id 헤더를 매번 새로 생성해서 붙임
                 .build();
