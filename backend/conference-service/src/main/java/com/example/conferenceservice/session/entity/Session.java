@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Builder
@@ -30,6 +31,22 @@ public class Session {
     @Column(nullable = false)
     private int capacity;
 
+    // 신규 컬럼 - 기존 row가 있는 테이블에 NOT NULL DEFAULT 없이 추가하면 MySQL strict 모드에서
+    // ddl-auto:update ALTER가 거부되므로 nullable로 두고 애플리케이션(Request 검증)에서 필수값을 보장한다.
+    @Column(name = "start_at")
+    private LocalDateTime startAt;
+
+    @Column(name = "end_at")
+    private LocalDateTime endAt;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private SessionStatus status = SessionStatus.PENDING;
+
+    @Column(name = "reject_reason")
+    private String rejectReason;
+
     @PrePersist
     private void assignId() {
         if (this.id == null) {
@@ -37,5 +54,9 @@ public class Session {
         }
     }
 
-
+    public void updateSchedule(int capacity, LocalDateTime startAt, LocalDateTime endAt) {
+        this.capacity = capacity;
+        this.startAt = startAt;
+        this.endAt = endAt;
+    }
 }
