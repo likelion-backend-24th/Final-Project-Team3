@@ -70,9 +70,10 @@ public class ConferenceController {
     public ResponseEntity<ApiResponse<SessionResponse>> createSession(
             @PathVariable UUID conferenceId,
             @Valid @RequestBody SessionCreateRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
             HttpServletRequest httpRequest
     ) {
-        SessionResponse response = sessionService.createSession(conferenceId, request);
+        SessionResponse response = sessionService.createSession(conferenceId, request, currentUser.getMemberId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("세션 등록 성공", response, traceIdProvider.resolve(httpRequest)));
     }

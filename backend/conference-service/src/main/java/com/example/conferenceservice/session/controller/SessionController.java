@@ -1,5 +1,6 @@
 package com.example.conferenceservice.session.controller;
 
+import com.example.conferenceservice.auth.CustomUserDetails;
 import com.example.conferenceservice.common.TraceIdProvider;
 import com.example.conferenceservice.common.dto.ApiResponse;
 import com.example.conferenceservice.session.dto.SessionCapacityResponse;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,9 +40,10 @@ public class SessionController {
     public ResponseEntity<ApiResponse<SessionResponse>> updateSession(
             @PathVariable UUID sessionId,
             @Valid @RequestBody SessionUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
             HttpServletRequest httpRequest
     ) {
-        SessionResponse response = sessionService.updateSession(sessionId, request);
+        SessionResponse response = sessionService.updateSession(sessionId, request, currentUser.getMemberId());
         return ResponseEntity.ok(ApiResponse.success("세션 정원·일정 수정 성공", response, traceIdProvider.resolve(httpRequest)));
     }
 }
