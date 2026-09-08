@@ -71,13 +71,15 @@ class SessionRegistrationTest {
     }
 
     @Test
-    void 정원이_0이하면_세션_등록이_거부된다() {
+    void 정원이_0이하면_세션_등록이_400으로_거절된다() {
         UUID conferenceId = UUID.randomUUID();
         SessionCreateRequest request = new SessionCreateRequest(
                 "세션 A", 0, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2));
 
         assertThatThrownBy(() -> sessionService.createSession(conferenceId, request))
-                .isInstanceOf(BusinessException.class);
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(SessionErrorCode.INVALID_SESSION_CAPACITY);
     }
 
     @Test
@@ -135,6 +137,21 @@ class SessionRegistrationTest {
         SessionResponse response = sessionService.updateSession(sessionId, request);
 
         assertThat(response.capacity()).isEqualTo(50);
+    }
+
+    @Test
+    void 정원이_0이하면_세션_수정이_400으로_거절된다() {
+        UUID sessionId = UUID.randomUUID();
+        Session existing = Session.builder()
+                .id(sessionId).conference(approvedConference(UUID.randomUUID())).title("세션 A").capacity(10)
+                .build();
+        SessionUpdateRequest request = new SessionUpdateRequest(
+                0, LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(4));
+
+        assertThatThrownBy(() -> sessionService.updateSession(sessionId, request))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(SessionErrorCode.INVALID_SESSION_CAPACITY);
     }
 
     @Test

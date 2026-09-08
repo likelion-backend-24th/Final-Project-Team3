@@ -34,7 +34,7 @@ public class SessionService {
 
     @Transactional
     public SessionResponse createSession(UUID conferenceId, SessionCreateRequest request) {
-        validatePeriod(request.startAt(), request.endAt());
+        validateSchedule(request.capacity(), request.startAt(), request.endAt());
 
         Conference conference = conferenceRepository.findById(conferenceId)
                 .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
@@ -55,7 +55,7 @@ public class SessionService {
 
     @Transactional
     public SessionResponse updateSession(UUID sessionId, SessionUpdateRequest request) {
-        validatePeriod(request.startAt(), request.endAt());
+        validateSchedule(request.capacity(), request.startAt(), request.endAt());
 
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new BusinessException(SessionErrorCode.SESSION_NOT_FOUND));
@@ -66,7 +66,10 @@ public class SessionService {
         return SessionResponse.from(session);
     }
 
-    private void validatePeriod(LocalDateTime startAt, LocalDateTime endAt) {
+    private void validateSchedule(int capacity, LocalDateTime startAt, LocalDateTime endAt) {
+        if (capacity <= 0) {
+            throw new BusinessException(SessionErrorCode.INVALID_SESSION_CAPACITY);
+        }
         if (!endAt.isAfter(startAt)) {
             throw new BusinessException(SessionErrorCode.INVALID_SESSION_PERIOD);
         }
