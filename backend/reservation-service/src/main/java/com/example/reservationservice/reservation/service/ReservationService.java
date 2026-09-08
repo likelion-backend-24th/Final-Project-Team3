@@ -15,6 +15,7 @@ import com.example.reservationservice.reservation.exception.ReservationErrorCode
 import com.example.reservationservice.reservation.repository.ReservationRepository;
 import com.example.reservationservice.reservation.repository.SessionCapacityLockRepository;
 import com.example.reservationservice.reservation.repository.WaitingQueueRepository;
+import org.aspectj.weaver.IClassFileProvider;
 import org.hibernate.query.sql.internal.ParameterRecognizerImpl;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -124,15 +125,26 @@ public class ReservationService {
             throw new BusinessException(ReservationErrorCode.ALREADY_CONFIRMED);
         }
 
-        if (reservation.getStatus() == ReservationStatus.QUEUED) {
+       boolean wasQueued = reservation.getStatus() == ReservationStatus.QUEUED;
+        Integer leftPosition = null;
+
+        if (wasQueued) {
             boolean reached = isQueuePositionReached(reservationId);
             if (!reached) {
                 throw new BusinessException(ReservationErrorCode.QUEUE_POSITION_NOT_REACHED);
             }
+            leftPosition = waitingQueueRepository.findByReservationId(reservationId)
+                    .map(WaitingQueue::getPosition)
+                    .orElse(null);
         }
 
         // 결제 처리 (지금은 Mock, 실제 PG 연동은 Story 17 이후)
         reservation.markAsConfirmed();
+
+        if (wasQueued && leftPosition != null) {
+            waitingQueueRepository.deleteByReservationId(reservationId);
+            waitingQueueRepository.decrementPositionAfter(reservation.getSessionId(), leftPosition);
+        }
 
         // QR 티켓 발급 (headcount만큼)
         List<QrTicket> tickets = new ArrayList<>();

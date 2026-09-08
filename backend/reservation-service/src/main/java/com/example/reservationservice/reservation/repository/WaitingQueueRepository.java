@@ -2,6 +2,7 @@ package com.example.reservationservice.reservation.repository;
 
 import com.example.reservationservice.reservation.entity.WaitingQueue;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -21,4 +22,13 @@ public interface WaitingQueueRepository extends JpaRepository<WaitingQueue, UUID
             "WHERE session_id = :sessionId FOR UPDATE",
             nativeQuery = true)
     int getNextPositionForUpdate(@Param("sessionId") UUID sessionId);
+
+    // 대기열에서 이탈(결제 완료 등)한 예약의 항목 삭제
+    @Modifying
+    void deleteByReservationId(UUID reservationId0);
+
+    @Modifying
+    @Query("UPDATE WaitingQueue w SET w.position = w.position - 1 " +
+           "WHERE w.sessionId = :sessionId AND w.position > :leftPosition")
+    void decrementPositionAfter(@Param("sessionId") UUID sessionId, @Param("leftPosition") int leftPosition);
 }

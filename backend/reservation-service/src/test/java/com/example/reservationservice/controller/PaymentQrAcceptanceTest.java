@@ -157,6 +157,61 @@ public class PaymentQrAcceptanceTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    @DisplayName("대기열 1번이 결제 완료하면, 2번의 순번이 1번으로 당겨져 결제가 가능해진다")
+    void queuePositionAdvancesAfterPayment() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
+
+        // 정원 채움 (HOLD)
+        mockMvc.perform(post("/api/reservations/hold")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createHoldJson(sessionId, UUID.randomUUID(), 1)));
+
+        // 대기열 1번
+        MvcResult firstQueued = mockMvc.perform(post("/api/reservations/hold")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createHoldJson(sessionId, UUID.randomUUID(), 1)))
+                .andReturn();
+        String firstReservationId = JsonPath.read(firstQueued.getResponse().getContentAsString(), "$.data.reservationId");
+
+        // 대기열 2번
+        MvcResult secondQueued = mockMvc.perform(post("/api/reservations/hold")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createHoldJson(sessionId, UUID.randomUUID(), 1)))
+                .andReturn();
+        String secondReservationId = JsonPath.read(secondQueued.getResponse().getContentAsString(), "$.data.reservationId");
+
+        // 2번 순서는 미도달 -> 결제 거부
+        mockMvc.perform(post("/api/reservations/{id}/payment", secondReservationId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"paymentMethod": "CARD", "amount": 10000}
+                        """))
+                .andExpect(status().isForbidden());
+
+        // 1번이 결제 완료 (대기열에서 빠짐)
+        mockMvc.perform(post("/api/reservations/{id}/payment", firstReservationId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"paymentMethod": "CARD", "amount" : 10000}
+                        """))
+                .andExpect(status().isOk());
+
+        // 2번 조회 시 1번으로 당겨져 있어야 함
+        mockMvc.perform(get("/api/reservations/{id}/queue-position", secondReservationId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(1));
+
+        // 2번이었던 사람도  결제 가능해야 함
+        mockMvc.perform(post("/api/reservations/{id}/payment", secondReservationId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"paymentMethod": "CARD", "amount": 10000}
+                        """))
+                .andExpect(status().isOk());
+
+    }
 
     private String createHoldJson(UUID sessionId, UUID memberId, int headCount) {
         return """
