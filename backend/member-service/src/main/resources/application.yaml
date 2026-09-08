@@ -14,6 +14,17 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 jwt:
   secret: ${JWT_SECRET}
   access-token-validity-ms: 1800000         # 30 분
@@ -21,3 +32,6 @@ jwt:
 cookie:
   secure: ${COOKIE_SECURE:false}            # 운영 배포 시 COOKIE_SECURE=true 로 오버라이드
   same-site: ${COOKIE_SAMESITE:Lax}         # 프론트가 다른 도메인이면 COOKIE_SECURE=true와 함께 None으로 명시적 오버라이드
+email:
+  verification-code-validity-ms: 600000     # 10분
+  max-attempts: 5                           # 검증 실패 허용 횟수

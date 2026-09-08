@@ -11,6 +11,17 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  mail:
+    host: localhost
+    port: 3025
+    username: test@example.com
+    password: test-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 jwt:
   secret: test-only-secret-key-for-member-service-please-rotate-1234
@@ -20,3 +31,7 @@ jwt:
 cookie:
   secure: false
   same-site: None
+
+email:
+  verification-code-validity-ms: 600000
+  max-attempts: 5
