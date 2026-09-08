@@ -78,6 +78,15 @@ public class EmailVerificationService {
         verification.markVerified();    // 관리 상태 엔티티라 dirty checking으로 자동 반영, save() 불필요
     }
 
+    public boolean isVerified(String rawEmail) {
+        return emailVerificationRepository.existsByEmailAndVerifiedTrue(normalize(rawEmail));
+    }
+
+    @Transactional
+    public void invalidate(String rawEmail) {
+        emailVerificationRepository.deleteAllByEmail(normalize(rawEmail));
+    }
+
     private String generateCode() {
         return String.format("%06d", RANDOM.nextInt(1_000_000));
     }

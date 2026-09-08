@@ -1,5 +1,6 @@
 package com.example.memberservice.member.service;
 
+import com.example.memberservice.auth.service.EmailVerificationService;
 import com.example.memberservice.common.exception.BusinessException;
 import com.example.memberservice.member.dto.OrganizerSignupRequest;
 import com.example.memberservice.member.dto.OrganizerSignupResponse;
@@ -22,6 +23,7 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final BusinessNoValidator businessNoValidator;
+    private final EmailVerificationService emailVerificationService;
 
     @Transactional
     public SignupResponse signup(SignupRequest request) {
@@ -30,12 +32,18 @@ public class MemberService {
             throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL, "이미 가입된 이메일입니다: " + email);
         }
 
+        if (!emailVerificationService.isVerified(email)) {
+            throw new BusinessException(MemberErrorCode.EMAIL_NOT_VERIFIED);
+        }
+
         Member member = Member.newMember(email, passwordEncoder.encode(request.password()), request.name());
         try {
             memberRepository.saveAndFlush(member);
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL, "이미 가입된 이메일입니다: " + email);
         }
+
+        emailVerificationService.invalidate(email);   // 인증 기록 소진 - 재사용 방지
 
         return new SignupResponse(member.getId(), member.getEmail(), member.getName(), member.getRole().name());
     }

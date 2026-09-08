@@ -1,6 +1,8 @@
 package com.example.memberservice;
 
 import com.example.memberservice.auth.dto.LoginRequest;
+import com.example.memberservice.auth.entity.EmailVerification;
+import com.example.memberservice.auth.repository.EmailVerificationRepository;
 import com.example.memberservice.member.dto.SignupRequest;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
@@ -11,6 +13,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import tools.jackson.databind.ObjectMapper;
+
+import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -29,8 +33,12 @@ class MemberSignupLoginTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private EmailVerificationRepository emailVerificationRepository;
+
     @Test
     void 회원가입에_성공하면_참가자_권한으로_생성된다() throws Exception {
+        markEmailVerified("jisun@example.com");
         SignupRequest request = new SignupRequest("jisun@example.com", "password1234", "지선");
 
         mockMvc.perform(post("/api/members/signup")
@@ -44,6 +52,7 @@ class MemberSignupLoginTest {
 
     @Test
     void 이미_가입된_이메일로_재가입하면_409로_거절된다() throws Exception {
+        markEmailVerified("dup@example.com");
         SignupRequest request = new SignupRequest("dup@example.com", "password1234", "중복");
         String body = objectMapper.writeValueAsString(request);
 
@@ -162,7 +171,14 @@ class MemberSignupLoginTest {
                 .andExpect(jsonPath("$.success").value(true));
     }
 
+    private void markEmailVerified(String email) {
+        EmailVerification verification = EmailVerification.issue(email, "test-hash", LocalDateTime.now().plusMinutes(10));
+        verification.markVerified();
+        emailVerificationRepository.save(verification);
+    }
+
     private void signup(String email, String password, String name) throws Exception {
+        markEmailVerified(email);
         mockMvc.perform(post("/api/members/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new SignupRequest(email, password, name))))
