@@ -1,6 +1,7 @@
 package com.example.conferenceservice.session.service;
 
 import com.example.conferenceservice.common.exception.BusinessException;
+import com.example.conferenceservice.common.security.OwnerScopeGuard;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
@@ -33,11 +34,12 @@ public class SessionService {
     }
 
     @Transactional
-    public SessionResponse createSession(UUID conferenceId, SessionCreateRequest request) {
+    public SessionResponse createSession(UUID conferenceId, SessionCreateRequest request, UUID requesterId) {
         validateSchedule(request.capacity(), request.startAt(), request.endAt());
 
         Conference conference = conferenceRepository.findById(conferenceId)
                 .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
+        OwnerScopeGuard.verify(requesterId, conference.getOrganizerId(), SessionErrorCode.SESSION_ACCESS_DENIED);
         if (conference.getStatus() != ConferenceStatus.APPROVED) {
             throw new BusinessException(SessionErrorCode.CONFERENCE_NOT_APPROVED);
         }
@@ -54,11 +56,12 @@ public class SessionService {
     }
 
     @Transactional
-    public SessionResponse updateSession(UUID sessionId, SessionUpdateRequest request) {
+    public SessionResponse updateSession(UUID sessionId, SessionUpdateRequest request, UUID requesterId) {
         validateSchedule(request.capacity(), request.startAt(), request.endAt());
 
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new BusinessException(SessionErrorCode.SESSION_NOT_FOUND));
+        OwnerScopeGuard.verify(requesterId, session.getConference().getOrganizerId(), SessionErrorCode.SESSION_ACCESS_DENIED);
         if (session.getConference().getStatus() != ConferenceStatus.APPROVED) {
             throw new BusinessException(SessionErrorCode.CONFERENCE_NOT_APPROVED);
         }

@@ -32,10 +32,13 @@ import static org.mockito.Mockito.verify;
 /**
  * Task 7-1 검증: 주최자가 승인된 컨퍼런스에 세션을 등록·수정한다.
  * 정원·신청 기간 유효성([세션정원-유효성] 규칙)과 컨퍼런스 승인 상태 검증을 다룬다.
- * 소유권(Owner Scope) 검증은 Task 7-2 책임이라 이 Test에서 다루지 않는다.
+ * 소유권(Owner Scope) 검증은 Task 7-2 책임이라 SessionOwnerScopeTest에서 다룬다.
+ * 이 Test의 요청자는 항상 대상 컨퍼런스의 소유자(ORGANIZER_ID)로 고정한다.
  */
 @ExtendWith(MockitoExtension.class)
 class SessionRegistrationTest {
+
+    private static final UUID ORGANIZER_ID = UUID.randomUUID();
 
     @Mock
     private SessionRepository sessionRepository;
@@ -59,7 +62,7 @@ class SessionRegistrationTest {
         given(conferenceRepository.findById(conferenceId)).willReturn(Optional.of(approved));
         given(sessionRepository.save(any(Session.class))).willAnswer(invocation -> invocation.getArgument(0));
 
-        SessionResponse response = sessionService.createSession(conferenceId, request);
+        SessionResponse response = sessionService.createSession(conferenceId, request, ORGANIZER_ID);
 
         assertThat(response.title()).isEqualTo("세션 A");
         assertThat(response.capacity()).isEqualTo(30);
@@ -76,7 +79,7 @@ class SessionRegistrationTest {
         SessionCreateRequest request = new SessionCreateRequest(
                 "세션 A", 0, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2));
 
-        assertThatThrownBy(() -> sessionService.createSession(conferenceId, request))
+        assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(SessionErrorCode.INVALID_SESSION_CAPACITY);
@@ -88,7 +91,7 @@ class SessionRegistrationTest {
         LocalDateTime sameInstant = LocalDateTime.now().plusDays(1);
         SessionCreateRequest request = new SessionCreateRequest("세션 A", 10, sameInstant, sameInstant);
 
-        assertThatThrownBy(() -> sessionService.createSession(conferenceId, request))
+        assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(SessionErrorCode.INVALID_SESSION_PERIOD);
@@ -98,14 +101,14 @@ class SessionRegistrationTest {
     void 승인되지_않은_컨퍼런스에는_세션_등록이_409로_거절된다() {
         UUID conferenceId = UUID.randomUUID();
         Conference pending = Conference.builder()
-                .id(conferenceId).organizerId(UUID.randomUUID()).title("검토 대기 컨퍼런스")
+                .id(conferenceId).organizerId(ORGANIZER_ID).title("검토 대기 컨퍼런스")
                 .status(ConferenceStatus.PENDING).capacity(100)
                 .build();
         SessionCreateRequest request = new SessionCreateRequest(
                 "세션 A", 10, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2));
         given(conferenceRepository.findById(conferenceId)).willReturn(Optional.of(pending));
 
-        assertThatThrownBy(() -> sessionService.createSession(conferenceId, request))
+        assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(SessionErrorCode.CONFERENCE_NOT_APPROVED);
@@ -118,7 +121,7 @@ class SessionRegistrationTest {
                 "세션 A", 10, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2));
         given(conferenceRepository.findById(missingConferenceId)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> sessionService.createSession(missingConferenceId, request))
+        assertThatThrownBy(() -> sessionService.createSession(missingConferenceId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ConferenceErrorCode.CONFERENCE_NOT_FOUND);
@@ -134,7 +137,7 @@ class SessionRegistrationTest {
                 50, LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(4));
         given(sessionRepository.findById(sessionId)).willReturn(Optional.of(existing));
 
-        SessionResponse response = sessionService.updateSession(sessionId, request);
+        SessionResponse response = sessionService.updateSession(sessionId, request, ORGANIZER_ID);
 
         assertThat(response.capacity()).isEqualTo(50);
     }
@@ -148,7 +151,7 @@ class SessionRegistrationTest {
         SessionUpdateRequest request = new SessionUpdateRequest(
                 0, LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(4));
 
-        assertThatThrownBy(() -> sessionService.updateSession(sessionId, request))
+        assertThatThrownBy(() -> sessionService.updateSession(sessionId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(SessionErrorCode.INVALID_SESSION_CAPACITY);
@@ -158,7 +161,7 @@ class SessionRegistrationTest {
     void 승인되지_않은_컨퍼런스의_세션_수정은_409로_거절된다() {
         UUID sessionId = UUID.randomUUID();
         Conference pending = Conference.builder()
-                .id(UUID.randomUUID()).organizerId(UUID.randomUUID()).title("검토 대기 컨퍼런스")
+                .id(UUID.randomUUID()).organizerId(ORGANIZER_ID).title("검토 대기 컨퍼런스")
                 .status(ConferenceStatus.PENDING).capacity(100)
                 .build();
         Session existing = Session.builder()
@@ -168,7 +171,7 @@ class SessionRegistrationTest {
                 50, LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(4));
         given(sessionRepository.findById(sessionId)).willReturn(Optional.of(existing));
 
-        assertThatThrownBy(() -> sessionService.updateSession(sessionId, request))
+        assertThatThrownBy(() -> sessionService.updateSession(sessionId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(SessionErrorCode.CONFERENCE_NOT_APPROVED);
@@ -181,7 +184,7 @@ class SessionRegistrationTest {
                 50, LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(4));
         given(sessionRepository.findById(missingId)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> sessionService.updateSession(missingId, request))
+        assertThatThrownBy(() -> sessionService.updateSession(missingId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(SessionErrorCode.SESSION_NOT_FOUND);
@@ -189,7 +192,7 @@ class SessionRegistrationTest {
 
     private Conference approvedConference(UUID id) {
         return Conference.builder()
-                .id(id).organizerId(UUID.randomUUID()).title("승인된 컨퍼런스")
+                .id(id).organizerId(ORGANIZER_ID).title("승인된 컨퍼런스")
                 .status(ConferenceStatus.APPROVED).capacity(100)
                 .build();
     }
