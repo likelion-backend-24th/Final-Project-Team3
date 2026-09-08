@@ -6,6 +6,7 @@ import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
+import com.example.conferenceservice.session.dto.RejectSessionRequest;
 import com.example.conferenceservice.session.dto.SessionCapacityResponse;
 import com.example.conferenceservice.session.dto.SessionCreateRequest;
 import com.example.conferenceservice.session.dto.SessionResponse;
@@ -84,5 +85,30 @@ public class SessionService {
         if (!endAt.isAfter(startAt)) {
             throw new BusinessException(SessionErrorCode.INVALID_SESSION_PERIOD);
         }
+    }
+
+    @Transactional
+    public SessionResponse approveSession(UUID id) {
+        Session session = findSession(id);
+        if (!session.isPending()) {
+            throw new BusinessException(SessionErrorCode.SESSION_ALREADY_DECIDED);
+        }
+        session.approve();
+        return SessionResponse.from(session);
+    }
+
+    @Transactional
+    public SessionResponse rejectSession(UUID id, RejectSessionRequest request) {
+        Session session = findSession(id);
+        if (!session.isPending()) {
+            throw new BusinessException(SessionErrorCode.SESSION_ALREADY_DECIDED);
+        }
+        session.reject(request.reason());
+        return SessionResponse.from(session);
+    }
+
+    private Session findSession(UUID id) {
+        return sessionRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(SessionErrorCode.SESSION_NOT_FOUND));
     }
 }
