@@ -6,7 +6,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -36,6 +35,9 @@ public class Reservation {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "expires_at", nullable = false)
+    private LocalDateTime expiresAt;
+
     @Builder
     public Reservation(UUID sessionId, UUID memberId, Integer headcount) {
         this.id = UuidCreator.getTimeOrderedEpoch();
@@ -44,6 +46,7 @@ public class Reservation {
         this.headcount = headcount;
         this.status = ReservationStatus.HOLD;
         this.createdAt = LocalDateTime.now();
+        this.expiresAt = LocalDateTime.now().plusMinutes(10);
     }
 
     public void markAsQueued() {
@@ -52,5 +55,9 @@ public class Reservation {
 
     public void markAsConfirmed() {
         this.status = ReservationStatus.CONFIRMED;
+    }
+
+    public void markAsCancelled() {
+        this.status = ReservationStatus.CANCELLED;
     }
 }

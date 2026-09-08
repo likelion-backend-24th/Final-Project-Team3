@@ -26,4 +26,9 @@ public interface SessionCapacityLockRepository extends JpaRepository<SessionCapa
     int tryIncrease(@Param("sessionId") UUID sessionId,
                     @Param("headcount") int headcount,
                     @Param("capacity") int capacity);
+
+    @Modifying
+    @Query("UPDATE SessionCapacityLock  s SET s.currentActive = s.currentActive - :headcount " +
+           "WHERE s.sessionId = :sessionId")
+    void decrease(@Param("sessionId") UUID sessionId, @Param("headcount") int headcount);
 }
