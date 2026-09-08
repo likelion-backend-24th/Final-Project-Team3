@@ -59,4 +59,17 @@ public class Session {
         this.startAt = startAt;
         this.endAt = endAt;
     }
+
+    public boolean isPending() {
+        return this.status == SessionStatus.PENDING;
+    }
+
+    public void approve() {
+        this.status = SessionStatus.APPROVED;
+    }
+
+    public void reject(String reason) {
+        this.status = SessionStatus.REJECTED;
+        this.rejectReason = reason;
+    }
 }
