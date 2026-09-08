@@ -29,7 +29,7 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/members/signup", "/api/members/organizers/signup", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout", "/api/auth/email/send-code").permitAll()
+                        .requestMatchers("/api/members/signup", "/api/members/organizers/signup", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout", "/api/auth/email/send-code", "/api/auth/email/verify").permitAll()
                         .anyRequest().authenticated()
                 );
         return http.build();

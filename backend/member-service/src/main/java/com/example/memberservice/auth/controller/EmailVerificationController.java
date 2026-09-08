@@ -1,6 +1,7 @@
 package com.example.memberservice.auth.controller;
 
 import com.example.memberservice.auth.dto.SendCodeRequest;
+import com.example.memberservice.auth.dto.VerifyCodeRequest;
 import com.example.memberservice.auth.service.EmailVerificationService;
 import com.example.memberservice.common.TraceIdProvider;
 import com.example.memberservice.common.dto.ApiResponse;
@@ -30,5 +31,16 @@ public class EmailVerificationController {
         String traceId = traceIdProvider.resolve(httpRequest);
 
         return ResponseEntity.ok(ApiResponse.success("인증코드를 발송했습니다.", traceId));
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<ApiResponse<Void>> verify(
+            @Valid @RequestBody VerifyCodeRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        emailVerificationService.verifyCode(request.email(), request.code());
+        String traceId = traceIdProvider.resolve(httpRequest);
+
+        return ResponseEntity.ok(ApiResponse.success("이메일 인증이 완료되었습니다.", traceId));
     }
 }

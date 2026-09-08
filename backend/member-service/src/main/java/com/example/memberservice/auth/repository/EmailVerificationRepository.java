@@ -20,4 +20,9 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
     @Modifying
     @Query("delete from EmailVerification e where e.email = :email")
     void deleteAllByEmail(@Param("email") String email);
+
+    // 읽기->고치기->쓰기 대신 DB에서 바로 증가 (원자적 UPDATE)
+    @Modifying
+    @Query("update EmailVerification e set e.attempts = e.attempts + 1 where e.id = :id")
+    int increaseAttempts(@Param("id") UUID id);
 }
