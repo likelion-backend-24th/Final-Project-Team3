@@ -11,9 +11,12 @@ import com.example.conferenceservice.session.dto.SessionCreateRequest;
 import com.example.conferenceservice.session.dto.SessionResponse;
 import com.example.conferenceservice.session.dto.SessionUpdateRequest;
 import com.example.conferenceservice.session.entity.Session;
+import com.example.conferenceservice.session.entity.SessionStatus;
 import com.example.conferenceservice.session.exception.SessionErrorCode;
 import com.example.conferenceservice.session.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +28,11 @@ import java.util.UUID;
 public class SessionService {
     private final SessionRepository sessionRepository;
     private final ConferenceRepository conferenceRepository;
+
+    @Transactional(readOnly = true)
+    public Page<Session> getPendingSessions(Pageable pageable) {
+        return sessionRepository.findByStatus(SessionStatus.PENDING, pageable);
+    }
 
     @Transactional(readOnly = true)
     public SessionCapacityResponse getCapacity(UUID sessionId) {
