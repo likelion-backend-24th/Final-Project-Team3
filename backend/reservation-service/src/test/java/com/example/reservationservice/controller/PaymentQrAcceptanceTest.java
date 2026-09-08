@@ -141,8 +141,8 @@ public class PaymentQrAcceptanceTest {
     }
 
     @Test
-    @DisplayName("결제 미완료 상태에서 QR 조회 시 404를 반환한다")
-    void qrTicketsNotFoundBeforePayment() throws Exception {
+    @DisplayName("결제 완료 전에는 좌석이 확정되지 않으며, QR 조회 시 404로 거부된다")
+    void seatNotConfirmedAndQrTicketsNotFoundBeforePayment() throws Exception {
         UUID sessionId = UUID.randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
 
@@ -156,6 +156,7 @@ public class PaymentQrAcceptanceTest {
         mockMvc.perform(get("/api/reservations/{id}/qr-tickets", reservationId))
                 .andExpect(status().isNotFound());
     }
+
 
     private String createHoldJson(UUID sessionId, UUID memberId, int headCount) {
         return """
