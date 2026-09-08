@@ -121,9 +121,6 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
 
-        if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
-            throw new BusinessException(ReservationErrorCode.ALREADY_CONFIRMED);
-        }
 
        boolean wasQueued = reservation.getStatus() == ReservationStatus.QUEUED;
         Integer leftPosition = null;
@@ -138,8 +135,12 @@ public class ReservationService {
                     .orElse(null);
         }
 
-        // 결제 처리 (지금은 Mock, 실제 PG 연동은 Story 17 이후)
-        reservation.markAsConfirmed();
+        // 조건부 UPDATE로 동시 결제 요청 방어
+        int updatedRows = reservationRepository.confirmIfNotAlready(reservationId);
+        if (updatedRows == 0) {
+            throw new BusinessException(ReservationErrorCode.ALREADY_CONFIRMED);
+        }
+
 
         if (wasQueued && leftPosition != null) {
             waitingQueueRepository.deleteByReservationId(reservationId);
