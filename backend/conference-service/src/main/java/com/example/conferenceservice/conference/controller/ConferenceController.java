@@ -9,6 +9,9 @@ import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
 import com.example.conferenceservice.conference.dto.ConferenceRequest;
 import com.example.conferenceservice.conference.dto.ConferenceResponse;
 import com.example.conferenceservice.conference.service.ConferenceService;
+import com.example.conferenceservice.session.dto.SessionCreateRequest;
+import com.example.conferenceservice.session.dto.SessionResponse;
+import com.example.conferenceservice.session.service.SessionService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +37,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ConferenceController {
     private final ConferenceService conferenceService;
+    private final SessionService sessionService;
     private final TraceIdProvider traceIdProvider;
 
     @GetMapping
@@ -59,5 +63,17 @@ public class ConferenceController {
         ConferenceResponse response = conferenceService.applyConference(currentUser, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("컨퍼런스 등록 신청 성공", response, traceIdProvider.resolve(httpRequest)));
+    }
+
+    @PostMapping("/{conferenceId}/sessions")
+    @PreAuthorize("hasRole('ORGANIZER')")
+    public ResponseEntity<ApiResponse<SessionResponse>> createSession(
+            @PathVariable UUID conferenceId,
+            @Valid @RequestBody SessionCreateRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        SessionResponse response = sessionService.createSession(conferenceId, request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("세션 등록 성공", response, traceIdProvider.resolve(httpRequest)));
     }
 }
