@@ -8,6 +8,7 @@ import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
 import com.example.conferenceservice.conference.repository.ConferenceTagRepository;
 import com.example.conferenceservice.session.entity.Session;
+import com.example.conferenceservice.session.entity.SessionStatus;
 import com.example.conferenceservice.session.repository.SessionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -74,10 +75,11 @@ class ConferenceVisibilityTest {
                 .build();
         Session session = Session.builder()
                 .id(UUID.randomUUID()).conference(approved).title("세션 A").capacity(30)
+                .status(SessionStatus.APPROVED)
                 .build();
         given(conferenceRepository.findByIdAndStatus(conferenceId, ConferenceStatus.APPROVED))
                 .willReturn(Optional.of(approved));
-        given(sessionRepository.findByConferenceId(conferenceId)).willReturn(List.of(session));
+        given(sessionRepository.findByConferenceIdAndStatus(conferenceId, SessionStatus.APPROVED)).willReturn(List.of(session));
         given(conferenceTagRepository.findByConferenceId(conferenceId)).willReturn(List.of());
 
         ConferenceDetailResponse result = conferenceService.getConference(conferenceId);

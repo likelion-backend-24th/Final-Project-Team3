@@ -13,6 +13,7 @@ import com.example.conferenceservice.conference.repository.ConferenceRepository;
 import com.example.conferenceservice.conference.repository.ConferenceTagRepository;
 import com.example.conferenceservice.common.exception.BusinessException;
 import com.example.conferenceservice.session.entity.Session;
+import com.example.conferenceservice.session.entity.SessionStatus;
 import com.example.conferenceservice.session.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -92,7 +93,7 @@ public class ConferenceService {
     @Transactional(readOnly = true)
     public ConferenceDetailResponse getConference(UUID id) {
         Conference conference = findApprovedConference(id);
-        List<Session> sessions = sessionRepository.findByConferenceId(id);
+        List<Session> sessions = sessionRepository.findByConferenceIdAndStatus(id, SessionStatus.APPROVED);
         List<String> tags = conferenceTagRepository.findByConferenceId(id).stream()
                 .map(ConferenceTag::getTag)
                 .toList();

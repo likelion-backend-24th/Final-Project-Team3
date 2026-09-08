@@ -16,6 +16,8 @@ import java.util.UUID;
 public interface SessionRepository extends JpaRepository<Session, UUID> {
     List<Session> findByConferenceId(UUID conferenceId);
 
+    List<Session> findByConferenceIdAndStatus(UUID conferenceId, SessionStatus status);
+
     Optional<Session> findByIdAndConference_Status(UUID id, ConferenceStatus status);
 
     Page<Session> findByStatus(SessionStatus status, Pageable pageable);
