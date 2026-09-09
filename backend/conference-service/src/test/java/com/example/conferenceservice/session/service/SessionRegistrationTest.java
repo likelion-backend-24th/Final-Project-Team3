@@ -57,8 +57,7 @@ class SessionRegistrationTest {
     void 승인된_컨퍼런스에_세션을_등록하면_정원과_기간이_저장된다() {
         UUID conferenceId = UUID.randomUUID();
         Conference approved = approvedConference(conferenceId);
-        SessionCreateRequest request = new SessionCreateRequest(
-                "세션 A", 30, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2));
+        SessionCreateRequest request = SessionRequestFixtures.validCreateRequest("세션 A", 30);
         given(conferenceRepository.findById(conferenceId)).willReturn(Optional.of(approved));
         given(sessionRepository.save(any(Session.class))).willAnswer(invocation -> invocation.getArgument(0));
 
@@ -76,8 +75,7 @@ class SessionRegistrationTest {
     @Test
     void 정원이_0이하면_세션_등록이_400으로_거절된다() {
         UUID conferenceId = UUID.randomUUID();
-        SessionCreateRequest request = new SessionCreateRequest(
-                "세션 A", 0, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2));
+        SessionCreateRequest request = SessionRequestFixtures.validCreateRequest("세션 A", 0);
 
         assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
@@ -89,12 +87,45 @@ class SessionRegistrationTest {
     void 시작일이_종료일보다_같거나_이후면_세션_등록이_400으로_거절된다() {
         UUID conferenceId = UUID.randomUUID();
         LocalDateTime sameInstant = LocalDateTime.now().plusDays(1);
-        SessionCreateRequest request = new SessionCreateRequest("세션 A", 10, sameInstant, sameInstant);
+        SessionCreateRequest request = new SessionCreateRequest(
+                "세션 A", 10, sameInstant, sameInstant,
+                LocalDateTime.now().plusDays(5), LocalDateTime.now().plusDays(5).plusHours(1),
+                "그랜드홀 A", "김연수 CTO", 10000);
 
         assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(SessionErrorCode.INVALID_SESSION_PERIOD);
+    }
+
+    @Test
+    void 진행_종료일시가_시작일시보다_같거나_이전이면_세션_등록이_400으로_거절된다() {
+        UUID conferenceId = UUID.randomUUID();
+        LocalDateTime sameInstant = LocalDateTime.now().plusDays(5);
+        SessionCreateRequest request = new SessionCreateRequest(
+                "세션 A", 10, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2),
+                sameInstant, sameInstant,
+                "그랜드홀 A", "김연수 CTO", 10000);
+
+        assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(SessionErrorCode.INVALID_SESSION_SCHEDULE);
+    }
+
+    @Test
+    void 진행_시작일시가_신청_종료일시보다_이전이면_세션_등록이_400으로_거절된다() {
+        UUID conferenceId = UUID.randomUUID();
+        LocalDateTime endAt = LocalDateTime.now().plusDays(5);
+        SessionCreateRequest request = new SessionCreateRequest(
+                "세션 A", 10, LocalDateTime.now().plusDays(1), endAt,
+                endAt.minusHours(1), endAt.plusHours(1),
+                "그랜드홀 A", "김연수 CTO", 10000);
+
+        assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(SessionErrorCode.INVALID_SESSION_SCHEDULE);
     }
 
     @Test
@@ -104,8 +135,7 @@ class SessionRegistrationTest {
                 .id(conferenceId).organizerId(ORGANIZER_ID).title("검토 대기 컨퍼런스")
                 .status(ConferenceStatus.PENDING).capacity(100)
                 .build();
-        SessionCreateRequest request = new SessionCreateRequest(
-                "세션 A", 10, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2));
+        SessionCreateRequest request = SessionRequestFixtures.validCreateRequest("세션 A", 10);
         given(conferenceRepository.findById(conferenceId)).willReturn(Optional.of(pending));
 
         assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
@@ -117,8 +147,7 @@ class SessionRegistrationTest {
     @Test
     void 존재하지_않는_컨퍼런스에_세션_등록시_404로_거절된다() {
         UUID missingConferenceId = UUID.randomUUID();
-        SessionCreateRequest request = new SessionCreateRequest(
-                "세션 A", 10, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2));
+        SessionCreateRequest request = SessionRequestFixtures.validCreateRequest("세션 A", 10);
         given(conferenceRepository.findById(missingConferenceId)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> sessionService.createSession(missingConferenceId, request, ORGANIZER_ID))
@@ -133,8 +162,7 @@ class SessionRegistrationTest {
         Session existing = Session.builder()
                 .id(sessionId).conference(approvedConference(UUID.randomUUID())).title("세션 A").capacity(10)
                 .build();
-        SessionUpdateRequest request = new SessionUpdateRequest(
-                50, LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(4));
+        SessionUpdateRequest request = SessionRequestFixtures.validUpdateRequest(50);
         given(sessionRepository.findById(sessionId)).willReturn(Optional.of(existing));
 
         SessionResponse response = sessionService.updateSession(sessionId, request, ORGANIZER_ID);
@@ -148,8 +176,7 @@ class SessionRegistrationTest {
         Session existing = Session.builder()
                 .id(sessionId).conference(approvedConference(UUID.randomUUID())).title("세션 A").capacity(10)
                 .build();
-        SessionUpdateRequest request = new SessionUpdateRequest(
-                0, LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(4));
+        SessionUpdateRequest request = SessionRequestFixtures.validUpdateRequest(0);
 
         assertThatThrownBy(() -> sessionService.updateSession(sessionId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
@@ -167,8 +194,7 @@ class SessionRegistrationTest {
         Session existing = Session.builder()
                 .id(sessionId).conference(pending).title("세션 A").capacity(10)
                 .build();
-        SessionUpdateRequest request = new SessionUpdateRequest(
-                50, LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(4));
+        SessionUpdateRequest request = SessionRequestFixtures.validUpdateRequest(50);
         given(sessionRepository.findById(sessionId)).willReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> sessionService.updateSession(sessionId, request, ORGANIZER_ID))
@@ -180,8 +206,7 @@ class SessionRegistrationTest {
     @Test
     void 존재하지_않는_세션_수정시_404로_거절된다() {
         UUID missingId = UUID.randomUUID();
-        SessionUpdateRequest request = new SessionUpdateRequest(
-                50, LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(4));
+        SessionUpdateRequest request = SessionRequestFixtures.validUpdateRequest(50);
         given(sessionRepository.findById(missingId)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> sessionService.updateSession(missingId, request, ORGANIZER_ID))

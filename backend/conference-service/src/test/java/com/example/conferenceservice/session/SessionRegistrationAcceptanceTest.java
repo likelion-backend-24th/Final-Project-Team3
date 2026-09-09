@@ -144,14 +144,21 @@ class SessionRegistrationAcceptanceTest {
     private String sessionRequestJson(String title, int capacity) {
         LocalDateTime startAt = LocalDateTime.now().plusDays(1).withNano(0);
         LocalDateTime endAt = LocalDateTime.now().plusDays(2).withNano(0);
+        LocalDateTime sessionStartAt = LocalDateTime.now().plusDays(5).withNano(0);
+        LocalDateTime sessionEndAt = sessionStartAt.plusHours(1);
         return """
                 {
                   "title": "%s",
                   "capacity": %d,
                   "startAt": "%s",
-                  "endAt": "%s"
+                  "endAt": "%s",
+                  "sessionStartAt": "%s",
+                  "sessionEndAt": "%s",
+                  "location": "그랜드홀 A",
+                  "speaker": "김연수 CTO",
+                  "price": 10000
                 }
-                """.formatted(title, capacity, startAt, endAt);
+                """.formatted(title, capacity, startAt, endAt, sessionStartAt, sessionEndAt);
     }
 
     private String organizerToken(UUID memberId) {

@@ -15,7 +15,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -54,8 +53,7 @@ class SessionOwnerScopeTest {
                 .id(conferenceId).organizerId(ownerId).title("승인된 컨퍼런스")
                 .status(ConferenceStatus.APPROVED).capacity(100)
                 .build();
-        SessionCreateRequest request = new SessionCreateRequest(
-                "세션 A", 10, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2));
+        SessionCreateRequest request = SessionRequestFixtures.validCreateRequest("세션 A", 10);
         given(conferenceRepository.findById(conferenceId)).willReturn(Optional.of(approved));
 
         assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, otherOrganizerId))
@@ -76,8 +74,7 @@ class SessionOwnerScopeTest {
         Session existing = Session.builder()
                 .id(sessionId).conference(approved).title("세션 A").capacity(10)
                 .build();
-        SessionUpdateRequest request = new SessionUpdateRequest(
-                50, LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(4));
+        SessionUpdateRequest request = SessionRequestFixtures.validUpdateRequest(50);
         given(sessionRepository.findById(sessionId)).willReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> sessionService.updateSession(sessionId, request, otherOrganizerId))
@@ -94,8 +91,7 @@ class SessionOwnerScopeTest {
                 .id(conferenceId).organizerId(ownerId).title("승인된 컨퍼런스")
                 .status(ConferenceStatus.APPROVED).capacity(100)
                 .build();
-        SessionCreateRequest request = new SessionCreateRequest(
-                "세션 A", 10, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2));
+        SessionCreateRequest request = SessionRequestFixtures.validCreateRequest("세션 A", 10);
         given(conferenceRepository.findById(conferenceId)).willReturn(Optional.of(approved));
         given(sessionRepository.save(any(Session.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));

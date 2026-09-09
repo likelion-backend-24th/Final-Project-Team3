@@ -44,7 +44,8 @@ public class SessionService {
 
     @Transactional
     public SessionResponse createSession(UUID conferenceId, SessionCreateRequest request, UUID requesterId) {
-        validateSchedule(request.capacity(), request.startAt(), request.endAt());
+        validateSchedule(request.capacity(), request.startAt(), request.endAt(),
+                request.sessionStartAt(), request.sessionEndAt());
 
         Conference conference = conferenceRepository.findById(conferenceId)
                 .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
@@ -59,6 +60,11 @@ public class SessionService {
                 .capacity(request.capacity())
                 .startAt(request.startAt())
                 .endAt(request.endAt())
+                .sessionStartAt(request.sessionStartAt())
+                .sessionEndAt(request.sessionEndAt())
+                .location(request.location())
+                .speaker(request.speaker())
+                .price(request.price())
                 .build();
         Session saved = sessionRepository.save(session);
         return SessionResponse.from(saved);
@@ -66,7 +72,8 @@ public class SessionService {
 
     @Transactional
     public SessionResponse updateSession(UUID sessionId, SessionUpdateRequest request, UUID requesterId) {
-        validateSchedule(request.capacity(), request.startAt(), request.endAt());
+        validateSchedule(request.capacity(), request.startAt(), request.endAt(),
+                request.sessionStartAt(), request.sessionEndAt());
 
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new BusinessException(SessionErrorCode.SESSION_NOT_FOUND));
@@ -74,16 +81,25 @@ public class SessionService {
         if (session.getConference().getStatus() != ConferenceStatus.APPROVED) {
             throw new BusinessException(SessionErrorCode.CONFERENCE_NOT_APPROVED);
         }
-        session.updateSchedule(request.capacity(), request.startAt(), request.endAt());
+        session.updateSchedule(request.capacity(), request.startAt(), request.endAt(),
+                request.sessionStartAt(), request.sessionEndAt(),
+                request.location(), request.speaker(), request.price());
         return SessionResponse.from(session);
     }
 
-    private void validateSchedule(int capacity, LocalDateTime startAt, LocalDateTime endAt) {
+    private void validateSchedule(int capacity, LocalDateTime startAt, LocalDateTime endAt,
+                                   LocalDateTime sessionStartAt, LocalDateTime sessionEndAt) {
         if (capacity <= 0) {
             throw new BusinessException(SessionErrorCode.INVALID_SESSION_CAPACITY);
         }
         if (!endAt.isAfter(startAt)) {
             throw new BusinessException(SessionErrorCode.INVALID_SESSION_PERIOD);
+        }
+        if (!sessionEndAt.isAfter(sessionStartAt)) {
+            throw new BusinessException(SessionErrorCode.INVALID_SESSION_SCHEDULE);
+        }
+        if (sessionStartAt.isBefore(endAt)) {
+            throw new BusinessException(SessionErrorCode.INVALID_SESSION_SCHEDULE);
         }
     }
 

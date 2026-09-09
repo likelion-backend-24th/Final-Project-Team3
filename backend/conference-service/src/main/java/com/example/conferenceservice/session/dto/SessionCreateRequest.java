@@ -3,6 +3,7 @@ package com.example.conferenceservice.session.dto;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 
 import java.time.LocalDateTime;
 
@@ -17,5 +18,21 @@ public record SessionCreateRequest(
     LocalDateTime startAt,
 
     @NotNull(message = "신청 종료 일시는 필수입니다.")
-    LocalDateTime endAt
+    LocalDateTime endAt,
+
+    @NotNull(message = "세션 진행 시작 일시는 필수입니다.")
+    LocalDateTime sessionStartAt,
+
+    @NotNull(message = "세션 진행 종료 일시는 필수입니다.")
+    LocalDateTime sessionEndAt,
+
+    @NotBlank(message = "장소는 필수입니다.")
+    String location,
+
+    @NotBlank(message = "발표자는 필수입니다.")
+    String speaker,
+
+    @NotNull(message = "참가 비용은 필수입니다.")
+    @PositiveOrZero(message = "참가 비용은 0 이상이어야 합니다.")
+    Integer price
 ) {}

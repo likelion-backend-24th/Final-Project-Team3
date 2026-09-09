@@ -11,7 +11,12 @@ public record SessionResponse(
         String title,
         int capacity,
         LocalDateTime startAt,
-        LocalDateTime endAt
+        LocalDateTime endAt,
+        LocalDateTime sessionStartAt,
+        LocalDateTime sessionEndAt,
+        String location,
+        String speaker,
+        int price
 ) {
     public static SessionResponse from(Session session) {
         return new SessionResponse(
@@ -21,7 +26,12 @@ public record SessionResponse(
                 session.getTitle(),
                 session.getCapacity(),
                 session.getStartAt(),
-                session.getEndAt()
+                session.getEndAt(),
+                session.getSessionStartAt(),
+                session.getSessionEndAt(),
+                session.getLocation(),
+                session.getSpeaker(),
+                session.getPrice() == null ? 0 : session.getPrice()
         );
     }
 }
