@@ -23,6 +23,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     int confirmIfNotAlready(@Param("id") UUID id);
 
     List<Reservation> findByStatusAndExpiresAtBefore(ReservationStatus status, LocalDateTime time);
+    List<Reservation> findByMemberIdOrderByCreatedAtDesc(UUID memberId);
 }
 
 
