@@ -2,6 +2,7 @@ package com.example.reservationservice.reservation.controller;
 
 import com.example.reservationservice.reservation.dto.MyReservationResponse;
 import com.example.reservationservice.reservation.dto.PaymentResult;
+import com.example.reservationservice.reservation.dto.SessionCapacityStatusResponse;
 import com.example.reservationservice.reservation.entity.QrTicket;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -84,6 +85,15 @@ public class ReservationController {
         return ResponseEntity.ok(
                 ApiResponse.success("내 예약 목록 조회 완료", reservations, traceIdProvider.resolve(httpRequest)));
     }
-    
+
+    @GetMapping("/sessions/{sessionId}/capacity-status")
+    public ResponseEntity<ApiResponse<SessionCapacityStatusResponse>> getCapacityStatus(
+            @PathVariable UUID sessionId,
+            HttpServletRequest httpRequest) {
+        SessionCapacityStatusResponse result = reservationService.getCapacityStatus(sessionId);
+        return ResponseEntity.ok(
+                ApiResponse.success("정원 현황 조회 완료", result, traceIdProvider.resolve(httpRequest)));
+    }
+
     public record PaymentRequest(String paymentMethod, int amount) {}
 }

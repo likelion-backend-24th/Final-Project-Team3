@@ -2,15 +2,13 @@ package com.example.reservationservice.reservation.service;
 
 import com.example.reservationservice.reservation.dto.MyReservationResponse;
 import com.example.reservationservice.reservation.dto.PaymentResult;
-import com.example.reservationservice.reservation.entity.QrTicket;
-import com.example.reservationservice.reservation.entity.ReservationStatus;
+import com.example.reservationservice.reservation.dto.SessionCapacityStatusResponse;
+import com.example.reservationservice.reservation.entity.*;
 import com.example.reservationservice.reservation.repository.QrTicketRepository;
 import lombok.RequiredArgsConstructor;
 import com.example.reservationservice.common.exception.BusinessException;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
 import com.example.reservationservice.reservation.dto.ReservationResult;
-import com.example.reservationservice.reservation.entity.Reservation;
-import com.example.reservationservice.reservation.entity.WaitingQueue;
 import com.example.reservationservice.reservation.exception.ConferenceServiceUnavailableException;
 import com.example.reservationservice.reservation.exception.ReservationErrorCode;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
@@ -178,7 +176,16 @@ public class ReservationService {
                 .map(MyReservationResponse::from)
                 .toList();
     }
-    
+
+    public SessionCapacityStatusResponse getCapacityStatus(UUID sessionId) {
+        int capacity = getSessionCapacity(sessionId);
+        int confirmedCount = sessionCapacityLockRepository.findById(sessionId)
+                .map(SessionCapacityLock::getCurrentActive)
+                .orElse(0);
+        int remaining = capacity - confirmedCount;
+        return new SessionCapacityStatusResponse(sessionId, capacity, confirmedCount, remaining);
+    }
+
     private String generateQrCode() {
         return UUID.randomUUID().toString().replace("-", "");
     }
