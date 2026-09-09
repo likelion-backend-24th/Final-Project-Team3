@@ -66,7 +66,6 @@ class ConferenceApplicationAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "organizerName": "김주최",
                                   "title": "신청된 컨퍼런스",
                                   "capacity": 100,
                                   "startAt": "2026-10-01T10:00:00",
@@ -84,13 +83,55 @@ class ConferenceApplicationAcceptanceTest {
     }
 
     @Test
+    void applyConference_organizerNameIsTakenFromJwtOrganizationNameClaim_notRequestBody() throws Exception {
+        mockMvc.perform(post("/api/conferences")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "주최기관명 검증용 컨퍼런스",
+                                  "capacity": 100,
+                                  "startAt": "2026-10-01T10:00:00",
+                                  "endAt": "2026-10-01T18:00:00",
+                                  "location": "서울",
+                                  "tags": ["개발"]
+                                }
+                                """))
+                .andExpect(status().isCreated());
+
+        List<Conference> saved = conferenceRepository.findAll();
+        assertThat(saved).hasSize(1);
+        assertThat(saved.get(0).getOrganizerName()).isEqualTo("멋쟁이사자처럼");
+    }
+
+    @Test
+    void applyConference_whenJwtHasNoOrganizationNameClaim_isRejectedWith401() throws Exception {
+        mockMvc.perform(post("/api/conferences")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerTokenWithoutOrganizationName())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "주최기관명 없는 토큰",
+                                  "capacity": 100,
+                                  "startAt": "2026-10-01T10:00:00",
+                                  "endAt": "2026-10-01T18:00:00",
+                                  "location": "서울",
+                                  "tags": ["개발"]
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("ORGANIZATION_NAME_NOT_FOUND"));
+
+        assertThat(conferenceRepository.findAll()).isEmpty();
+    }
+
+    @Test
     void applyConference_thenNotExposedInListOrDetail() throws Exception {
         String response = mockMvc.perform(post("/api/conferences")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "organizerName": "김주최",
                                   "title": "비공개 상태 확인용 컨퍼런스",
                                   "capacity": 50,
                                   "startAt": "2026-11-01T10:00:00",
@@ -114,6 +155,18 @@ class ConferenceApplicationAcceptanceTest {
     }
 
     private String organizerToken() {
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        return Jwts.builder()
+                .subject(UUID.randomUUID().toString())
+                .claim("role", MemberRole.ORGANIZER.name())
+                .claim("organizationName", "멋쟁이사자처럼")
+                .issuedAt(new Date())
+                .expiration(Date.from(Instant.now().plus(1, ChronoUnit.HOURS)))
+                .signWith(key)
+                .compact();
+    }
+
+    private String organizerTokenWithoutOrganizationName() {
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
         return Jwts.builder()
                 .subject(UUID.randomUUID().toString())

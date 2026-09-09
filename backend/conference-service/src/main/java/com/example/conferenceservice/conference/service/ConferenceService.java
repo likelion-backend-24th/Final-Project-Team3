@@ -36,13 +36,16 @@ public class ConferenceService {
 
     @Transactional
     public ConferenceResponse applyConference(CustomUserDetails currentUser, ConferenceRequest request) {
+        if (currentUser.getOrganizationName() == null || currentUser.getOrganizationName().isBlank()) {
+            throw new BusinessException(ConferenceErrorCode.ORGANIZATION_NAME_NOT_FOUND);
+        }
         if (!request.endAt().isAfter(request.startAt())) {
             throw new BusinessException(ConferenceErrorCode.INVALID_CONFERENCE_PERIOD);
         }
 
         Conference conference = Conference.builder()
                 .organizerId(currentUser.getMemberId())
-                .organizerName(request.organizerName())
+                .organizerName(currentUser.getOrganizationName())
                 .title(request.title())
                 .capacity(request.capacity())
                 .startAt(request.startAt())

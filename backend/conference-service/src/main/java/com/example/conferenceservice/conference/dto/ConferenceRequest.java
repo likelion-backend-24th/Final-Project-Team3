@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record ConferenceRequest(
-    @NotBlank(message = "주최자 이름은 필수입니다.")
-    String organizerName,
-
     @NotBlank(message = "컨퍼런스 이름은 필수입니다.")
     String title,
 
