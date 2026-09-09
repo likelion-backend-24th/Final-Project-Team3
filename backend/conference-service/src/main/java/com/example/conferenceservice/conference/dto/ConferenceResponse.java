@@ -16,6 +16,7 @@ public record ConferenceResponse(
         LocalDateTime startAt,
         LocalDateTime endAt,
         String location,
+        String locationDetail,
         String description,
         String imageUrl,
         long sessionCount
@@ -36,6 +37,7 @@ public record ConferenceResponse(
                 conference.getStartAt(),
                 conference.getEndAt(),
                 conference.getLocation(),
+                conference.getLocationDetail(),
                 conference.getDescription(),
                 conference.getImageUrl(),
                 sessionCount

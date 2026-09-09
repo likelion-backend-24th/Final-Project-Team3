@@ -2,8 +2,10 @@ package com.example.conferenceservice.conference.service;
 
 import com.example.conferenceservice.auth.CustomUserDetails;
 import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
+import com.example.conferenceservice.conference.dto.ConferenceLocationUpdateRequest;
 import com.example.conferenceservice.conference.dto.ConferenceRequest;
 import com.example.conferenceservice.conference.dto.ConferenceResponse;
+import com.example.conferenceservice.conference.dto.ConferenceUpdateRequest;
 import com.example.conferenceservice.conference.dto.RejectConferenceRequest;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
@@ -12,6 +14,7 @@ import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
 import com.example.conferenceservice.conference.repository.ConferenceTagRepository;
 import com.example.conferenceservice.common.exception.BusinessException;
+import com.example.conferenceservice.common.security.OwnerScopeGuard;
 import com.example.conferenceservice.session.entity.Session;
 import com.example.conferenceservice.session.entity.SessionStatus;
 import com.example.conferenceservice.session.repository.SessionRepository;
@@ -24,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -51,6 +55,7 @@ public class ConferenceService {
                 .startAt(request.startAt())
                 .endAt(request.endAt())
                 .location(request.location())
+                .locationDetail(request.locationDetail())
                 .description(request.description())
                 .imageUrl(request.imageUrl())
                 .status(ConferenceStatus.PENDING)
@@ -84,6 +89,10 @@ public class ConferenceService {
                         SessionRepository.ConferenceSessionCount::getCount));
     }
 
+    private long countApprovedSessions(Conference conference) {
+        return countApprovedSessionsByConference(List.of(conference)).getOrDefault(conference.getId(), 0L);
+    }
+
     @Transactional(readOnly = true)
     public Page<Conference> getPendingConferences(Pageable pageable) {
         return conferenceRepository.findByStatus(ConferenceStatus.PENDING, pageable);
@@ -107,6 +116,38 @@ public class ConferenceService {
         }
         conference.reject(request.reason());
         return ConferenceResponse.from(conference);
+    }
+
+    @Transactional
+    public ConferenceResponse updateConference(UUID id, ConferenceUpdateRequest request, UUID requesterId) {
+        Conference conference = findConference(id);
+        OwnerScopeGuard.verify(requesterId, conference.getOrganizerId(), ConferenceErrorCode.CONFERENCE_ACCESS_DENIED);
+        if (!request.endAt().isAfter(request.startAt())) {
+            throw new BusinessException(ConferenceErrorCode.INVALID_CONFERENCE_PERIOD);
+        }
+        conference.updateDetails(request.title(), request.capacity(), request.startAt(), request.endAt(),
+                request.description(), request.imageUrl());
+        replaceTags(conference, request.tags());
+        return ConferenceResponse.from(conference, countApprovedSessions(conference));
+    }
+
+    private void replaceTags(Conference conference, List<String> tagNames) {
+        conferenceTagRepository.deleteByConferenceId(conference.getId());
+        List<ConferenceTag> tags = toTags(tagNames, conference);
+        if (!tags.isEmpty()) {
+            conferenceTagRepository.saveAll(tags);
+        }
+    }
+
+    @Transactional
+    public ConferenceResponse updateLocation(UUID id, ConferenceLocationUpdateRequest request, UUID requesterId) {
+        Conference conference = findConference(id);
+        OwnerScopeGuard.verify(requesterId, conference.getOrganizerId(), ConferenceErrorCode.CONFERENCE_ACCESS_DENIED);
+        if (conference.isApproved() && !Objects.equals(conference.getLocation(), request.location())) {
+            throw new BusinessException(ConferenceErrorCode.CONFERENCE_LOCATION_ADDRESS_LOCKED);
+        }
+        conference.updateLocation(request.location(), request.locationDetail());
+        return ConferenceResponse.from(conference, countApprovedSessions(conference));
     }
 
     @Transactional(readOnly = true)
