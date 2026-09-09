@@ -25,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -62,8 +63,22 @@ public class ConferenceService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Conference> getConferences(Pageable pageable) {
-        return conferenceRepository.findByStatus(ConferenceStatus.APPROVED, pageable);
+    public Page<ConferenceResponse> getConferences(Pageable pageable) {
+        Page<Conference> conferences = conferenceRepository.findByStatus(ConferenceStatus.APPROVED, pageable);
+        Map<UUID, Long> sessionCounts = countApprovedSessionsByConference(conferences.getContent());
+        return conferences.map(conference ->
+                ConferenceResponse.from(conference, sessionCounts.getOrDefault(conference.getId(), 0L)));
+    }
+
+    private Map<UUID, Long> countApprovedSessionsByConference(List<Conference> conferences) {
+        if (conferences.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> conferenceIds = conferences.stream().map(Conference::getId).toList();
+        return sessionRepository.countByConferenceIdInAndStatus(conferenceIds, SessionStatus.APPROVED).stream()
+                .collect(Collectors.toMap(
+                        SessionRepository.ConferenceSessionCount::getConferenceId,
+                        SessionRepository.ConferenceSessionCount::getCount));
     }
 
     @Transactional(readOnly = true)

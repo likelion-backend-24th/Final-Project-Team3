@@ -42,7 +42,7 @@ public class ConferenceController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<ConferenceResponse>>> listConferences(@PageableDefault Pageable pageable, HttpServletRequest request) {
-        Page<ConferenceResponse> page = conferenceService.getConferences(pageable).map(ConferenceResponse::from);
+        Page<ConferenceResponse> page = conferenceService.getConferences(pageable);
         Meta meta = Meta.builder().pagination(PageMeta.from(page)).build();
         return ResponseEntity.ok(ApiResponse.success("컨퍼런스 목록 조회 성공", page.getContent(), meta, traceIdProvider.resolve(request)));
     }

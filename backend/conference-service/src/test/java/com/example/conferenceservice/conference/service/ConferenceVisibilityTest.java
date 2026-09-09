@@ -2,6 +2,7 @@ package com.example.conferenceservice.conference.service;
 
 import com.example.conferenceservice.common.exception.BusinessException;
 import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
+import com.example.conferenceservice.conference.dto.ConferenceResponse;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
@@ -51,19 +52,38 @@ class ConferenceVisibilityTest {
 
     @Test
     void listConferences_onlyQueriesApprovedConferences() {
+        UUID conferenceId = UUID.randomUUID();
         Conference approved = Conference.builder()
-                .id(UUID.randomUUID()).organizerId(UUID.randomUUID()).organizerName("주최자").title("승인된 컨퍼런스")
+                .id(conferenceId).organizerId(UUID.randomUUID()).organizerName("주최자").title("승인된 컨퍼런스")
                 .status(ConferenceStatus.APPROVED).capacity(100)
                 .build();
         Pageable pageable = PageRequest.of(0, 10);
         given(conferenceRepository.findByStatus(ConferenceStatus.APPROVED, pageable))
                 .willReturn(new PageImpl<>(List.of(approved)));
+        given(sessionRepository.countByConferenceIdInAndStatus(List.of(conferenceId), SessionStatus.APPROVED))
+                .willReturn(List.of(sessionCount(conferenceId, 3L)));
 
-        Page<Conference> result = conferenceService.getConferences(pageable);
+        Page<ConferenceResponse> result = conferenceService.getConferences(pageable);
 
-        assertThat(result.getContent()).containsExactly(approved);
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).id()).isEqualTo(conferenceId);
+        assertThat(result.getContent().get(0).sessionCount()).isEqualTo(3L);
         verify(conferenceRepository).findByStatus(ConferenceStatus.APPROVED, pageable);
         verify(conferenceRepository, never()).findAll(any(Pageable.class));
+    }
+
+    private SessionRepository.ConferenceSessionCount sessionCount(UUID conferenceId, long count) {
+        return new SessionRepository.ConferenceSessionCount() {
+            @Override
+            public UUID getConferenceId() {
+                return conferenceId;
+            }
+
+            @Override
+            public long getCount() {
+                return count;
+            }
+        };
     }
 
     @Test

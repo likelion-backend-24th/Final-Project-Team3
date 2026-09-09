@@ -125,7 +125,7 @@ class SessionRegistrationTest {
         assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
-                .isEqualTo(SessionErrorCode.INVALID_SESSION_SCHEDULE);
+                .isEqualTo(SessionErrorCode.INVALID_SESSION_SCHEDULE_BEFORE_REGISTRATION);
     }
 
     @Test
@@ -140,7 +140,7 @@ class SessionRegistrationTest {
         assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
-                .isEqualTo(SessionErrorCode.INVALID_SESSION_SCHEDULE);
+                .isEqualTo(SessionErrorCode.INVALID_SESSION_SCHEDULE_BEFORE_REGISTRATION);
     }
 
     @Test

@@ -110,7 +110,7 @@ public class SessionService {
             throw new BusinessException(SessionErrorCode.INVALID_SESSION_SCHEDULE);
         }
         if (!sessionStartAt.isAfter(endAt)) {
-            throw new BusinessException(SessionErrorCode.INVALID_SESSION_SCHEDULE);
+            throw new BusinessException(SessionErrorCode.INVALID_SESSION_SCHEDULE_BEFORE_REGISTRATION);
         }
     }
 

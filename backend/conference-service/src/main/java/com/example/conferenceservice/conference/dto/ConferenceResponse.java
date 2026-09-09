@@ -17,10 +17,15 @@ public record ConferenceResponse(
         LocalDateTime endAt,
         String location,
         String description,
-        String imageUrl
+        String imageUrl,
+        long sessionCount
 )
 {
     public static ConferenceResponse from(Conference conference) {
+        return from(conference, 0);
+    }
+
+    public static ConferenceResponse from(Conference conference, long sessionCount) {
         return new ConferenceResponse(
                 conference.getId(),
                 conference.getOrganizerId(),
@@ -32,7 +37,8 @@ public record ConferenceResponse(
                 conference.getEndAt(),
                 conference.getLocation(),
                 conference.getDescription(),
-                conference.getImageUrl()
+                conference.getImageUrl(),
+                sessionCount
         );
     }
 }
