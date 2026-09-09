@@ -58,6 +58,8 @@ public class Session {
         this.capacity = capacity;
         this.startAt = startAt;
         this.endAt = endAt;
+        this.status = SessionStatus.PENDING;
+        this.rejectReason = null;
     }
 
     public boolean isPending() {
