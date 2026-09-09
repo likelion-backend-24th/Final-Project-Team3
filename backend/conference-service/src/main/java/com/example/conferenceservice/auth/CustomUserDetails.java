@@ -13,10 +13,12 @@ public class CustomUserDetails implements UserDetails {
 
     private final UUID memberId;
     private final MemberRole role;
+    private final String organizationName;
 
-    public CustomUserDetails(UUID memberId, MemberRole role) {
+    public CustomUserDetails(UUID memberId, MemberRole role, String organizationName) {
         this.memberId = memberId;
         this.role = role;
+        this.organizationName = organizationName;
     }
 
     @Override

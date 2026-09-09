@@ -1,6 +1,5 @@
 package com.example.conferenceservice.conference.dto;
 
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -9,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public record ConferenceRequest(
+public record ConferenceUpdateRequest(
     @NotBlank(message = "컨퍼런스 이름은 필수입니다.")
     String title,
 
@@ -17,16 +16,10 @@ public record ConferenceRequest(
     int capacity,
 
     @NotNull(message = "시작 일시는 필수입니다.")
-    @Future(message = "시작 일시는 현재 시각 이후여야 합니다.")
     LocalDateTime startAt,
 
     @NotNull(message = "종료 일시는 필수입니다.")
     LocalDateTime endAt,
-
-    @NotBlank(message = "장소는 필수입니다.")
-    String location,
-
-    String locationDetail,
 
     String description,
 
@@ -34,5 +27,4 @@ public record ConferenceRequest(
 
     @NotEmpty(message = "카테고리는 최소 1개 선택해야 합니다.")
     List<@NotBlank(message = "태그는 빈 값일 수 없습니다.") String> tags
-    ){
-}
+) {}
