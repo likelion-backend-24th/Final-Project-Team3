@@ -45,7 +45,8 @@ public class RouteConfig {
                 .route(
                         RequestPredicates.path("/api/conferences/**")
                                 .or(RequestPredicates.path("/api/admin/conferences/**"))
-                                .or(RequestPredicates.path("/api/admin/sessions/**")),
+                                .or(RequestPredicates.path("/api/admin/sessions/**"))
+                                .or(RequestPredicates.path("/api/sessions/**")),
                         http()
                 ) // 이 경로로 오는 요청은 그냥 그대로 전달
                 .before(uri(conferenceServiceUrl)) // 전달할 대상 서버 주소 지정 (application.yaml의 services.conference-service.url 값)
