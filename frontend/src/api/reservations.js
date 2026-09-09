@@ -8,3 +8,16 @@ export function createHold({ sessionId, memberId, headcount }) {
 export function getQueuePosition(reservationId) {
   return apiFetch(`/reservations/${reservationId}/queue-position`)
 }
+
+// 결제는 아직 Mock이라 PG 없이 즉시 CONFIRMED 처리된다. Session에 가격 필드가 없어
+// amount는 프론트에서 항상 0으로 보낸다.
+export function submitPayment(reservationId, { paymentMethod, amount }) {
+  return apiFetch(`/reservations/${reservationId}/payment`, {
+    method: 'POST',
+    body: { paymentMethod, amount },
+  })
+}
+
+export function getQrTickets(reservationId) {
+  return apiFetch(`/reservations/${reservationId}/qr-tickets`)
+}

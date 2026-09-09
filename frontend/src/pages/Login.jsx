@@ -20,7 +20,8 @@ export default function Login() {
     setLoading(true)
     try {
       const claims = await login(email, password)
-      navigate(claims?.role === 'ORGANIZER' ? '/organizer' : '/conferences')
+      const dest = claims?.role === 'ORGANIZER' ? '/organizer' : claims?.role === 'ADMIN' ? '/admin' : '/conferences'
+      navigate(dest)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '로그인에 실패했습니다.')
     } finally {

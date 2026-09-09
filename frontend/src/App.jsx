@@ -10,13 +10,18 @@ import Login from './pages/Login'
 import Home from './pages/Home'
 import ConferenceDetail from './pages/ConferenceDetail'
 import SessionApply from './pages/SessionApply'
+import Payment from './pages/Payment'
 import ReservationComplete from './pages/ReservationComplete'
 import QueueStatus from './pages/QueueStatus'
 import MyPage from './pages/MyPage'
 
 import OrganizerDashboard from './pages/organizer/Dashboard'
 import ConferenceCreate from './pages/organizer/ConferenceCreate'
+import SessionManage from './pages/organizer/SessionManage'
+import SessionCreate from './pages/organizer/SessionCreate'
 import ComingSoon from './pages/organizer/ComingSoon'
+
+import AdminApprovals from './pages/admin/Approvals'
 
 function Layout() {
   return (
@@ -27,10 +32,11 @@ function Layout() {
   )
 }
 
-// 주최자는 "홈"을 눌러도 컨퍼런스 목록이 아니라 자기 대시보드로 가야 한다.
+// 주최자·전체관리자는 "홈"을 눌러도 컨퍼런스 목록이 아니라 각자의 관리 화면으로 가야 한다.
 function HomeOrDashboard() {
   const { claims } = useAuth()
   if (claims?.role === 'ORGANIZER') return <Navigate to="/organizer" replace />
+  if (claims?.role === 'ADMIN') return <Navigate to="/admin" replace />
   return <Home />
 }
 
@@ -54,6 +60,14 @@ export default function App() {
               element={
                 <ProtectedRoute role="MEMBER">
                   <SessionApply />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reservations/:id/payment"
+              element={
+                <ProtectedRoute role="MEMBER">
+                  <Payment />
                 </ProtectedRoute>
               }
             />
@@ -99,6 +113,22 @@ export default function App() {
               }
             />
             <Route
+              path="/organizer/conferences/:id/sessions"
+              element={
+                <ProtectedRoute role="ORGANIZER">
+                  <SessionManage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/conferences/:id/sessions/new"
+              element={
+                <ProtectedRoute role="ORGANIZER">
+                  <SessionCreate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/organizer/operations"
               element={
                 <ProtectedRoute role="ORGANIZER">
@@ -119,6 +149,15 @@ export default function App() {
               element={
                 <ProtectedRoute role="ORGANIZER">
                   <ComingSoon title="정산 내역" />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute role="ADMIN">
+                  <AdminApprovals />
                 </ProtectedRoute>
               }
             />

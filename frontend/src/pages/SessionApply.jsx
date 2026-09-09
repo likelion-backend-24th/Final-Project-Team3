@@ -30,8 +30,8 @@ export default function SessionApply() {
           state: { sessionTitle: session?.title, queuePosition: res.data.queuePosition },
         })
       } else {
-        navigate(`/reservations/${res.data.reservationId}/complete`, {
-          state: { sessionTitle: session?.title, conferenceTitle },
+        navigate(`/reservations/${res.data.reservationId}/payment`, {
+          state: { sessionTitle: session?.title, conferenceTitle, headcount },
         })
       }
     } catch (err) {
