@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -40,6 +41,16 @@ public class SessionService {
         Session session = sessionRepository.findByIdAndConference_Status(sessionId, ConferenceStatus.APPROVED)
                 .orElseThrow(() -> new BusinessException(SessionErrorCode.SESSION_NOT_FOUND));
         return SessionCapacityResponse.from(session);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SessionResponse> getSessionsByConference(UUID conferenceId, UUID requesterId) {
+        Conference conference = conferenceRepository.findById(conferenceId)
+                .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
+        OwnerScopeGuard.verify(requesterId, conference.getOrganizerId(), SessionErrorCode.SESSION_ACCESS_DENIED);
+        return sessionRepository.findByConferenceId(conferenceId).stream()
+                .map(SessionResponse::from)
+                .toList();
     }
 
     @Transactional
@@ -98,7 +109,7 @@ public class SessionService {
         if (!sessionEndAt.isAfter(sessionStartAt)) {
             throw new BusinessException(SessionErrorCode.INVALID_SESSION_SCHEDULE);
         }
-        if (sessionStartAt.isBefore(endAt)) {
+        if (!sessionStartAt.isAfter(endAt)) {
             throw new BusinessException(SessionErrorCode.INVALID_SESSION_SCHEDULE);
         }
     }

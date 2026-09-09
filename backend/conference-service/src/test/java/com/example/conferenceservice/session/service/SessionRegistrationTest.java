@@ -114,6 +114,21 @@ class SessionRegistrationTest {
     }
 
     @Test
+    void 진행_시작일시가_신청_종료일시와_같으면_세션_등록이_400으로_거절된다() {
+        UUID conferenceId = UUID.randomUUID();
+        LocalDateTime endAt = LocalDateTime.now().plusDays(5);
+        SessionCreateRequest request = new SessionCreateRequest(
+                "세션 A", 10, LocalDateTime.now().plusDays(1), endAt,
+                endAt, endAt.plusHours(1),
+                "그랜드홀 A", "김연수 CTO", 10000);
+
+        assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(SessionErrorCode.INVALID_SESSION_SCHEDULE);
+    }
+
+    @Test
     void 진행_시작일시가_신청_종료일시보다_이전이면_세션_등록이_400으로_거절된다() {
         UUID conferenceId = UUID.randomUUID();
         LocalDateTime endAt = LocalDateTime.now().plusDays(5);

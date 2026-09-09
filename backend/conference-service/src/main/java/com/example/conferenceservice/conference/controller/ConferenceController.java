@@ -77,4 +77,15 @@ public class ConferenceController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("세션 등록 성공", response, traceIdProvider.resolve(httpRequest)));
     }
+
+    @GetMapping("/{conferenceId}/sessions")
+    @PreAuthorize("hasRole('ORGANIZER')")
+    public ResponseEntity<ApiResponse<List<SessionResponse>>> getSessionsByConference(
+            @PathVariable UUID conferenceId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            HttpServletRequest request
+    ) {
+        List<SessionResponse> sessions = sessionService.getSessionsByConference(conferenceId, currentUser.getMemberId());
+        return ResponseEntity.ok(ApiResponse.success("세션 목록 조회 성공", sessions, traceIdProvider.resolve(request)));
+    }
 }
