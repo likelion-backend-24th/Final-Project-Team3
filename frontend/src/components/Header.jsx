@@ -17,6 +17,8 @@ const organizerNav = [
   { to: '/organizer/settlements', label: '정산 내역' },
 ]
 
+const adminNav = [{ to: '/admin', label: '컨퍼런스 승인', end: true }]
+
 const roleLabel = { MEMBER: '참가자', ORGANIZER: '주최자', ADMIN: '관리자' }
 
 // '컨퍼런스' 메뉴는 홈("/")과 목록("/conferences")이 같은 화면이라 둘 다 active로 취급한다.
@@ -31,8 +33,9 @@ export default function Header() {
   const navigate = useNavigate()
   const location = useLocation()
   const isOrganizer = claims?.role === 'ORGANIZER'
+  const isAdmin = claims?.role === 'ADMIN'
   const isAuthenticated = status === 'authenticated'
-  const nav = isOrganizer ? organizerNav : participantNav(isAuthenticated)
+  const nav = isOrganizer ? organizerNav : isAdmin ? adminNav : participantNav(isAuthenticated)
 
   const handleLogout = async () => {
     await logout()

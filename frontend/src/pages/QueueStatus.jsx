@@ -53,11 +53,17 @@ export default function QueueStatus() {
         <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /> 실시간 업데이트 중
       </p>
 
-      <div>
+      <div className="flex items-center justify-center gap-3">
         <Link to="/conferences">
           <Button variant="secondary">목록으로</Button>
         </Link>
+        <Link to={`/reservations/${id}/payment`} state={{ sessionTitle }}>
+          <Button>결제하러 가기</Button>
+        </Link>
       </div>
+      <p className="text-xs text-text-faint mt-3">
+        순번이 아직 도달하지 않았다면 결제 화면에서 안내해드려요
+      </p>
     </div>
   )
 }

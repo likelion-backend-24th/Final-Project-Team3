@@ -12,9 +12,17 @@ export function signupParticipant({ email, password, name }) {
   return apiFetch('/members/signup', { method: 'POST', body: { email, password, name } })
 }
 
-// 백엔드에 주최자 자체 회원가입 API(Task 13-1, #31)가 아직 구현되지 않았다.
-// 계약은 GitHub #31 기준(email/password/name/organizationName/businessNo, POST /api/members/organizers/signup)으로
-// 맞춰뒀고, 백엔드가 준비되면 바로 연결된다.
+// 이메일 인증(#87): signup 자체는 바디가 그대로지만, 서버가 signup 시점에 해당 이메일이
+// verify까지 완료됐는지 확인한다(MEMBER_EMAIL_NOT_VERIFIED). 그래서 프론트는 signup 전에
+// 반드시 send-code → verify 순서로 먼저 호출해야 한다.
+export function sendEmailCode(email) {
+  return apiFetch('/auth/email/send-code', { method: 'POST', body: { email } })
+}
+
+export function verifyEmailCode(email, code) {
+  return apiFetch('/auth/email/verify', { method: 'POST', body: { email, code } })
+}
+
 export function signupOrganizer({ email, password, name, organizationName, businessNo }) {
   return apiFetch('/members/organizers/signup', {
     method: 'POST',

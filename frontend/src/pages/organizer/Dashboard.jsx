@@ -60,14 +60,31 @@ export default function Dashboard() {
       {error && <p className="text-danger">{error}</p>}
       <div className="space-y-3">
         {conferences?.map((c) => (
-          <div key={c.id} className="bg-surface border border-border rounded-xl p-5 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-text font-medium">{c.title}</p>
-                <StatusBadge status={c.status} />
+          <div key={c.id} className="bg-surface border border-border rounded-xl p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-text font-medium">{c.title}</p>
+                  <StatusBadge status={c.status} />
+                </div>
+                <p className="text-sm text-text-muted">정원 {c.capacity}명</p>
               </div>
-              <p className="text-sm text-text-muted">정원 {c.capacity}명</p>
+              {c.status === 'APPROVED' && (
+                <div className="flex gap-2">
+                  <Link to="/organizer/operations">
+                    <Button variant="secondary">운영 현황</Button>
+                  </Link>
+                  <Link to={`/organizer/conferences/${c.id}/sessions`}>
+                    <Button variant="secondary">세션 관리</Button>
+                  </Link>
+                </div>
+              )}
             </div>
+            {c.status === 'PENDING' && (
+              <p className="text-sm text-warning mt-3">
+                전체관리자 검토 중입니다. 승인 후 세션 설정 및 운영이 가능합니다.
+              </p>
+            )}
           </div>
         ))}
         {conferences?.length === 0 && (

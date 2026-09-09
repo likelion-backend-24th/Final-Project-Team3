@@ -70,10 +70,11 @@ export default function SignupOrganizer() {
           </div>
           <TextField
             label="사업자등록번호"
-            placeholder="10자리 숫자"
+            placeholder="10자리 숫자, - 없이"
             value={form.businessNo}
-            onChange={update('businessNo')}
-            maxLength={12}
+            onChange={(e) => setForm((f) => ({ ...f, businessNo: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+            maxLength={10}
+            inputMode="numeric"
             required
           />
           <TextField
