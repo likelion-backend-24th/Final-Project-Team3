@@ -30,6 +30,8 @@ public record ConferenceRequest(
 
     String description,
 
+    String imageUrl,
+
     List<@NotBlank(message = "태그는 빈 값일 수 없습니다.") String> tags
     ){
 }

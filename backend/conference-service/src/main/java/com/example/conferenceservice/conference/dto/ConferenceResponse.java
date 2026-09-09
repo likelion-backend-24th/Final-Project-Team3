@@ -16,7 +16,8 @@ public record ConferenceResponse(
         LocalDateTime startAt,
         LocalDateTime endAt,
         String location,
-        String description
+        String description,
+        String imageUrl
 )
 {
     public static ConferenceResponse from(Conference conference) {
@@ -30,7 +31,8 @@ public record ConferenceResponse(
                 conference.getStartAt(),
                 conference.getEndAt(),
                 conference.getLocation(),
-                conference.getDescription()
+                conference.getDescription(),
+                conference.getImageUrl()
         );
     }
 }
