@@ -266,6 +266,27 @@ public class PaymentQrAcceptanceTest {
                 .andExpect(jsonPath("$.data.length()").value(1));
     }
 
+    @Test
+    @DisplayName("세션 정원, 확정인원, 잔여좌석을 조회할 수 있다")
+    void getCapacityStatus() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+
+        mockMvc.perform(post("/api/reservations/hold")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createHoldJson(sessionId, UUID.randomUUID(), 3)));
+
+        mockMvc.perform(post("/api/reservations/hold")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createHoldJson(sessionId, UUID.randomUUID(), 2)));
+
+        mockMvc.perform(get("/api/reservations/sessions/{sessionId}/capacity-status", sessionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.capacity").value(10))
+                .andExpect(jsonPath("$.data.confirmedCount").value(5))
+                .andExpect(jsonPath("$.data.remaining").value(5));
+    }
+
     private String createHoldJson(UUID sessionId, UUID memberId, int headCount) {
         return """
                 {"sessionId": "%s", "memberId": "%s", "headcount": %d}
