@@ -78,6 +78,16 @@ class OrganizerLoginTest {
     }
 
     @Test
+    void ORGANIZER로_로그인하면_JWT에_organizationName_claim이_담긴다() throws Exception {
+        Member organizer = createOrganizer("org-name@example.com", "password1234", "기관명확인", "기관명확인기업", "1234567892");
+
+        String accessToken = loginAndGetAccessToken("org-name@example.com", "password1234");
+        Claims claims = parseClaims(accessToken);
+
+        assertThat(claims.get("organizationName", String.class)).isEqualTo(organizer.getOrganizationName());
+    }
+
+    @Test
     void MEMBER로_로그인하면_JWT에_organizerId_claim이_없다() throws Exception {
         Member member = Member.newMember("member@example.com", passwordEncoder.encode("password1234"), "참가자");
         memberRepository.save(member);

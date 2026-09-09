@@ -36,6 +36,7 @@ public class JwtTokenProvider {
 
         if(member.getRole() == Role.ORGANIZER) {
             builder.claim("organizerId", member.getId().toString());
+            builder.claim("organizationName", member.getOrganizationName());
         }
 
         return builder
