@@ -3,6 +3,7 @@ package com.example.conferenceservice.conference.dto;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
@@ -32,6 +33,7 @@ public record ConferenceRequest(
 
     String imageUrl,
 
+    @NotEmpty(message = "카테고리는 최소 1개 선택해야 합니다.")
     List<@NotBlank(message = "태그는 빈 값일 수 없습니다.") String> tags
     ){
 }

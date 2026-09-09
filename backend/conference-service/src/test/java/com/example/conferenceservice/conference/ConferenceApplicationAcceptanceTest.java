@@ -4,6 +4,7 @@ import com.example.conferenceservice.auth.MemberRole;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
+import com.example.conferenceservice.conference.repository.ConferenceTagRepository;
 import com.jayway.jsonpath.JsonPath;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -46,11 +47,15 @@ class ConferenceApplicationAcceptanceTest {
     @Autowired
     private ConferenceRepository conferenceRepository;
 
+    @Autowired
+    private ConferenceTagRepository conferenceTagRepository;
+
     @Value("${jwt.secret}")
     private String jwtSecret;
 
     @AfterEach
     void tearDown() {
+        conferenceTagRepository.deleteAll();
         conferenceRepository.deleteAll();
     }
 
@@ -66,7 +71,8 @@ class ConferenceApplicationAcceptanceTest {
                                   "capacity": 100,
                                   "startAt": "2026-10-01T10:00:00",
                                   "endAt": "2026-10-01T18:00:00",
-                                  "location": "서울"
+                                  "location": "서울",
+                                  "tags": ["개발"]
                                 }
                                 """))
                 .andExpect(status().isCreated())
@@ -89,7 +95,8 @@ class ConferenceApplicationAcceptanceTest {
                                   "capacity": 50,
                                   "startAt": "2026-11-01T10:00:00",
                                   "endAt": "2026-11-01T18:00:00",
-                                  "location": "부산"
+                                  "location": "부산",
+                                  "tags": ["개발"]
                                 }
                                 """))
                 .andExpect(status().isCreated())
