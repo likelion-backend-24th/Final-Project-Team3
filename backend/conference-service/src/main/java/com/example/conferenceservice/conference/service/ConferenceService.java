@@ -48,6 +48,7 @@ public class ConferenceService {
                 .endAt(request.endAt())
                 .location(request.location())
                 .description(request.description())
+                .imageUrl(request.imageUrl())
                 .status(ConferenceStatus.PENDING)
                 .build();
         Conference savedConference = conferenceRepository.save(conference);

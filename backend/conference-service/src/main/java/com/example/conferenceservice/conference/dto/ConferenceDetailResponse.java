@@ -20,6 +20,7 @@ public record ConferenceDetailResponse(
         LocalDateTime endAt,
         String location,
         String description,
+        String imageUrl,
         List<String> tags,
         List<SessionResponse> sessions
 )
@@ -36,6 +37,7 @@ public record ConferenceDetailResponse(
                 conference.getEndAt(),
                 conference.getLocation(),
                 conference.getDescription(),
+                conference.getImageUrl(),
                 tags,
                 sessions.stream().map(SessionResponse::from).toList()
         );

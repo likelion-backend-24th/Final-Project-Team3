@@ -56,6 +56,9 @@ public class Conference {
     @Column(name = "rejection_reason")
     private String rejectionReason;
 
+    @Column(name = "image_url")
+    private String imageUrl;
+
     public boolean isPending() {
         return this.status == ConferenceStatus.PENDING;
     }
