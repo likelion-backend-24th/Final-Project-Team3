@@ -1,5 +1,6 @@
 package com.example.reservationservice.reservation.service;
 
+import com.example.reservationservice.reservation.dto.MyReservationResponse;
 import com.example.reservationservice.reservation.dto.PaymentResult;
 import com.example.reservationservice.reservation.entity.QrTicket;
 import com.example.reservationservice.reservation.entity.ReservationStatus;
@@ -172,8 +173,12 @@ public class ReservationService {
         return qrTicketRepository.findByReservationId(reservationId);
     }
 
-
-
+    public List<MyReservationResponse> getMyReservations(UUID memberId) {
+        return reservationRepository.findByMemberIdOrderByCreatedAtDesc(memberId).stream()
+                .map(MyReservationResponse::from)
+                .toList();
+    }
+    
     private String generateQrCode() {
         return UUID.randomUUID().toString().replace("-", "");
     }

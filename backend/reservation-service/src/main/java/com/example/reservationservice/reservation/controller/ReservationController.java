@@ -1,5 +1,6 @@
 package com.example.reservationservice.reservation.controller;
 
+import com.example.reservationservice.reservation.dto.MyReservationResponse;
 import com.example.reservationservice.reservation.dto.PaymentResult;
 import com.example.reservationservice.reservation.entity.QrTicket;
 import jakarta.servlet.http.HttpServletRequest;
@@ -75,7 +76,14 @@ public class ReservationController {
                 ApiResponse.success("QR 티켓 조회 완료", tickets, traceIdProvider.resolve(httpRequest)));
     }
 
-
-
+    @GetMapping("/my")
+    public ResponseEntity<ApiResponse<List<MyReservationResponse>>> getMyReservation(
+            @RequestParam UUID memberId,
+            HttpServletRequest httpRequest) {
+        List<MyReservationResponse> reservations = reservationService.getMyReservations(memberId);
+        return ResponseEntity.ok(
+                ApiResponse.success("내 예약 목록 조회 완료", reservations, traceIdProvider.resolve(httpRequest)));
+    }
+    
     public record PaymentRequest(String paymentMethod, int amount) {}
 }

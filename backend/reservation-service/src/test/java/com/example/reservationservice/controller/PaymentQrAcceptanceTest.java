@@ -213,6 +213,59 @@ public class PaymentQrAcceptanceTest {
 
     }
 
+    @Test
+    @DisplayName("회원은 자신의 예약목록을 최신순을 조회 할 수 있다.")
+    void getMyReservations() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+
+        mockMvc.perform(post("/api/reservations/hold")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"sessionId": "%s", "memberId": "%s", "headcount": 1}
+                        """.formatted(sessionId, memberId)));
+
+        UUID anotherSessionId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(anotherSessionId)).willReturn(10);
+
+        mockMvc.perform(post("/api/reservations/hold")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"sessionId": "%s", "memberId": "%s", "headcount": 2}
+                        """.formatted(anotherSessionId, memberId)));
+        mockMvc.perform(get("/api/reservations/my")
+                .param("memberId", memberId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2));
+    }
+
+    @Test
+    @DisplayName("다른 회원의 예약은 조회 결과에 포함되지 않는다")
+    void getMyReservationExcludesOthers() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID myMemberId = UUID.randomUUID();
+        UUID otherMemberId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+
+        mockMvc.perform(post("/api/reservations/hold")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"sessionId": "%s", "memberId": "%s", "headcount": 1}
+                        """.formatted(sessionId, myMemberId)));
+
+        mockMvc.perform(post("/api/reservations/hold")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"sessionId": "%s", "memberId": "%s", "headcount": 1}
+                    """.formatted(sessionId, otherMemberId)));
+
+        mockMvc.perform(get("/api/reservations/my")
+                .param("memberId", myMemberId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
     private String createHoldJson(UUID sessionId, UUID memberId, int headCount) {
         return """
                 {"sessionId": "%s", "memberId": "%s", "headcount": %d}
