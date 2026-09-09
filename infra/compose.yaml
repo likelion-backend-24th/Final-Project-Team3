@@ -8,6 +8,70 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  gateway:
+    build: ../backend/gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SERVICES_MEMBER_SERVICE_URL: http://member-service:8081
+      SERVICES_CONFERENCE_SERVICE_URL: http://conference-service:8082
+      SERVICES_RESERVATION_SERVICE_URL: http://reservation-service:8083
+    depends_on:
+      - member-service
+      - conference-service
+      - reservation-service
+
+  member-service:
+    build: ../backend/member-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/member_service
+      MEMBER_DB_USER: ${MEMBER_DB_USER}
+      MEMBER_DB_PASSWORD: ${MEMBER_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  conference-service:
+    build: ../backend/conference-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/conference_service
+      CONFERENCE_DB_USER: ${CONFERENCE_DB_USER}
+      CONFERENCE_DB_PASSWORD: ${CONFERENCE_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  reservation-service:
+    build: ../backend/reservation-service
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/reservation_service
+      RESERVATION_DB_USER: ${RESERVATION_DB_USER}
+      RESERVATION_DB_PASSWORD: ${RESERVATION_DB_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build: ../frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway
 
 volumes:
   mysql_data:
