@@ -15,3 +15,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+services:
+  conference-service:
+    url: http://localhost:8082
