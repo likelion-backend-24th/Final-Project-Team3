@@ -5,6 +5,7 @@ import com.example.conferenceservice.common.TraceIdProvider;
 import com.example.conferenceservice.common.dto.ApiResponse;
 import com.example.conferenceservice.session.dto.SessionCapacityResponse;
 import com.example.conferenceservice.session.dto.SessionResponse;
+import com.example.conferenceservice.session.dto.SessionStartAtResponse;
 import com.example.conferenceservice.session.dto.SessionUpdateRequest;
 import com.example.conferenceservice.session.service.SessionService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,5 +46,11 @@ public class SessionController {
     ) {
         SessionResponse response = sessionService.updateSession(sessionId, request, currentUser.getMemberId());
         return ResponseEntity.ok(ApiResponse.success("세션 정원·일정 수정 성공", response, traceIdProvider.resolve(httpRequest)));
+    }
+
+    @GetMapping("/{sessionId}/startat")
+    public ResponseEntity<ApiResponse<SessionStartAtResponse>> getStartAt(@PathVariable UUID sessionId, HttpServletRequest request) {
+        SessionStartAtResponse startAt = sessionService.getStartAt(sessionId);
+        return ResponseEntity.ok(ApiResponse.success("세션 시작 일시 조회 성공", startAt, traceIdProvider.resolve(request)));
     }
 }
