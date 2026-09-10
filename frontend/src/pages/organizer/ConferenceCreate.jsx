@@ -6,8 +6,8 @@ import Button from '../../components/Button'
 import { createConference } from '../../api/conferences'
 import { ApiError } from '../../api/client'
 
-// PR #57/#65로 conference-service에 organizerName/startAt/endAt/location/description/tags가
-// 전부 실제로 저장되게 됐다 (예전엔 title/capacity만 보냈음). 배너 이미지는 시안에 있었지만 제외 요청으로 안 만듦.
+// organizerName은 더 이상 폼에서 안 받는다 — 서버가 로그인한 주최자의 JWT(조직명)로 직접 채운다
+// (전엔 아무 문자열이나 보낼 수 있던 갭이었음). imageUrl은 파일 업로드가 아니라 URL 입력 방식으로 지원된다.
 const CATEGORY_TAGS = ['Software', 'AI', 'ML', 'Cloud', 'Security', 'Frontend', 'Backend', 'DevOps', 'Mobile', 'Data', 'Career', 'Startup']
 
 // datetime-local 인풋 값("2027-03-15T09:00")엔 초가 없어서 백엔드 LocalDateTime 파싱용으로 붙여준다.
@@ -17,13 +17,13 @@ function toLocalDateTime(value) {
 
 export default function ConferenceCreate() {
   const navigate = useNavigate()
-  const [organizerName, setOrganizerName] = useState('')
   const [title, setTitle] = useState('')
   const [capacity, setCapacity] = useState('')
   const [startAt, setStartAt] = useState('')
   const [endAt, setEndAt] = useState('')
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
   const [tags, setTags] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -40,17 +40,21 @@ export default function ConferenceCreate() {
       setError('종료 일시는 시작 일시보다 늦어야 합니다.')
       return
     }
+    if (tags.length === 0) {
+      setError('카테고리는 최소 1개 선택해야 합니다.')
+      return
+    }
 
     setLoading(true)
     try {
       await createConference({
-        organizerName,
         title,
         capacity: Number(capacity),
         startAt: toLocalDateTime(startAt),
         endAt: toLocalDateTime(endAt),
         location,
         description: description || null,
+        imageUrl: imageUrl || null,
         tags,
       })
       navigate('/organizer', { state: { justCreated: true } })
@@ -80,14 +84,6 @@ export default function ConferenceCreate() {
               placeholder="예: DevCon 2027"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              required
-            />
-
-            <TextField
-              label="주최기관명"
-              placeholder="예: 한국 개발자 협회"
-              value={organizerName}
-              onChange={(e) => setOrganizerName(e.target.value)}
               required
             />
 
@@ -137,10 +133,17 @@ export default function ConferenceCreate() {
                 className="w-full bg-bg border border-border rounded-lg px-4 py-3 text-sm text-text placeholder:text-text-faint focus:outline-none focus:border-primary resize-none"
               />
             </label>
+
+            <TextField
+              label="이미지 URL (선택)"
+              placeholder="https://..."
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+            />
           </div>
 
           <div className="bg-surface border border-border rounded-xl p-6 mt-6">
-            <h2 className="text-sm font-medium text-text mb-3">카테고리 태그</h2>
+            <h2 className="text-sm font-medium text-text mb-3">카테고리 태그 <span className="text-danger">*</span> <span className="text-xs text-text-faint font-normal">(최소 1개)</span></h2>
             <div className="flex flex-wrap gap-2">
               {CATEGORY_TAGS.map((tag) => (
                 <button

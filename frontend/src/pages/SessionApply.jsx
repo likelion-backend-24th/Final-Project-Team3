@@ -31,7 +31,7 @@ export default function SessionApply() {
         })
       } else {
         navigate(`/reservations/${res.data.reservationId}/payment`, {
-          state: { sessionTitle: session?.title, conferenceTitle, headcount },
+          state: { sessionTitle: session?.title, conferenceTitle, headcount, price: session?.price ?? 0 },
         })
       }
     } catch (err) {
@@ -55,7 +55,14 @@ export default function SessionApply() {
 
         <div className="bg-surface border border-border rounded-xl p-5 mb-4">
           <p className="text-text font-medium mb-1">{session?.title ?? '세션'}</p>
-          <p className="text-sm text-text-muted">정원 {session?.capacity ?? '-'}명</p>
+          <p className="text-sm text-text-muted">
+            정원 {session?.capacity ?? '-'}명
+            {session?.location && ` · ${session.location}`}
+            {session?.speaker && ` · ${session.speaker}`}
+          </p>
+          <p className="text-sm text-text mt-1 font-medium">
+            {session?.price > 0 ? `${session.price.toLocaleString()}원 / 인` : '무료'}
+          </p>
         </div>
 
         <div className="bg-surface border border-border rounded-xl p-5">

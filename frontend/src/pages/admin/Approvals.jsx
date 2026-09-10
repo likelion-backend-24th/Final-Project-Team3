@@ -153,7 +153,7 @@ export default function Approvals() {
               <ApprovalItem
                 key={s.id}
                 title={s.title}
-                subtitle={`정원 ${s.capacity}명`}
+                subtitle={`${s.conferenceTitle ?? '소속 컨퍼런스 미상'} · 정원 ${s.capacity}명`}
                 meta={formatDateRange(s.startAt, s.endAt)}
                 busy={busyId === s.id}
                 onApprove={() => approveSess(s.id)}

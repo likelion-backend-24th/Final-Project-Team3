@@ -15,13 +15,14 @@ const METHODS = [
   { id: 'PHONE', label: '휴대폰 소액결제', icon: Smartphone },
 ]
 
-// Session에 가격 필드가 없어 모든 세션은 사실상 무료다 — 결제는 PG 없는 Mock이라
-// paymentMethod만 의미가 있고 amount는 항상 0으로 보낸다.
+// Session에 price 필드가 생겨서 실제 금액(가격 × 인원)을 계산해 보낸다. 결제 자체는 여전히
+// PG 없는 Mock이라 amount를 서버가 검증하진 않지만, 화면 표시와 요청 값은 실제 값으로 맞춘다.
 export default function Payment() {
   const { id } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const { sessionTitle, conferenceTitle, headcount } = location.state ?? {}
+  const { sessionTitle, conferenceTitle, headcount = 1, price = 0 } = location.state ?? {}
+  const amount = price * headcount
 
   const [method, setMethod] = useState('CARD')
   const [error, setError] = useState('')
@@ -34,7 +35,7 @@ export default function Payment() {
     setQueueBlocked(false)
     setLoading(true)
     try {
-      await submitPayment(id, { paymentMethod: method, amount: 0 })
+      await submitPayment(id, { paymentMethod: method, amount })
       navigate(`/reservations/${id}/complete`, { state: { sessionTitle, conferenceTitle } })
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
@@ -84,12 +85,12 @@ export default function Payment() {
             )}
             <div className="flex justify-between text-text-muted">
               <span>단가</span>
-              <span>무료</span>
+              <span>{price > 0 ? `${price.toLocaleString()}원` : '무료'}</span>
             </div>
           </div>
           <div className="flex justify-between items-center border-t border-border mt-4 pt-4">
             <span className="text-text font-medium">합계</span>
-            <span className="text-lg font-semibold text-primary">0원</span>
+            <span className="text-lg font-semibold text-primary">{amount > 0 ? `${amount.toLocaleString()}원` : '0원'}</span>
           </div>
         </div>
 
@@ -125,7 +126,7 @@ export default function Payment() {
           {error && <p className="text-sm text-danger mt-2">{error}</p>}
 
           <Button type="submit" loading={loading} className="w-full mt-2">
-            0원 결제하기
+            {amount > 0 ? `${amount.toLocaleString()}원 결제하기` : '0원 결제하기'}
           </Button>
           <p className="flex items-center justify-center gap-1.5 text-xs text-text-faint mt-3">
             <ShieldCheck size={13} /> 포트원(PortOne)으로 안전하게 결제돼요 · 결제 완료 즉시 QR 티켓이 발급됩니다
