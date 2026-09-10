@@ -4,6 +4,8 @@ const styles = {
   REJECTED: 'text-danger bg-danger/10',
   HOLD: 'text-success bg-success/10',
   QUEUED: 'text-danger bg-danger/10',
+  CONFIRMED: 'text-success bg-success/10',
+  CANCELLED: 'text-text-muted bg-surface2',
 }
 
 const labels = {
@@ -12,6 +14,8 @@ const labels = {
   REJECTED: '반려됨',
   HOLD: '신청 완료',
   QUEUED: '대기열 등록',
+  CONFIRMED: '결제 완료',
+  CANCELLED: '취소됨',
 }
 
 export default function StatusBadge({ status }) {

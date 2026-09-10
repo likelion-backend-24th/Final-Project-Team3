@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Calendar, MapPin, ChevronRight } from 'lucide-react'
+import { Search, Calendar, MapPin, ChevronRight, Layers } from 'lucide-react'
 import { listConferences } from '../api/conferences'
 import { formatDateRange } from '../utils/date'
 
 const CATEGORIES = ['전체', '소프트웨어', 'AI', 'ML', '클라우드', '보안', '프런트엔드']
 
-// 카드마다 다른 느낌을 주기 위한 결정론적 그라디언트 (실제 배너 이미지가 백엔드에 없어서 대체)
-// to-surface로 끝나야 카드 하단 내용 영역(bg-surface)이랑 색이 정확히 이어져서 경계가 안 보인다.
+// imageUrl이 생겨서(백엔드) 있으면 실제 이미지를 쓰고, 없는 컨퍼런스는 예전처럼
+// 결정론적 그라디언트로 대체한다. to-surface로 끝나야 카드 하단 내용 영역(bg-surface)이랑
+// 색이 정확히 이어져서 경계가 안 보인다.
 const GRADIENTS = [
   'from-indigo-900/60 via-purple-900/35 to-surface',
   'from-blue-900/60 via-cyan-900/35 to-surface',
@@ -121,7 +122,14 @@ export default function Home() {
                 to={`/conferences/${c.id}`}
                 className="bg-surface border border-border rounded-xl overflow-hidden hover:border-primary transition-colors flex flex-col"
               >
-                <div className={`relative h-32 bg-gradient-to-br ${gradientFor(c.id)}`} />
+                {c.imageUrl ? (
+                  <div
+                    className="relative h-32 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${c.imageUrl})` }}
+                  />
+                ) : (
+                  <div className={`relative h-32 bg-gradient-to-br ${gradientFor(c.id)}`} />
+                )}
                 <div className="p-5 flex flex-col flex-1">
                   {tags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mb-3">
@@ -152,7 +160,14 @@ export default function Home() {
                     )}
                   </div>
 
-                  <div className="mt-auto flex items-center justify-end pt-4">
+                  <div className="mt-auto flex items-center justify-between pt-4">
+                    {c.sessionCount > 0 ? (
+                      <span className="flex items-center gap-1.5 text-xs text-text-faint">
+                        <Layers size={13} /> {c.sessionCount}개 세션
+                      </span>
+                    ) : (
+                      <span />
+                    )}
                     <ChevronRight size={16} className="text-text-muted" />
                   </div>
                 </div>

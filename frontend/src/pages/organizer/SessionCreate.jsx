@@ -1,50 +1,111 @@
-import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { ChevronLeft, Info } from 'lucide-react'
 import TextField from '../../components/TextField'
 import Button from '../../components/Button'
-import { createSession } from '../../api/conferences'
+import { createSession, getSessionsByConference, updateSession } from '../../api/conferences'
 import { ApiError } from '../../api/client'
 
-// 세션 "목록 조회" API가 아직 없어서(주최자 소유 스코프로 전체 상태를 볼 방법이 없음) 등록 폼만 제공한다.
-// 등록 후엔 대시보드로 돌아가며, 방금 등록한 세션이 승인 대기 상태라는 안내만 보여준다.
+// 세션 생성/수정 공용 폼. 수정 모드(sessionId가 있으면)는 title을 못 바꾸고(백엔드 SessionUpdateRequest에
+// title이 없음), 저장하면 백엔드가 status를 무조건 PENDING으로 리셋한다(재승인 정책) — 그 사실을 안내한다.
 function toLocalDateTime(value) {
   return value ? `${value}:00` : null
 }
 
+// LocalDateTime 문자열("2027-03-15T09:00:00")을 datetime-local 인풋 값으로.
+function toInputValue(value) {
+  return value ? value.slice(0, 16) : ''
+}
+
+const emptyForm = { capacity: '', startAt: '', endAt: '', sessionStartAt: '', sessionEndAt: '', location: '', speaker: '', price: '0' }
+
+function formFromSession(session) {
+  return {
+    capacity: String(session.capacity ?? ''),
+    startAt: toInputValue(session.startAt),
+    endAt: toInputValue(session.endAt),
+    sessionStartAt: toInputValue(session.sessionStartAt),
+    sessionEndAt: toInputValue(session.sessionEndAt),
+    location: session.location ?? '',
+    speaker: session.speaker ?? '',
+    price: String(session.price ?? '0'),
+  }
+}
+
 export default function SessionCreate() {
-  const { id: conferenceId } = useParams()
+  const { id: conferenceId, sessionId } = useParams()
+  const location = useLocation()
   const navigate = useNavigate()
-  const [title, setTitle] = useState('')
-  const [capacity, setCapacity] = useState('')
-  const [startAt, setStartAt] = useState('')
-  const [endAt, setEndAt] = useState('')
+  const isEdit = Boolean(sessionId)
+
+  const [title, setTitle] = useState(location.state?.session?.title ?? '')
+  const [form, setForm] = useState(location.state?.session ? formFromSession(location.state.session) : emptyForm)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingSession, setLoadingSession] = useState(isEdit && !location.state?.session)
+
+  // 직접 URL로 들어와서 location.state가 없는 경우(새로고침 등)를 위한 폴백 —
+  // 세션 단건 조회 API가 없어서 목록에서 찾는다.
+  useEffect(() => {
+    if (!isEdit || location.state?.session) return
+    getSessionsByConference(conferenceId)
+      .then((res) => {
+        const session = res.data.find((s) => s.id === sessionId)
+        if (session) {
+          setTitle(session.title)
+          setForm(formFromSession(session))
+        } else {
+          setError('세션 정보를 찾을 수 없어요.')
+        }
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : '세션 정보를 불러오지 못했습니다.'))
+      .finally(() => setLoadingSession(false))
+  }, [isEdit, conferenceId, sessionId, location.state])
+
+  const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
   const submit = async (e) => {
     e.preventDefault()
     setError('')
 
-    if (startAt && endAt && new Date(endAt) <= new Date(startAt)) {
-      setError('종료 일시는 시작 일시보다 늦어야 합니다.')
+    if (form.startAt && form.endAt && new Date(form.endAt) <= new Date(form.startAt)) {
+      setError('신청 종료 일시는 시작 일시보다 늦어야 합니다.')
       return
+    }
+    if (form.sessionStartAt && form.sessionEndAt && new Date(form.sessionEndAt) <= new Date(form.sessionStartAt)) {
+      setError('진행 종료 일시는 시작 일시보다 늦어야 합니다.')
+      return
+    }
+
+    const payload = {
+      capacity: Number(form.capacity),
+      startAt: toLocalDateTime(form.startAt),
+      endAt: toLocalDateTime(form.endAt),
+      sessionStartAt: toLocalDateTime(form.sessionStartAt),
+      sessionEndAt: toLocalDateTime(form.sessionEndAt),
+      location: form.location,
+      speaker: form.speaker,
+      price: Number(form.price) || 0,
     }
 
     setLoading(true)
     try {
-      await createSession(conferenceId, {
-        title,
-        capacity: Number(capacity),
-        startAt: toLocalDateTime(startAt),
-        endAt: toLocalDateTime(endAt),
-      })
-      navigate(`/organizer/conferences/${conferenceId}/sessions`, { state: { justCreatedSession: true } })
+      if (isEdit) {
+        await updateSession(sessionId, payload)
+        navigate(`/organizer/conferences/${conferenceId}/sessions`, { state: { justUpdatedSession: true } })
+      } else {
+        await createSession(conferenceId, { title, ...payload })
+        navigate(`/organizer/conferences/${conferenceId}/sessions`, { state: { justCreatedSession: true } })
+      }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : '세션 등록에 실패했습니다.')
+      setError(err instanceof ApiError ? err.message : `세션 ${isEdit ? '수정' : '등록'}에 실패했습니다.`)
     } finally {
       setLoading(false)
     }
+  }
+
+  if (loadingSession) {
+    return <div className="max-w-6xl mx-auto px-6 py-20 text-center text-text-muted">불러오는 중...</div>
   }
 
   return (
@@ -59,42 +120,103 @@ export default function SessionCreate() {
       </div>
 
       <div className="max-w-xl mx-auto mt-4">
-        <h1 className="text-2xl font-semibold text-text mb-1">세션 등록</h1>
-        <p className="text-text-muted mb-6">전체관리자 승인 후 참가자에게 공개됩니다</p>
+        <h1 className="text-2xl font-semibold text-text mb-1">세션 {isEdit ? '수정' : '등록'}</h1>
+        <p className="text-text-muted mb-6">
+          {isEdit ? '수정 내용은 전체관리자 재승인 후 반영됩니다' : '전체관리자 승인 후 참가자에게 공개됩니다'}
+        </p>
+
+        {isEdit && (
+          <div className="flex gap-2 bg-warning/10 text-warning text-sm rounded-lg px-3 py-2.5 mb-5">
+            <Info size={16} className="shrink-0 mt-0.5" />
+            <span>수정하고 저장하면 승인 상태였더라도 다시 승인 대기로 바뀌어요. 승인 전까지 참가자 화면에서 숨겨집니다.</span>
+          </div>
+        )}
 
         <form onSubmit={submit}>
           <div className="bg-surface border border-border rounded-xl p-6 space-y-5">
-            <TextField
-              label="세션명"
-              placeholder="예: 키노트: 스택을 넘어서"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-            />
+            {isEdit ? (
+              <div>
+                <span className="block mb-2 text-sm text-text">세션명</span>
+                <p className="text-text-muted text-sm px-4 py-3 bg-bg border border-border rounded-lg">{title}</p>
+              </div>
+            ) : (
+              <TextField
+                label="세션명"
+                placeholder="예: 키노트: 스택을 넘어서"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+            )}
 
-            <TextField
-              label="정원"
-              type="number"
-              min={1}
-              placeholder="예: 60"
-              value={capacity}
-              onChange={(e) => setCapacity(e.target.value)}
-              required
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                label="정원"
+                type="number"
+                min={1}
+                placeholder="예: 60"
+                value={form.capacity}
+                onChange={setField('capacity')}
+                required
+              />
+              <TextField
+                label="참가 비용(원)"
+                type="number"
+                min={0}
+                placeholder="0"
+                value={form.price}
+                onChange={setField('price')}
+                required
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <TextField
                 label="신청 시작 일시"
                 type="datetime-local"
-                value={startAt}
-                onChange={(e) => setStartAt(e.target.value)}
+                value={form.startAt}
+                onChange={setField('startAt')}
                 required
               />
               <TextField
                 label="신청 종료 일시"
                 type="datetime-local"
-                value={endAt}
-                onChange={(e) => setEndAt(e.target.value)}
+                value={form.endAt}
+                onChange={setField('endAt')}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                label="진행 시작 일시"
+                type="datetime-local"
+                value={form.sessionStartAt}
+                onChange={setField('sessionStartAt')}
+                required
+              />
+              <TextField
+                label="진행 종료 일시"
+                type="datetime-local"
+                value={form.sessionEndAt}
+                onChange={setField('sessionEndAt')}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                label="장소"
+                placeholder="예: 그랜드홀 A"
+                value={form.location}
+                onChange={setField('location')}
+                required
+              />
+              <TextField
+                label="발표자"
+                placeholder="예: 김연수 CTO"
+                value={form.speaker}
+                onChange={setField('speaker')}
                 required
               />
             </div>
@@ -112,7 +234,7 @@ export default function SessionCreate() {
               취소
             </Button>
             <Button type="submit" loading={loading} className="flex-1">
-              세션 등록
+              {isEdit ? '수정 저장' : '세션 등록'}
             </Button>
           </div>
         </form>

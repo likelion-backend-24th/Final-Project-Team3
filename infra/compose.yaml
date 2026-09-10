@@ -61,6 +61,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/reservation_service
       RESERVATION_DB_USER: ${RESERVATION_DB_USER}
       RESERVATION_DB_PASSWORD: ${RESERVATION_DB_PASSWORD}
+      SERVICES_CONFERENCE_SERVICE_URL: http://conference-service:8082
     depends_on:
       mysql:
         condition: service_healthy

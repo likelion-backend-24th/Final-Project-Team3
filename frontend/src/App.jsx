@@ -129,6 +129,14 @@ export default function App() {
               }
             />
             <Route
+              path="/organizer/conferences/:id/sessions/:sessionId/edit"
+              element={
+                <ProtectedRoute role="ORGANIZER">
+                  <SessionCreate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/organizer/operations"
               element={
                 <ProtectedRoute role="ORGANIZER">
