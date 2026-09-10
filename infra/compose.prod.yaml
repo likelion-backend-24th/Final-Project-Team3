@@ -1,0 +1,21 @@
+# 프로덕션 배포용 오버라이드.
+# 로컬 개발은 compose.yaml만 사용(소스에서 직접 build).
+# 서버 배포는 GitHub Actions가 미리 빌드해 GHCR에 올린 이미지를 pull만 하도록
+# 아래 명령으로 이 파일을 함께 사용한다:
+#   docker compose -f compose.yaml -f compose.prod.yaml pull
+#   docker compose -f compose.yaml -f compose.prod.yaml up -d
+services:
+  gateway:
+    image: ghcr.io/likelion-backend-24th/final-project-team3-gateway:latest
+
+  member-service:
+    image: ghcr.io/likelion-backend-24th/final-project-team3-member-service:latest
+
+  conference-service:
+    image: ghcr.io/likelion-backend-24th/final-project-team3-conference-service:latest
+
+  reservation-service:
+    image: ghcr.io/likelion-backend-24th/final-project-team3-reservation-service:latest
+
+  frontend:
+    image: ghcr.io/likelion-backend-24th/final-project-team3-frontend:latest
