@@ -10,6 +10,4 @@ import java.util.UUID;
 @Repository
 public interface ConferenceTagRepository extends JpaRepository<ConferenceTag, UUID> {
     List<ConferenceTag> findByConferenceId(UUID conferenceId);
-
-    void deleteByConferenceId(UUID conferenceId);
 }

@@ -47,14 +47,18 @@ public class Conference {
     private LocalDateTime endAt;
 
     // 도로명 주소 등 실제 위치 정보. 승인(APPROVED) 이후엔 참가자가 이미 이 주소를 보고 신청했을 수 있어
-    // 변경할 수 없다 - locationDetail(교통편·주차·편의시설 등 부가 안내)은 주소 잠금과 무관하게 수정 가능하지만,
-    // updateLocation() 호출 자체는 어떤 필드를 바꾸든 재승인이 필요하도록 상태를 PENDING으로 되돌린다.
+    // 변경할 수 없다([장소-수정불가] 규칙) - transportation/parkingInfo/amenities는 주소 잠금과 무관하게 항상 수정 가능하다.
     @Column
     private String location;
 
-    @Lob
-    @Column(name = "location_detail", columnDefinition = "TEXT")
-    private String locationDetail;
+    @Column(name = "transportation")
+    private String transportation;
+
+    @Column(name = "parking_info")
+    private String parkingInfo;
+
+    @Column(name = "amenities")
+    private String amenities;
 
     @Lob
     @Column(columnDefinition = "TEXT")
@@ -79,26 +83,15 @@ public class Conference {
         this.rejectionReason = reason;
     }
 
-    public void updateDetails(String title, int capacity, LocalDateTime startAt, LocalDateTime endAt,
-                               String description, String imageUrl) {
-        this.title = title;
-        this.capacity = capacity;
-        this.startAt = startAt;
-        this.endAt = endAt;
+    public void updateDescription(String description) {
         this.description = description;
-        this.imageUrl = imageUrl;
-        markPendingForReapproval();
     }
 
-    public void updateLocation(String location, String locationDetail) {
+    public void updateLocation(String location, String transportation, String parkingInfo, String amenities) {
         this.location = location;
-        this.locationDetail = locationDetail;
-        markPendingForReapproval();
-    }
-
-    private void markPendingForReapproval() {
-        this.status = ConferenceStatus.PENDING;
-        this.rejectionReason = null;
+        this.transportation = transportation;
+        this.parkingInfo = parkingInfo;
+        this.amenities = amenities;
     }
 
     public boolean isApproved() {
