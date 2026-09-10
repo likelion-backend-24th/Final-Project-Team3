@@ -32,6 +32,7 @@ public class JwtTokenProvider {
         JwtBuilder builder = Jwts.builder()
                 .subject(String.valueOf(member.getId()))
                 .claim("email", member.getEmail())
+                .claim("name", member.getName())
                 .claim("role", member.getRole().name());
 
         if(member.getRole() == Role.ORGANIZER) {

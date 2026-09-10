@@ -12,6 +12,7 @@ function claimsFromToken(token) {
   return {
     memberId: payload.sub,
     email: payload.email,
+    name: payload.name,
     role: payload.role,
     organizerId: payload.organizerId ?? null,
   }
