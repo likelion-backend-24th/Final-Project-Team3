@@ -1,11 +1,11 @@
 package com.example.conferenceservice.conference.service;
 
 import com.example.conferenceservice.auth.CustomUserDetails;
+import com.example.conferenceservice.conference.dto.ConferenceDescriptionUpdateRequest;
 import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
 import com.example.conferenceservice.conference.dto.ConferenceLocationUpdateRequest;
 import com.example.conferenceservice.conference.dto.ConferenceRequest;
 import com.example.conferenceservice.conference.dto.ConferenceResponse;
-import com.example.conferenceservice.conference.dto.ConferenceUpdateRequest;
 import com.example.conferenceservice.conference.dto.RejectConferenceRequest;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
@@ -55,7 +55,9 @@ public class ConferenceService {
                 .startAt(request.startAt())
                 .endAt(request.endAt())
                 .location(request.location())
-                .locationDetail(request.locationDetail())
+                .transportation(request.transportation())
+                .parkingInfo(request.parkingInfo())
+                .amenities(request.amenities())
                 .description(request.description())
                 .imageUrl(request.imageUrl())
                 .status(ConferenceStatus.PENDING)
@@ -119,24 +121,11 @@ public class ConferenceService {
     }
 
     @Transactional
-    public ConferenceResponse updateConference(UUID id, ConferenceUpdateRequest request, UUID requesterId) {
+    public ConferenceResponse updateDescription(UUID id, ConferenceDescriptionUpdateRequest request, UUID requesterId) {
         Conference conference = findConference(id);
         OwnerScopeGuard.verify(requesterId, conference.getOrganizerId(), ConferenceErrorCode.CONFERENCE_ACCESS_DENIED);
-        if (!request.endAt().isAfter(request.startAt())) {
-            throw new BusinessException(ConferenceErrorCode.INVALID_CONFERENCE_PERIOD);
-        }
-        conference.updateDetails(request.title(), request.capacity(), request.startAt(), request.endAt(),
-                request.description(), request.imageUrl());
-        replaceTags(conference, request.tags());
+        conference.updateDescription(request.description());
         return ConferenceResponse.from(conference, countApprovedSessions(conference));
-    }
-
-    private void replaceTags(Conference conference, List<String> tagNames) {
-        conferenceTagRepository.deleteByConferenceId(conference.getId());
-        List<ConferenceTag> tags = toTags(tagNames, conference);
-        if (!tags.isEmpty()) {
-            conferenceTagRepository.saveAll(tags);
-        }
     }
 
     @Transactional
@@ -146,7 +135,7 @@ public class ConferenceService {
         if (conference.isApproved() && !Objects.equals(conference.getLocation(), request.location())) {
             throw new BusinessException(ConferenceErrorCode.CONFERENCE_LOCATION_ADDRESS_LOCKED);
         }
-        conference.updateLocation(request.location(), request.locationDetail());
+        conference.updateLocation(request.location(), request.transportation(), request.parkingInfo(), request.amenities());
         return ConferenceResponse.from(conference, countApprovedSessions(conference));
     }
 

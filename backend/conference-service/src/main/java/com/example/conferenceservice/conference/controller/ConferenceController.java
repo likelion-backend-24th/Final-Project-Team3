@@ -5,11 +5,11 @@ import com.example.conferenceservice.common.TraceIdProvider;
 import com.example.conferenceservice.common.dto.ApiResponse;
 import com.example.conferenceservice.common.dto.Meta;
 import com.example.conferenceservice.common.dto.PageMeta;
+import com.example.conferenceservice.conference.dto.ConferenceDescriptionUpdateRequest;
 import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
 import com.example.conferenceservice.conference.dto.ConferenceLocationUpdateRequest;
 import com.example.conferenceservice.conference.dto.ConferenceRequest;
 import com.example.conferenceservice.conference.dto.ConferenceResponse;
-import com.example.conferenceservice.conference.dto.ConferenceUpdateRequest;
 import com.example.conferenceservice.conference.service.ConferenceService;
 import com.example.conferenceservice.session.dto.SessionCreateRequest;
 import com.example.conferenceservice.session.dto.SessionResponse;
@@ -68,16 +68,16 @@ public class ConferenceController {
                 .body(ApiResponse.success("컨퍼런스 등록 신청 성공", response, traceIdProvider.resolve(httpRequest)));
     }
 
-    @PatchMapping("/{id}")
+    @PatchMapping("/{id}/description")
     @PreAuthorize("hasRole('ORGANIZER')")
-    public ResponseEntity<ApiResponse<ConferenceResponse>> updateConference(
+    public ResponseEntity<ApiResponse<ConferenceResponse>> updateDescription(
             @PathVariable UUID id,
-            @Valid @RequestBody ConferenceUpdateRequest request,
+            @Valid @RequestBody ConferenceDescriptionUpdateRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser,
             HttpServletRequest httpRequest
     ) {
-        ConferenceResponse response = conferenceService.updateConference(id, request, currentUser.getMemberId());
-        return ResponseEntity.ok(ApiResponse.success("컨퍼런스 수정 성공", response, traceIdProvider.resolve(httpRequest)));
+        ConferenceResponse response = conferenceService.updateDescription(id, request, currentUser.getMemberId());
+        return ResponseEntity.ok(ApiResponse.success("컨퍼런스 소개글 수정 성공", response, traceIdProvider.resolve(httpRequest)));
     }
 
     @PatchMapping("/{id}/location")

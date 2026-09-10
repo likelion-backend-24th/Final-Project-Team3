@@ -26,7 +26,11 @@ public record ConferenceRequest(
     @NotBlank(message = "장소는 필수입니다.")
     String location,
 
-    String locationDetail,
+    String transportation,
+
+    String parkingInfo,
+
+    String amenities,
 
     String description,
 
