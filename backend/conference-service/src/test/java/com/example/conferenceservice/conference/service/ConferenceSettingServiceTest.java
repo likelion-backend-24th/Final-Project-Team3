@@ -131,6 +131,30 @@ class ConferenceSettingServiceTest {
                 .isEqualTo(ConferenceErrorCode.CONFERENCE_ACCESS_DENIED);
     }
 
+    @Test
+    void updateDescription_notFound_throwsConferenceNotFound() {
+        UUID missingId = UUID.randomUUID();
+        given(conferenceRepository.findById(missingId)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> conferenceService.updateDescription(
+                missingId, new ConferenceDescriptionUpdateRequest("소개글"), UUID.randomUUID()))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ConferenceErrorCode.CONFERENCE_NOT_FOUND);
+    }
+
+    @Test
+    void updateLocation_notFound_throwsConferenceNotFound() {
+        UUID missingId = UUID.randomUUID();
+        given(conferenceRepository.findById(missingId)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> conferenceService.updateLocation(
+                missingId, new ConferenceLocationUpdateRequest("서울", null, null, null), UUID.randomUUID()))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ConferenceErrorCode.CONFERENCE_NOT_FOUND);
+    }
+
     private Conference conference(UUID organizerId, ConferenceStatus status) {
         return Conference.builder()
                 .id(UUID.randomUUID()).organizerId(organizerId).organizerName("주최자").title("컨퍼런스")
