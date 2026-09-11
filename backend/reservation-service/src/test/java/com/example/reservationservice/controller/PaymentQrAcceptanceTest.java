@@ -1,11 +1,14 @@
 package com.example.reservationservice.controller;
 
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
+import com.example.reservationservice.reservation.entity.Reservation;
+import com.example.reservationservice.reservation.entity.ReservationStatus;
 import com.example.reservationservice.reservation.exception.ReservationErrorCode;
 import com.example.reservationservice.reservation.repository.QrTicketRepository;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
 import com.example.reservationservice.reservation.repository.SessionCapacityLockRepository;
 import com.example.reservationservice.reservation.repository.WaitingQueueRepository;
+import com.example.reservationservice.reservation.scheduler.HoldExpirationScheduler;
 import com.jayway.jsonpath.JsonPath;
 import org.hibernate.query.sql.internal.ParameterRecognizerImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,12 +19,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static java.util.UUID.randomUUID;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -50,6 +56,9 @@ public class PaymentQrAcceptanceTest {
 
     @Autowired
     private QrTicketRepository qrTicketRepository;
+
+    @Autowired
+    private HoldExpirationScheduler holdExpirationScheduler;
 
     @BeforeEach
     void setUp() {
@@ -158,12 +167,12 @@ public class PaymentQrAcceptanceTest {
     }
 
     @Test
-    @DisplayName("대기열 1번이 결제 완료하면, 2번의 순번이 1번으로 당겨져 결제가 가능해진다")
-    void queuePositionAdvancesAfterPayment() throws Exception {
+    @DisplayName("앞선 HOLD가 만료되지 않은 채로는 대기열 1번이라도 결제로 정원을 초과할 수 없다")
+    void queuedPaymentRejectedWhenSeatStillHeld() throws Exception {
         UUID sessionId = UUID.randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
 
-        // 정원 채움 (HOLD)
+        // 정원 채움 (HOLD, 아직 만료되지 않음 -> 실제 좌석은 비어있지 않음)
         mockMvc.perform(post("/api/reservations/hold")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createHoldJson(sessionId, UUID.randomUUID(), 1)));
@@ -175,35 +184,63 @@ public class PaymentQrAcceptanceTest {
                 .andReturn();
         String firstReservationId = JsonPath.read(firstQueued.getResponse().getContentAsString(), "$.data.reservationId");
 
-        // 대기열 2번
-        MvcResult secondQueued = mockMvc.perform(post("/api/reservations/hold")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(createHoldJson(sessionId, UUID.randomUUID(), 1)))
-                .andReturn();
-        String secondReservationId = JsonPath.read(secondQueued.getResponse().getContentAsString(), "$.data.reservationId");
-
-        // 2번 순서는 미도달 -> 결제 거부
-        mockMvc.perform(post("/api/reservations/{id}/payment", secondReservationId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"paymentMethod": "CARD", "amount": 10000}
-                        """))
-                .andExpect(status().isForbidden());
-
-        // 1번이 결제 완료 (대기열에서 빠짐)
+        // 대기열 순번(position==1)은 도달했지만, 실제 좌석은 아직 비어있지 않으므로 결제는 거부되어야 한다
         mockMvc.perform(post("/api/reservations/{id}/payment", firstReservationId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"paymentMethod": "CARD", "amount" : 10000}
+                        {"paymentMethod": "CARD", "amount": 10000}
                         """))
-                .andExpect(status().isOk());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("RESERVATION_SESSION_CAPACITY_EXCEEDED"));
+    }
 
-        // 2번 조회 시 1번으로 당겨져 있어야 함
+    @Test
+    @DisplayName("HOLD가 만료되면 새 신청자가 아니라 대기열 1번이 좌석을 승계하고, 이어서 대기열 순번이 당겨진다")
+    void queueFrontIsPromotedWhenHoldExpires_notNewApplicant() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
+
+        // 정원 채움 (HOLD)
+        MvcResult firstHold = mockMvc.perform(post("/api/reservations/hold")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createHoldJson(sessionId, UUID.randomUUID(), 1)))
+                .andReturn();
+        String firstReservationId = JsonPath.read(firstHold.getResponse().getContentAsString(), "$.data.reservationId");
+
+        // 대기열 1번
+        MvcResult secondQueued = mockMvc.perform(post("/api/reservations/hold")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createHoldJson(sessionId, UUID.randomUUID(), 1)))
+                .andReturn();
+        String secondReservationId = JsonPath.read(secondQueued.getResponse().getContentAsString(), "$.data.reservationId");
+
+        // 대기열 2번
+        MvcResult thirdQueued = mockMvc.perform(post("/api/reservations/hold")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createHoldJson(sessionId, UUID.randomUUID(), 1)))
+                .andReturn();
+        String thirdReservationId = JsonPath.read(thirdQueued.getResponse().getContentAsString(), "$.data.reservationId");
+
+        // 1번 HOLD를 강제로 만료시키고 스케줄러 실행 (실제 10분 대기 대신 재현)
+        Reservation firstReservation = reservationRepository.findById(UUID.fromString(firstReservationId)).orElseThrow();
+        ReflectionTestUtils.setField(firstReservation, "expiresAt", LocalDateTime.now().minusMinutes(1));
+        reservationRepository.saveAndFlush(firstReservation);
+
+        holdExpirationScheduler.expireOverdueHolds();
+
+        // 반납된 좌석은 새 신청자가 아니라 대기열 1번이 자동으로 승계해 HOLD가 되고, 대기열에서는 빠진다
+        Reservation promoted = reservationRepository.findById(UUID.fromString(secondReservationId)).orElseThrow();
+        assertThat(promoted.getStatus()).isEqualTo(ReservationStatus.HOLD);
+
         mockMvc.perform(get("/api/reservations/{id}/queue-position", secondReservationId))
+                .andExpect(status().isNotFound());
+
+        // 대기열 2번이었던 사람은 1번으로 당겨진다
+        mockMvc.perform(get("/api/reservations/{id}/queue-position", thirdReservationId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value(1));
 
-        // 2번이었던 사람도  결제 가능해야 함
+        // 승계받은 사람은 정상적으로(HOLD 결제 경로로) 결제 가능하다
         mockMvc.perform(post("/api/reservations/{id}/payment", secondReservationId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -211,6 +248,14 @@ public class PaymentQrAcceptanceTest {
                         """))
                 .andExpect(status().isOk());
 
+        // 좌석은 이미 승계자가 가져갔으므로, 순번이 1번으로 당겨졌다고 해도 대기열 3번이었던 사람은 결제할 수 없다
+        mockMvc.perform(post("/api/reservations/{id}/payment", thirdReservationId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"paymentMethod": "CARD", "amount": 10000}
+                        """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("RESERVATION_SESSION_CAPACITY_EXCEEDED"));
     }
 
     @Test
