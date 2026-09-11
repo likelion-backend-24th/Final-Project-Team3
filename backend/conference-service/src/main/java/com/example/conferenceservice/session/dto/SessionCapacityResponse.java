@@ -6,12 +6,14 @@ import java.util.UUID;
 
 public record SessionCapacityResponse(
         UUID sessionId,
-        int capacity
+        int capacity,
+        Integer maxHeadcountPerApplication
 ) {
     public static SessionCapacityResponse from(Session session) {
         return new SessionCapacityResponse(
                 session.getId(),
-                session.getCapacity()
+                session.getCapacity(),
+                session.getMaxHeadcountPerApplication()
         );
     }
 }

@@ -52,6 +52,7 @@ class SessionCapacityTest {
                 .build();
         Session session = Session.builder()
                 .id(sessionId).conference(approved).title("세션 A").capacity(30)
+                .maxHeadcountPerApplication(4)
                 .build();
         given(sessionRepository.findByIdAndConference_Status(sessionId, ConferenceStatus.APPROVED))
                 .willReturn(Optional.of(session));
@@ -60,6 +61,7 @@ class SessionCapacityTest {
 
         assertThat(result.sessionId()).isEqualTo(sessionId);
         assertThat(result.capacity()).isEqualTo(30);
+        assertThat(result.maxHeadcountPerApplication()).isEqualTo(4);
     }
 
     @Test
