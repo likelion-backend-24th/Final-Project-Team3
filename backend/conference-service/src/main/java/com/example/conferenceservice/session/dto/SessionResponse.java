@@ -16,7 +16,8 @@ public record SessionResponse(
         LocalDateTime sessionEndAt,
         String location,
         String speaker,
-        int price
+        int price,
+        Integer maxHeadcountPerApplication
 ) {
     public static SessionResponse from(Session session) {
         return new SessionResponse(
@@ -31,7 +32,8 @@ public record SessionResponse(
                 session.getSessionEndAt(),
                 session.getLocation(),
                 session.getSpeaker(),
-                session.getPrice() == null ? 0 : session.getPrice()
+                session.getPrice() == null ? 0 : session.getPrice(),
+                session.getMaxHeadcountPerApplication()
         );
     }
 }

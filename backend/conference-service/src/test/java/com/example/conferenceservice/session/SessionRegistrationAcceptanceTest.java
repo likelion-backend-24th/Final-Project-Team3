@@ -156,7 +156,8 @@ class SessionRegistrationAcceptanceTest {
                   "sessionEndAt": "%s",
                   "location": "그랜드홀 A",
                   "speaker": "김연수 CTO",
-                  "price": 10000
+                  "price": 10000,
+                  "maxHeadcountPerApplication": 4
                 }
                 """.formatted(title, capacity, startAt, endAt, sessionStartAt, sessionEndAt);
     }

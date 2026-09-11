@@ -17,13 +17,13 @@ final class SessionRequestFixtures {
         return new SessionCreateRequest(
                 title, capacity, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2),
                 LocalDateTime.now().plusDays(5), LocalDateTime.now().plusDays(5).plusHours(1),
-                "그랜드홀 A", "김연수 CTO", 10000);
+                "그랜드홀 A", "김연수 CTO", 10000, 4);
     }
 
     static SessionUpdateRequest validUpdateRequest(int capacity) {
         return new SessionUpdateRequest(
                 capacity, LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(4),
                 LocalDateTime.now().plusDays(5), LocalDateTime.now().plusDays(5).plusHours(1),
-                "그랜드홀 A", "김연수 CTO", 10000);
+                "그랜드홀 A", "김연수 CTO", 10000, 4);
     }
 }

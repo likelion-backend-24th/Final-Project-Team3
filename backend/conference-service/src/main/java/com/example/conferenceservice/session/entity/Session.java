@@ -56,6 +56,11 @@ public class Session {
     @Column(name = "price")
     private Integer price;
 
+    // 1인당(1회 신청당) 최대 신청 인원. 프론트에서 고정값(4명)으로 막던 것을 주최자가 세션별로 설정하도록 이관.
+    // 기존 row는 마이그레이션 없이 컬럼만 추가되므로 null일 수 있어 Integer로 둔다.
+    @Column(name = "max_headcount_per_application")
+    private Integer maxHeadcountPerApplication;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
@@ -73,7 +78,8 @@ public class Session {
 
     public void updateSchedule(int capacity, LocalDateTime startAt, LocalDateTime endAt,
                                 LocalDateTime sessionStartAt, LocalDateTime sessionEndAt,
-                                String location, String speaker, Integer price) {
+                                String location, String speaker, Integer price,
+                                Integer maxHeadcountPerApplication) {
         this.capacity = capacity;
         this.startAt = startAt;
         this.endAt = endAt;
@@ -82,6 +88,7 @@ public class Session {
         this.location = location;
         this.speaker = speaker;
         this.price = price;
+        this.maxHeadcountPerApplication = maxHeadcountPerApplication;
         this.status = SessionStatus.PENDING;
         this.rejectReason = null;
     }

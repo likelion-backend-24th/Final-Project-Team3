@@ -90,7 +90,7 @@ class SessionRegistrationTest {
         SessionCreateRequest request = new SessionCreateRequest(
                 "세션 A", 10, sameInstant, sameInstant,
                 LocalDateTime.now().plusDays(5), LocalDateTime.now().plusDays(5).plusHours(1),
-                "그랜드홀 A", "김연수 CTO", 10000);
+                "그랜드홀 A", "김연수 CTO", 10000, 4);
 
         assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
@@ -105,7 +105,7 @@ class SessionRegistrationTest {
         SessionCreateRequest request = new SessionCreateRequest(
                 "세션 A", 10, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2),
                 sameInstant, sameInstant,
-                "그랜드홀 A", "김연수 CTO", 10000);
+                "그랜드홀 A", "김연수 CTO", 10000, 4);
 
         assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
@@ -120,7 +120,7 @@ class SessionRegistrationTest {
         SessionCreateRequest request = new SessionCreateRequest(
                 "세션 A", 10, LocalDateTime.now().plusDays(1), endAt,
                 endAt, endAt.plusHours(1),
-                "그랜드홀 A", "김연수 CTO", 10000);
+                "그랜드홀 A", "김연수 CTO", 10000, 4);
 
         assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
@@ -135,12 +135,26 @@ class SessionRegistrationTest {
         SessionCreateRequest request = new SessionCreateRequest(
                 "세션 A", 10, LocalDateTime.now().plusDays(1), endAt,
                 endAt.minusHours(1), endAt.plusHours(1),
-                "그랜드홀 A", "김연수 CTO", 10000);
+                "그랜드홀 A", "김연수 CTO", 10000, 4);
 
         assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(SessionErrorCode.INVALID_SESSION_SCHEDULE_BEFORE_REGISTRATION);
+    }
+
+    @Test
+    void 일인당_최대_신청_인원이_정원을_초과하면_세션_등록이_400으로_거절된다() {
+        UUID conferenceId = UUID.randomUUID();
+        SessionCreateRequest request = new SessionCreateRequest(
+                "세션 A", 3, LocalDateTime.now().plusDays(1), LocalDateTime.now().plusDays(2),
+                LocalDateTime.now().plusDays(5), LocalDateTime.now().plusDays(5).plusHours(1),
+                "그랜드홀 A", "김연수 CTO", 10000, 4);
+
+        assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(SessionErrorCode.MAX_HEADCOUNT_EXCEEDS_CAPACITY);
     }
 
     @Test
@@ -197,6 +211,20 @@ class SessionRegistrationTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(SessionErrorCode.INVALID_SESSION_CAPACITY);
+    }
+
+    @Test
+    void 일인당_최대_신청_인원이_정원을_초과하면_세션_수정이_400으로_거절된다() {
+        UUID sessionId = UUID.randomUUID();
+        SessionUpdateRequest request = new SessionUpdateRequest(
+                3, LocalDateTime.now().plusDays(3), LocalDateTime.now().plusDays(4),
+                LocalDateTime.now().plusDays(5), LocalDateTime.now().plusDays(5).plusHours(1),
+                "그랜드홀 A", "김연수 CTO", 10000, 4);
+
+        assertThatThrownBy(() -> sessionService.updateSession(sessionId, request, ORGANIZER_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(SessionErrorCode.MAX_HEADCOUNT_EXCEEDS_CAPACITY);
     }
 
     @Test

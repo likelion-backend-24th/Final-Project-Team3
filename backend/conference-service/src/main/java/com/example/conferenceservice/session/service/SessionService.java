@@ -64,7 +64,7 @@ public class SessionService {
     @Transactional
     public SessionResponse createSession(UUID conferenceId, SessionCreateRequest request, UUID requesterId) {
         validateSchedule(request.capacity(), request.startAt(), request.endAt(),
-                request.sessionStartAt(), request.sessionEndAt());
+                request.sessionStartAt(), request.sessionEndAt(), request.maxHeadcountPerApplication());
 
         Conference conference = conferenceRepository.findById(conferenceId)
                 .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
@@ -84,6 +84,7 @@ public class SessionService {
                 .location(request.location())
                 .speaker(request.speaker())
                 .price(request.price())
+                .maxHeadcountPerApplication(request.maxHeadcountPerApplication())
                 .build();
         Session saved = sessionRepository.save(session);
         return SessionResponse.from(saved);
@@ -92,7 +93,7 @@ public class SessionService {
     @Transactional
     public SessionResponse updateSession(UUID sessionId, SessionUpdateRequest request, UUID requesterId) {
         validateSchedule(request.capacity(), request.startAt(), request.endAt(),
-                request.sessionStartAt(), request.sessionEndAt());
+                request.sessionStartAt(), request.sessionEndAt(), request.maxHeadcountPerApplication());
 
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new BusinessException(SessionErrorCode.SESSION_NOT_FOUND));
@@ -102,12 +103,14 @@ public class SessionService {
         }
         session.updateSchedule(request.capacity(), request.startAt(), request.endAt(),
                 request.sessionStartAt(), request.sessionEndAt(),
-                request.location(), request.speaker(), request.price());
+                request.location(), request.speaker(), request.price(),
+                request.maxHeadcountPerApplication());
         return SessionResponse.from(session);
     }
 
     private void validateSchedule(int capacity, LocalDateTime startAt, LocalDateTime endAt,
-                                   LocalDateTime sessionStartAt, LocalDateTime sessionEndAt) {
+                                   LocalDateTime sessionStartAt, LocalDateTime sessionEndAt,
+                                   Integer maxHeadcountPerApplication) {
         if (capacity <= 0) {
             throw new BusinessException(SessionErrorCode.INVALID_SESSION_CAPACITY);
         }
@@ -119,6 +122,9 @@ public class SessionService {
         }
         if (!sessionStartAt.isAfter(endAt)) {
             throw new BusinessException(SessionErrorCode.INVALID_SESSION_SCHEDULE_BEFORE_REGISTRATION);
+        }
+        if (maxHeadcountPerApplication != null && maxHeadcountPerApplication > capacity) {
+            throw new BusinessException(SessionErrorCode.MAX_HEADCOUNT_EXCEEDS_CAPACITY);
         }
     }
 

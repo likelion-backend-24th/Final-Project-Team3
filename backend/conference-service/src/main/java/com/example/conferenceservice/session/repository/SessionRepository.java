@@ -32,6 +32,13 @@ public interface SessionRepository extends JpaRepository<Session, UUID> {
             @Param("conferenceIds") List<UUID> conferenceIds,
             @Param("status") SessionStatus status);
 
+    // 주최자 본인의 컨퍼런스 목록(getMyConferences)에서는 승인 대기 세션도 본인 눈에 보여야 하므로
+    // 상태와 무관하게 전체 세션 개수를 집계한다.
+    @Query("SELECT s.conference.id AS conferenceId, COUNT(s) AS count "
+            + "FROM Session s WHERE s.conference.id IN :conferenceIds "
+            + "GROUP BY s.conference.id")
+    List<ConferenceSessionCount> countByConferenceIdIn(@Param("conferenceIds") List<UUID> conferenceIds);
+
     interface ConferenceSessionCount {
         UUID getConferenceId();
         long getCount();
