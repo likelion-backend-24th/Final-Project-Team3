@@ -17,6 +17,8 @@ import MyPage from './pages/MyPage'
 
 import OrganizerDashboard from './pages/organizer/Dashboard'
 import ConferenceCreate from './pages/organizer/ConferenceCreate'
+import Applications from './pages/organizer/Applications'
+import ConferenceSettings from './pages/organizer/ConferenceSettings'
 import SessionManage from './pages/organizer/SessionManage'
 import SessionCreate from './pages/organizer/SessionCreate'
 import ComingSoon from './pages/organizer/ComingSoon'
@@ -109,6 +111,22 @@ export default function App() {
               element={
                 <ProtectedRoute role="ORGANIZER">
                   <ConferenceCreate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/applications"
+              element={
+                <ProtectedRoute role="ORGANIZER">
+                  <Applications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/conferences/:id/settings"
+              element={
+                <ProtectedRoute role="ORGANIZER">
+                  <ConferenceSettings />
                 </ProtectedRoute>
               }
             />

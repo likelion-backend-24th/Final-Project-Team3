@@ -75,8 +75,8 @@ export default function SessionManage() {
                     {s.price > 0 ? `${s.price.toLocaleString()}원` : '무료'}
                   </p>
                 )}
-                {s.status === 'REJECTED' && s.rejectReason && (
-                  <p className="text-sm text-danger mt-1.5">반려 사유: {s.rejectReason}</p>
+                {s.status === 'REJECTED' && s.rejectionReason && (
+                  <p className="text-sm text-danger mt-1.5">반려 사유: {s.rejectionReason}</p>
                 )}
               </div>
               <Link

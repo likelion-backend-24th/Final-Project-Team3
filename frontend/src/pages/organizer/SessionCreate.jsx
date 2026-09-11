@@ -3,8 +3,9 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, Info } from 'lucide-react'
 import TextField from '../../components/TextField'
 import Button from '../../components/Button'
-import { createSession, getSessionsByConference, updateSession } from '../../api/conferences'
+import { createSession, getConference, getSessionsByConference, updateSession } from '../../api/conferences'
 import { ApiError } from '../../api/client'
+import { formatDateRange } from '../../utils/date'
 
 // 세션 생성/수정 공용 폼. 수정 모드(sessionId가 있으면)는 title을 못 바꾸고(백엔드 SessionUpdateRequest에
 // title이 없음), 저장하면 백엔드가 status를 무조건 PENDING으로 리셋한다(재승인 정책) — 그 사실을 안내한다.
@@ -17,7 +18,17 @@ function toInputValue(value) {
   return value ? value.slice(0, 16) : ''
 }
 
-const emptyForm = { capacity: '', startAt: '', endAt: '', sessionStartAt: '', sessionEndAt: '', location: '', speaker: '', price: '0' }
+const emptyForm = {
+  capacity: '',
+  startAt: '',
+  endAt: '',
+  sessionStartAt: '',
+  sessionEndAt: '',
+  location: '',
+  speaker: '',
+  price: '0',
+  maxHeadcountPerApplication: '',
+}
 
 function formFromSession(session) {
   return {
@@ -29,6 +40,7 @@ function formFromSession(session) {
     location: session.location ?? '',
     speaker: session.speaker ?? '',
     price: String(session.price ?? '0'),
+    maxHeadcountPerApplication: String(session.maxHeadcountPerApplication ?? ''),
   }
 }
 
@@ -40,9 +52,18 @@ export default function SessionCreate() {
 
   const [title, setTitle] = useState(location.state?.session?.title ?? '')
   const [form, setForm] = useState(location.state?.session ? formFromSession(location.state.session) : emptyForm)
+  const [conference, setConference] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingSession, setLoadingSession] = useState(isEdit && !location.state?.session)
+
+  // 세션 진행 일시가 컨퍼런스 진행 기간 밖으로 나가지 않게 미리 막으려면 컨퍼런스 기간을 알아야 한다.
+  // (세션 등록은 승인된 컨퍼런스에서만 가능하니 공개 상세 조회로 충분하다.)
+  useEffect(() => {
+    getConference(conferenceId)
+      .then((res) => setConference(res.data))
+      .catch(() => {})
+  }, [conferenceId])
 
   // 직접 URL로 들어와서 location.state가 없는 경우(새로고침 등)를 위한 폴백 —
   // 세션 단건 조회 API가 없어서 목록에서 찾는다.
@@ -76,6 +97,19 @@ export default function SessionCreate() {
       setError('진행 종료 일시는 시작 일시보다 늦어야 합니다.')
       return
     }
+    if (Number(form.maxHeadcountPerApplication) > Number(form.capacity)) {
+      setError('1인당 최대 신청 인원은 정원을 초과할 수 없습니다.')
+      return
+    }
+    if (
+      conference &&
+      form.sessionStartAt &&
+      form.sessionEndAt &&
+      (new Date(form.sessionStartAt) < new Date(conference.startAt) || new Date(form.sessionEndAt) > new Date(conference.endAt))
+    ) {
+      setError('세션 진행 일시는 컨퍼런스 진행 기간 안에 있어야 합니다.')
+      return
+    }
 
     const payload = {
       capacity: Number(form.capacity),
@@ -86,6 +120,7 @@ export default function SessionCreate() {
       location: form.location,
       speaker: form.speaker,
       price: Number(form.price) || 0,
+      maxHeadcountPerApplication: Number(form.maxHeadcountPerApplication),
     }
 
     setLoading(true)
@@ -170,6 +205,16 @@ export default function SessionCreate() {
               />
             </div>
 
+            <TextField
+              label="1인당 최대 신청 인원"
+              type="number"
+              min={1}
+              placeholder="예: 4"
+              value={form.maxHeadcountPerApplication}
+              onChange={setField('maxHeadcountPerApplication')}
+              required
+            />
+
             <div className="grid grid-cols-2 gap-4">
               <TextField
                 label="신청 시작 일시"
@@ -187,21 +232,28 @@ export default function SessionCreate() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <TextField
-                label="진행 시작 일시"
-                type="datetime-local"
-                value={form.sessionStartAt}
-                onChange={setField('sessionStartAt')}
-                required
-              />
-              <TextField
-                label="진행 종료 일시"
-                type="datetime-local"
-                value={form.sessionEndAt}
-                onChange={setField('sessionEndAt')}
-                required
-              />
+            <div>
+              <div className="grid grid-cols-2 gap-4">
+                <TextField
+                  label="진행 시작 일시"
+                  type="datetime-local"
+                  value={form.sessionStartAt}
+                  onChange={setField('sessionStartAt')}
+                  required
+                />
+                <TextField
+                  label="진행 종료 일시"
+                  type="datetime-local"
+                  value={form.sessionEndAt}
+                  onChange={setField('sessionEndAt')}
+                  required
+                />
+              </div>
+              {conference && (
+                <p className="text-xs text-text-faint mt-2">
+                  컨퍼런스 진행 기간({formatDateRange(conference.startAt, conference.endAt)}) 안에서 설정해주세요.
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

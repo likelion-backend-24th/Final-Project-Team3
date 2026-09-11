@@ -54,6 +54,12 @@ export async function apiFetch(path, { method = 'GET', body, skipAuthRetry = fal
     onUnauthorized?.()
   }
 
+  // DELETE 같은 일부 엔드포인트는 204 No Content로 바디 없이 응답한다(ApiResponse 봉투 자체가 없음).
+  // 상태코드가 성공 범위인데 봉투가 없다면 그것 자체로 성공 처리한다.
+  if (res.ok && parsed === null) {
+    return { success: true, data: null }
+  }
+
   // 일부 엔드포인트(예: 세션 홀드 정원 초과)는 "정상적인 비즈니스 결과"를 4xx 상태 코드에
   // success:true 바디로 함께 내려준다(예: 대기열 등록 시 409). 그래서 에러 여부는 HTTP status가 아니라
   // 응답 바디의 success 필드로만 판단한다.

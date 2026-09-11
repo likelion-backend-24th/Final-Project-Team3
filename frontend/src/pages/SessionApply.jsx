@@ -6,7 +6,9 @@ import { useAuth } from '../context/AuthContext'
 import { createHold } from '../api/reservations'
 import { ApiError } from '../api/client'
 
-const MAX_HEADCOUNT = 4
+// 세션마다 주최자가 정한 1인당 최대 신청 인원(maxHeadcountPerApplication)을 쓰고, 없는(구) 세션은 이 값으로 대체한다.
+// 참고: 이건 화면 UX일 뿐 실제 정원 보호는 아니다 - 서버가 지금 이 값을 검증하지 않는다.
+const DEFAULT_MAX_HEADCOUNT = 4
 
 export default function SessionApply() {
   const { id: conferenceId, sessionId } = useParams()
@@ -15,6 +17,7 @@ export default function SessionApply() {
   const { claims } = useAuth()
   const session = location.state?.session
   const conferenceTitle = location.state?.conferenceTitle
+  const maxHeadcount = session?.maxHeadcountPerApplication ?? DEFAULT_MAX_HEADCOUNT
 
   const [headcount, setHeadcount] = useState(1)
   const [error, setError] = useState('')
@@ -76,12 +79,12 @@ export default function SessionApply() {
             </button>
             <span className="text-xl font-semibold text-text w-6 text-center">{headcount}</span>
             <button
-              onClick={() => setHeadcount((n) => Math.min(MAX_HEADCOUNT, n + 1))}
+              onClick={() => setHeadcount((n) => Math.min(maxHeadcount, n + 1))}
               className="w-9 h-9 rounded-lg bg-surface2 border border-border text-text hover:bg-border flex items-center justify-center"
             >
               <Plus size={16} />
             </button>
-            <span className="text-sm text-text-faint">최대 {MAX_HEADCOUNT}인</span>
+            <span className="text-sm text-text-faint">최대 {maxHeadcount}인</span>
           </div>
           {error && <p className="text-sm text-danger mb-3">{error}</p>}
           <Button onClick={submit} loading={loading} className="w-full">
