@@ -93,6 +93,7 @@ class ConferenceApprovalTest {
         ConferenceResponse result = conferenceService.rejectConference(conferenceId, new RejectConferenceRequest("정원 초과"));
 
         assertThat(result.status()).isEqualTo(ConferenceStatus.REJECTED);
+        assertThat(result.rejectionReason()).isEqualTo("정원 초과");
         assertThat(pending.getRejectionReason()).isEqualTo("정원 초과");
     }
 

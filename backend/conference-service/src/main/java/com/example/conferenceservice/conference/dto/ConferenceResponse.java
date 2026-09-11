@@ -21,7 +21,8 @@ public record ConferenceResponse(
         String amenities,
         String description,
         String imageUrl,
-        long sessionCount
+        long sessionCount,
+        String rejectionReason
 )
 {
     public static ConferenceResponse from(Conference conference) {
@@ -44,7 +45,8 @@ public record ConferenceResponse(
                 conference.getAmenities(),
                 conference.getDescription(),
                 conference.getImageUrl(),
-                sessionCount
+                sessionCount,
+                conference.getRejectionReason()
         );
     }
 }

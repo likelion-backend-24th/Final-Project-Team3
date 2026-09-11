@@ -48,6 +48,7 @@ class SessionApprovalTest {
         SessionResponse result = sessionService.approveSession(sessionId);
 
         assertThat(result.id()).isEqualTo(sessionId);
+        assertThat(result.status()).isEqualTo(SessionStatus.APPROVED);
         assertThat(pending.isPending()).isFalse();
     }
 
@@ -84,6 +85,8 @@ class SessionApprovalTest {
         SessionResponse result = sessionService.rejectSession(sessionId, new RejectSessionRequest("정원 초과"));
 
         assertThat(result.id()).isEqualTo(sessionId);
+        assertThat(result.status()).isEqualTo(SessionStatus.REJECTED);
+        assertThat(result.rejectionReason()).isEqualTo("정원 초과");
         assertThat(pending.getRejectReason()).isEqualTo("정원 초과");
     }
 

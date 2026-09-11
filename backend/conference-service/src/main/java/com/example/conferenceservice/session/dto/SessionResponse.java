@@ -1,6 +1,7 @@
 package com.example.conferenceservice.session.dto;
 
 import com.example.conferenceservice.session.entity.Session;
+import com.example.conferenceservice.session.entity.SessionStatus;
 
 import java.time.LocalDateTime;
 
@@ -9,6 +10,7 @@ public record SessionResponse(
         java.util.UUID conferenceId,
         String conferenceTitle,
         String title,
+        SessionStatus status,
         int capacity,
         LocalDateTime startAt,
         LocalDateTime endAt,
@@ -17,7 +19,8 @@ public record SessionResponse(
         String location,
         String speaker,
         int price,
-        Integer maxHeadcountPerApplication
+        Integer maxHeadcountPerApplication,
+        String rejectionReason
 ) {
     public static SessionResponse from(Session session) {
         return new SessionResponse(
@@ -25,6 +28,7 @@ public record SessionResponse(
                 session.getConference().getId(),
                 session.getConference().getTitle(),
                 session.getTitle(),
+                session.getStatus(),
                 session.getCapacity(),
                 session.getStartAt(),
                 session.getEndAt(),
@@ -33,7 +37,8 @@ public record SessionResponse(
                 session.getLocation(),
                 session.getSpeaker(),
                 session.getPrice() == null ? 0 : session.getPrice(),
-                session.getMaxHeadcountPerApplication()
+                session.getMaxHeadcountPerApplication(),
+                session.getRejectReason()
         );
     }
 }
