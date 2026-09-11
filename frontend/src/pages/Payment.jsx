@@ -38,7 +38,12 @@ export default function Payment() {
       await submitPayment(id, { paymentMethod: method, amount })
       navigate(`/reservations/${id}/complete`, { state: { sessionTitle, conferenceTitle } })
     } catch (err) {
-      if (err instanceof ApiError && err.status === 403) {
+      // 403(아직 내 순번 아님)과 409 RESERVATION_SESSION_CAPACITY_EXCEEDED(순번은 됐지만 그 사이
+      // 다른 사람이 자리를 채워서 아직 빈 자리가 없음)는 참가자 입장에서 결국 같은 상황이다 —
+      // "지금은 결제 못 하니 대기열에서 좀 더 기다려야 함". 그래서 같이 취급한다.
+      const isQueueBlocked =
+        err instanceof ApiError && (err.status === 403 || err.code === 'RESERVATION_SESSION_CAPACITY_EXCEEDED')
+      if (isQueueBlocked) {
         setQueueBlocked(true)
       } else {
         setError(err instanceof ApiError ? err.message : '결제에 실패했습니다.')
@@ -65,7 +70,7 @@ export default function Payment() {
 
         {queueBlocked && (
           <div className="bg-warning/10 border border-warning/30 rounded-xl p-4 mb-5 text-sm text-warning">
-            아직 결제 순서가 되지 않았어요. 대기열에서 순서를 기다려주세요.{' '}
+            아직 결제할 수 없어요. 대기열 순번이 됐어도 그 사이 자리가 다시 찰 수 있어요 — 잠시 후 대기열 화면에서 다시 시도해주세요.{' '}
             <Link to={`/reservations/${id}/queue`} className="underline">대기열 화면으로</Link>
           </div>
         )}
