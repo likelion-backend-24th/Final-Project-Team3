@@ -53,6 +53,11 @@ public class Reservation {
         this.status = ReservationStatus.QUEUED;
     }
 
+    public void markAsHold() {
+        this.status = ReservationStatus.HOLD;
+        this.expiresAt = LocalDateTime.now().plusMinutes(10);
+    }
+
     public void markAsConfirmed() {
         this.status = ReservationStatus.CONFIRMED;
     }

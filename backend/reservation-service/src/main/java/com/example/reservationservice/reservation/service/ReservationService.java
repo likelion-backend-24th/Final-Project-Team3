@@ -47,6 +47,10 @@ public class ReservationService {
 
         int capacity = getSessionCapacity(sessionId);
 
+        if (headcount > capacity) {
+            throw new BusinessException(ReservationErrorCode.SESSION_CAPACITY_EXCEEDED);
+        }
+
         sessionCapacityLockRepository.ensureExists(sessionId);
 
         int updatedRows = sessionCapacityLockRepository.tryIncrease(sessionId, headcount, capacity);
@@ -129,6 +133,16 @@ public class ReservationService {
             if (!reached) {
                 throw new BusinessException(ReservationErrorCode.QUEUE_POSITION_NOT_REACHED);
             }
+
+            // 대기열 순번 도달 여부와 별개로, 실제 좌석이 비어있는지 원자적으로 재검증한다.
+            // (그렇지 않으면 앞선 HOLD가 아직 살아있어도 대기열 1번이 결제를 통과해 정원을 초과함)
+            int capacity = getSessionCapacity(reservation.getSessionId());
+            int capacityUpdatedRows = sessionCapacityLockRepository.tryIncrease(
+                    reservation.getSessionId(), reservation.getHeadcount(), capacity);
+            if (capacityUpdatedRows == 0) {
+                throw new BusinessException(ReservationErrorCode.SESSION_CAPACITY_EXCEEDED);
+            }
+
             leftPosition = waitingQueueRepository.findByReservationId(reservationId)
                     .map(WaitingQueue::getPosition)
                     .orElse(null);
