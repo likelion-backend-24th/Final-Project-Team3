@@ -73,9 +73,18 @@ public class ConferenceService {
     }
 
     @Transactional(readOnly = true)
+    public Page<ConferenceResponse> getMyConferences(UUID organizerId, Pageable pageable) {
+        Page<Conference> conferences = conferenceRepository.findByOrganizerId(organizerId, pageable);
+        return toResponsePage(conferences, countSessionsByConference(conferences.getContent()));
+    }
+
+    @Transactional(readOnly = true)
     public Page<ConferenceResponse> getConferences(Pageable pageable) {
         Page<Conference> conferences = conferenceRepository.findByStatus(ConferenceStatus.APPROVED, pageable);
-        Map<UUID, Long> sessionCounts = countApprovedSessionsByConference(conferences.getContent());
+        return toResponsePage(conferences, countApprovedSessionsByConference(conferences.getContent()));
+    }
+
+    private Page<ConferenceResponse> toResponsePage(Page<Conference> conferences, Map<UUID, Long> sessionCounts) {
         return conferences.map(conference ->
                 ConferenceResponse.from(conference, sessionCounts.getOrDefault(conference.getId(), 0L)));
     }
@@ -86,6 +95,17 @@ public class ConferenceService {
         }
         List<UUID> conferenceIds = conferences.stream().map(Conference::getId).toList();
         return sessionRepository.countByConferenceIdInAndStatus(conferenceIds, SessionStatus.APPROVED).stream()
+                .collect(Collectors.toMap(
+                        SessionRepository.ConferenceSessionCount::getConferenceId,
+                        SessionRepository.ConferenceSessionCount::getCount));
+    }
+
+    private Map<UUID, Long> countSessionsByConference(List<Conference> conferences) {
+        if (conferences.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> conferenceIds = conferences.stream().map(Conference::getId).toList();
+        return sessionRepository.countByConferenceIdIn(conferenceIds).stream()
                 .collect(Collectors.toMap(
                         SessionRepository.ConferenceSessionCount::getConferenceId,
                         SessionRepository.ConferenceSessionCount::getCount));

@@ -50,6 +50,18 @@ public class ConferenceController {
         return ResponseEntity.ok(ApiResponse.success("컨퍼런스 목록 조회 성공", page.getContent(), meta, traceIdProvider.resolve(request)));
     }
 
+    @GetMapping("/my")
+    @PreAuthorize("hasRole('ORGANIZER')")
+    public ResponseEntity<ApiResponse<List<ConferenceResponse>>> getMyConferences(
+            @PageableDefault Pageable pageable,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            HttpServletRequest request
+    ) {
+        Page<ConferenceResponse> page = conferenceService.getMyConferences(currentUser.getMemberId(), pageable);
+        Meta meta = Meta.builder().pagination(PageMeta.from(page)).build();
+        return ResponseEntity.ok(ApiResponse.success("내 컨퍼런스 목록 조회 성공", page.getContent(), meta, traceIdProvider.resolve(request)));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ConferenceDetailResponse>> getConference(@PathVariable UUID id, HttpServletRequest request) {
         ConferenceDetailResponse conference = conferenceService.getConference(id);

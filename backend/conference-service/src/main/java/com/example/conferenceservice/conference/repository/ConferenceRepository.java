@@ -15,4 +15,6 @@ public interface ConferenceRepository extends JpaRepository<Conference, UUID> {
     Page<Conference> findByStatus(ConferenceStatus status, Pageable pageable);
 
     Optional<Conference> findByIdAndStatus(UUID id, ConferenceStatus status);
+
+    Page<Conference> findByOrganizerId(UUID organizerId, Pageable pageable);
 }
