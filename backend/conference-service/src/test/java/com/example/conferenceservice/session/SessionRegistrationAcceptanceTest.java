@@ -136,7 +136,7 @@ class SessionRegistrationAcceptanceTest {
         return Conference.builder()
                 .organizerId(organizerId).organizerName("주최자").title("컨퍼런스")
                 .status(status).capacity(100)
-                .startAt(LocalDateTime.now().plusDays(1)).endAt(LocalDateTime.now().plusDays(2))
+                .startAt(LocalDateTime.now().plusDays(1)).endAt(LocalDateTime.now().plusDays(10))
                 .location("서울")
                 .build();
     }

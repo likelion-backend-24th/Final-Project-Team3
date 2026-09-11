@@ -72,6 +72,7 @@ public class SessionService {
         if (conference.getStatus() != ConferenceStatus.APPROVED) {
             throw new BusinessException(SessionErrorCode.CONFERENCE_NOT_APPROVED);
         }
+        validateWithinConferencePeriod(request.sessionStartAt(), request.sessionEndAt(), conference);
 
         Session session = Session.builder()
                 .conference(conference)
@@ -101,6 +102,7 @@ public class SessionService {
         if (session.getConference().getStatus() != ConferenceStatus.APPROVED) {
             throw new BusinessException(SessionErrorCode.CONFERENCE_NOT_APPROVED);
         }
+        validateWithinConferencePeriod(request.sessionStartAt(), request.sessionEndAt(), session.getConference());
         session.updateSchedule(request.capacity(), request.startAt(), request.endAt(),
                 request.sessionStartAt(), request.sessionEndAt(),
                 request.location(), request.speaker(), request.price(),
@@ -125,6 +127,12 @@ public class SessionService {
         }
         if (maxHeadcountPerApplication != null && maxHeadcountPerApplication > capacity) {
             throw new BusinessException(SessionErrorCode.MAX_HEADCOUNT_EXCEEDS_CAPACITY);
+        }
+    }
+
+    private void validateWithinConferencePeriod(LocalDateTime sessionStartAt, LocalDateTime sessionEndAt, Conference conference) {
+        if (sessionStartAt.isBefore(conference.getStartAt()) || sessionEndAt.isAfter(conference.getEndAt())) {
+            throw new BusinessException(SessionErrorCode.SESSION_SCHEDULE_OUTSIDE_CONFERENCE_PERIOD);
         }
     }
 

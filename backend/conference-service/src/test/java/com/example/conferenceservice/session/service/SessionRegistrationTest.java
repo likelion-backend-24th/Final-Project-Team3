@@ -158,6 +158,23 @@ class SessionRegistrationTest {
     }
 
     @Test
+    void 세션_진행_일정이_컨퍼런스_진행_기간을_벗어나면_세션_등록이_400으로_거절된다() {
+        UUID conferenceId = UUID.randomUUID();
+        Conference approved = Conference.builder()
+                .id(conferenceId).organizerId(ORGANIZER_ID).title("승인된 컨퍼런스")
+                .status(ConferenceStatus.APPROVED).capacity(100)
+                .startAt(LocalDateTime.now()).endAt(LocalDateTime.now().plusDays(2))
+                .build();
+        SessionCreateRequest request = SessionRequestFixtures.validCreateRequest("세션 A", 10);
+        given(conferenceRepository.findById(conferenceId)).willReturn(Optional.of(approved));
+
+        assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(SessionErrorCode.SESSION_SCHEDULE_OUTSIDE_CONFERENCE_PERIOD);
+    }
+
+    @Test
     void 승인되지_않은_컨퍼런스에는_세션_등록이_409로_거절된다() {
         UUID conferenceId = UUID.randomUUID();
         Conference pending = Conference.builder()
@@ -228,6 +245,26 @@ class SessionRegistrationTest {
     }
 
     @Test
+    void 세션_진행_일정이_컨퍼런스_진행_기간을_벗어나면_세션_수정이_400으로_거절된다() {
+        UUID sessionId = UUID.randomUUID();
+        Conference approved = Conference.builder()
+                .id(UUID.randomUUID()).organizerId(ORGANIZER_ID).title("승인된 컨퍼런스")
+                .status(ConferenceStatus.APPROVED).capacity(100)
+                .startAt(LocalDateTime.now()).endAt(LocalDateTime.now().plusDays(2))
+                .build();
+        Session existing = Session.builder()
+                .id(sessionId).conference(approved).title("세션 A").capacity(10)
+                .build();
+        SessionUpdateRequest request = SessionRequestFixtures.validUpdateRequest(50);
+        given(sessionRepository.findById(sessionId)).willReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> sessionService.updateSession(sessionId, request, ORGANIZER_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(SessionErrorCode.SESSION_SCHEDULE_OUTSIDE_CONFERENCE_PERIOD);
+    }
+
+    @Test
     void 승인되지_않은_컨퍼런스의_세션_수정은_409로_거절된다() {
         UUID sessionId = UUID.randomUUID();
         Conference pending = Conference.builder()
@@ -262,6 +299,7 @@ class SessionRegistrationTest {
         return Conference.builder()
                 .id(id).organizerId(ORGANIZER_ID).title("승인된 컨퍼런스")
                 .status(ConferenceStatus.APPROVED).capacity(100)
+                .startAt(LocalDateTime.now()).endAt(LocalDateTime.now().plusDays(30))
                 .build();
     }
 }

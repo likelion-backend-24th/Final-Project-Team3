@@ -94,6 +94,7 @@ class SessionOwnerScopeTest {
         Conference approved = Conference.builder()
                 .id(conferenceId).organizerId(ownerId).title("승인된 컨퍼런스")
                 .status(ConferenceStatus.APPROVED).capacity(100)
+                .startAt(java.time.LocalDateTime.now()).endAt(java.time.LocalDateTime.now().plusDays(30))
                 .build();
         SessionCreateRequest request = SessionRequestFixtures.validCreateRequest("세션 A", 10);
         given(conferenceRepository.findById(conferenceId)).willReturn(Optional.of(approved));

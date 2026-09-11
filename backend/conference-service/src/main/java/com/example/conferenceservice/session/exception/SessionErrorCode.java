@@ -15,6 +15,7 @@ public enum SessionErrorCode implements ErrorCode {
     INVALID_SESSION_SCHEDULE(HttpStatus.BAD_REQUEST, "INVALID_SESSION_SCHEDULE", "세션 진행 종료 일시는 시작 일시보다 이후여야 합니다."),
     INVALID_SESSION_SCHEDULE_BEFORE_REGISTRATION(HttpStatus.BAD_REQUEST, "INVALID_SESSION_SCHEDULE_BEFORE_REGISTRATION", "세션 진행 시작 일시는 신청 종료 일시보다 이후여야 합니다."),
     MAX_HEADCOUNT_EXCEEDS_CAPACITY(HttpStatus.BAD_REQUEST, "MAX_HEADCOUNT_EXCEEDS_CAPACITY", "1인당 최대 신청 인원은 세션 정원을 초과할 수 없습니다."),
+    SESSION_SCHEDULE_OUTSIDE_CONFERENCE_PERIOD(HttpStatus.BAD_REQUEST, "SESSION_SCHEDULE_OUTSIDE_CONFERENCE_PERIOD", "세션 진행 일정은 컨퍼런스 진행 기간 내여야 합니다."),
     CONFERENCE_NOT_APPROVED(HttpStatus.CONFLICT, "CONFERENCE_NOT_APPROVED", "승인된 컨퍼런스에만 세션을 등록할 수 있습니다."),
     SESSION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "SESSION_ACCESS_DENIED", "본인이 등록한 컨퍼런스의 세션만 관리할 수 있습니다."),
     SESSION_ALREADY_DECIDED(HttpStatus.CONFLICT, "SESSION_ALREADY_DECIDED", "이미 처리된 세션입니다.");
