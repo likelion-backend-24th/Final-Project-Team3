@@ -5,7 +5,7 @@ import { Ticket, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getMyReservations, getQueuePosition, getQrTickets } from '../api/reservations'
 import { listConferences, getConference } from '../api/conferences'
-import { updateProfile } from '../api/auth'
+import { getProfile, updateProfile } from '../api/auth'
 import { ApiError } from '../api/client'
 import Button from '../components/Button'
 import SelectField from '../components/SelectField'
@@ -48,13 +48,24 @@ export default function MyPage() {
   const [tab, setTab] = useState('ALL')
   const [error, setError] = useState('')
 
-  // 프로필(연령대·직무) 수정 — GET /api/members/me가 없어서 현재 값을 미리 채워주지는 못하고,
-  // 이번 세션에서 선택·저장한 값만 화면에 반영한다.
+  // 프로필(연령대·직무) 수정
   const [ageGroup, setAgeGroup] = useState('')
   const [job, setJob] = useState('')
   const [profileError, setProfileError] = useState('')
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
+
+  useEffect(() => {
+    if (!claims?.memberId) return
+    getProfile()
+      .then((res) => {
+        setAgeGroup(res.data.ageGroup ?? '')
+        setJob(res.data.job ?? '')
+      })
+      .catch(() => {
+        // 조회 실패해도 예약 목록은 정상 표시해야 하니, 프로필 칸만 빈 채로 둔다
+      })
+  }, [claims?.memberId])
 
   useEffect(() => {
     if (!claims?.memberId) return

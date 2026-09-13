@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -73,6 +74,26 @@ class MemberProfileTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("AUTH_REQUIRED"));
+    }
+
+    @Test
+    void 조회도_인증_없이_호출하면_401로_거절된다() throws Exception {
+        mockMvc.perform(get("/api/members/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("AUTH_REQUIRED"));
+    }
+
+    @Test
+    void 유효한_토큰으로_조회하면_가입때_입력한_연령대_직무가_그대로_반환된다() throws Exception {
+        String email = "profile-view@example.com";
+        String accessToken = signupAndLogin(email, "password1234", "프로필조회", AgeGroup.THIRTIES, Job.DATA_AI);
+
+        mockMvc.perform(get("/api/members/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.email").value(email))
+                .andExpect(jsonPath("$.data.ageGroup").value("THIRTIES"))
+                .andExpect(jsonPath("$.data.job").value("DATA_AI"));
     }
 
     @Test

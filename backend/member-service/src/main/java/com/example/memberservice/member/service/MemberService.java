@@ -96,6 +96,12 @@ public class MemberService {
         );
     }
 
+    public MemberProfileResponse getProfile(UUID memberId) {
+        // 클래스 레벨 @Transactional(readOnly = true)를 그대로 씀 — 조회 전용이라 별도 트랜잭션 지정 불필요
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+        return new MemberProfileResponse(member.getId(), member.getEmail(), member.getName(), member.getAgeGroup(), member.getJob());
+    }
+
     @Transactional
     public MemberProfileResponse updateProfile(UUID memberId, UpdateProfileRequest request) {
         // JWT의 subject였던 memberId로 실제 DB row를 찾음

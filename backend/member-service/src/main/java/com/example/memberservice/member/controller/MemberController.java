@@ -45,6 +45,16 @@ public class MemberController {
                 .body(ApiResponse.success("주최자 회원가입이 완료되었습니다.", response, traceId));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<MemberProfileResponse>> getProfile(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            HttpServletRequest httpRequest
+    ) {
+        MemberProfileResponse response = memberService.getProfile(currentUser.getMemberId());
+        String traceId = traceIdProvider.resolve(httpRequest);
+        return ResponseEntity.ok(ApiResponse.success("프로필 조회 성공", response, traceId));
+    }
+
     @PatchMapping("/me")
     public ResponseEntity<ApiResponse<MemberProfileResponse>> updateProfile(
             @Valid @RequestBody UpdateProfileRequest request,

@@ -30,8 +30,12 @@ export function signupOrganizer({ email, password, name, organizationName, busin
   })
 }
 
-// 마이페이지 프로필(연령대·직무) 수정. PATCH /api/members/me는 로그인 필요(Bearer) —
+// 마이페이지 프로필(연령대·직무) 조회/수정. 둘 다 로그인 필요(Bearer) —
 // apiFetch가 accessToken을 자동으로 붙여준다.
+export function getProfile() {
+  return apiFetch('/members/me')
+}
+
 export function updateProfile({ ageGroup, job }) {
   return apiFetch('/members/me', { method: 'PATCH', body: { ageGroup, job } })
 }
