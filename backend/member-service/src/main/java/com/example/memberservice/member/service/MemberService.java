@@ -2,10 +2,7 @@ package com.example.memberservice.member.service;
 
 import com.example.memberservice.auth.service.EmailVerificationService;
 import com.example.memberservice.common.exception.BusinessException;
-import com.example.memberservice.member.dto.OrganizerSignupRequest;
-import com.example.memberservice.member.dto.OrganizerSignupResponse;
-import com.example.memberservice.member.dto.SignupRequest;
-import com.example.memberservice.member.dto.SignupResponse;
+import com.example.memberservice.member.dto.*;
 import com.example.memberservice.member.entity.Member;
 import com.example.memberservice.member.exception.MemberErrorCode;
 import com.example.memberservice.member.repository.MemberRepository;
@@ -14,6 +11,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -95,6 +94,15 @@ public class MemberService {
                 member.getBusinessNo(),
                 member.getRole().name()
         );
+    }
+
+    @Transactional
+    public MemberProfileResponse updateProfile(UUID memberId, UpdateProfileRequest request) {
+        // JWT의 subject였던 memberId로 실제 DB row를 찾음
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+        member.updateProfile(request.ageGroup(), request.job());
+        return new MemberProfileResponse(member.getId(), member.getEmail(), member.getName(), member.getAgeGroup(), member.getJob());
     }
 
     private String normalize(String email) {

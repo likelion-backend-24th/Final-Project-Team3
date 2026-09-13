@@ -1,21 +1,17 @@
 package com.example.memberservice.member.controller;
 
+import com.example.memberservice.auth.security.CustomUserDetails;
 import com.example.memberservice.common.TraceIdProvider;
 import com.example.memberservice.common.dto.ApiResponse;
-import com.example.memberservice.member.dto.OrganizerSignupRequest;
-import com.example.memberservice.member.dto.OrganizerSignupResponse;
-import com.example.memberservice.member.dto.SignupRequest;
-import com.example.memberservice.member.dto.SignupResponse;
+import com.example.memberservice.member.dto.*;
 import com.example.memberservice.member.service.MemberService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/members")
@@ -47,5 +43,16 @@ public class MemberController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success("주최자 회원가입이 완료되었습니다.", response, traceId));
+    }
+
+    @PatchMapping("/me")
+    public ResponseEntity<ApiResponse<MemberProfileResponse>> updateProfile(
+            @Valid @RequestBody UpdateProfileRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser, // ← Step 3 필터가 채워준 값이 여기로 옴
+            HttpServletRequest httpRequest
+    ) {
+        MemberProfileResponse response = memberService.updateProfile(currentUser.getMemberId(), request);
+        String traceId = traceIdProvider.resolve(httpRequest);
+        return ResponseEntity.ok(ApiResponse.success("프로필이 수정되었습니다.", response, traceId));
     }
 }
