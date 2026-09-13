@@ -64,6 +64,10 @@ public class MemberService {
             throw new BusinessException(MemberErrorCode.DUPLICATE_BUSINESS_NO);
         }
 
+        if (!emailVerificationService.isVerified(email)) {
+            throw new BusinessException(MemberErrorCode.EMAIL_NOT_VERIFIED);
+        }
+
         Member member = Member.newOrganizer(
                 email,
                 passwordEncoder.encode(request.password()),
@@ -80,6 +84,8 @@ public class MemberService {
             }
             throw new BusinessException(MemberErrorCode.DUPLICATE_BUSINESS_NO);
         }
+
+        emailVerificationService.invalidate(email);
 
         return new OrganizerSignupResponse(
                 member.getId(),

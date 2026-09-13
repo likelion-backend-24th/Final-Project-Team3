@@ -1,0 +1,4 @@
+services:
+  gateway:
+    ports: !override
+      - "8090:8080"
