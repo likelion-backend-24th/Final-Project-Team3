@@ -53,6 +53,21 @@ class MemberSignupLoginTest {
     }
 
     @Test
+    void 연령대나_직무가_없으면_400으로_거절된다() throws Exception {
+        markEmailVerified("no-profile@example.com");
+
+        // ageGroup, job을 아예 빼고 보냄 — @NotNull 검증이 걸러내는지 확인
+        String body = """
+                {"email":"no-profile@example.com","password":"password1234","name":"프로필없음"}
+                """;
+
+        mockMvc.perform(post("/api/members/signup").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("INVALID_REQUEST"));
+    }
+
+    @Test
     void 이미_가입된_이메일로_재가입하면_409로_거절된다() throws Exception {
         markEmailVerified("dup@example.com");
         SignupRequest request = new SignupRequest("dup@example.com", "password1234", "중복", AgeGroup.TWENTIES, Job.DEVELOPER);
