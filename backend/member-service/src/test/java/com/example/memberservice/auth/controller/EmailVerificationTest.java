@@ -6,6 +6,8 @@ import com.example.memberservice.auth.entity.EmailVerification;
 import com.example.memberservice.auth.repository.EmailVerificationRepository;
 import com.example.memberservice.auth.service.EmailSender;
 import com.example.memberservice.member.dto.SignupRequest;
+import com.example.memberservice.member.entity.AgeGroup;
+import com.example.memberservice.member.entity.Job;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -137,7 +139,7 @@ class EmailVerificationTest {
 
     @Test
     void 인증완료하지_않은_이메일로_회원가입하면_거절된다() throws Exception {
-        SignupRequest request = new SignupRequest("not-verified@example.com", "password1234", "미인증");
+        SignupRequest request = new SignupRequest("not-verified@example.com", "password1234", "미인증", AgeGroup.TWENTIES, Job.DEVELOPER);
 
         mockMvc.perform(post("/api/members/signup")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -177,7 +179,7 @@ class EmailVerificationTest {
 
         mockMvc.perform(post("/api/members/signup")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new SignupRequest(email, password, name))))
+                        .content(objectMapper.writeValueAsString(new SignupRequest(email, password, name, AgeGroup.TWENTIES, Job.DEVELOPER))))
                 .andExpect(status().isCreated());
     }
 }

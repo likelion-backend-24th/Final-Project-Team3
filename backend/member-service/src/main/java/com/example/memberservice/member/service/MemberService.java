@@ -36,7 +36,7 @@ public class MemberService {
             throw new BusinessException(MemberErrorCode.EMAIL_NOT_VERIFIED);
         }
 
-        Member member = Member.newMember(email, passwordEncoder.encode(request.password()), request.name());
+        Member member = Member.newMember(email, passwordEncoder.encode(request.password()), request.name(), request.ageGroup(), request.job());
         try {
             memberRepository.saveAndFlush(member);
         } catch (DataIntegrityViolationException e) {

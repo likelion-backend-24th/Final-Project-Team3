@@ -40,6 +40,14 @@ public class Member {
     @Column(unique = true, length = 20)
     private String businessNo;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private AgeGroup ageGroup;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private Job job;
+
     @Column(nullable = false, updatable = false)
     @CreatedDate
     private LocalDateTime createdAt;
@@ -52,21 +60,25 @@ public class Member {
     }
 
     @Builder
-    private Member(String email, String password, String name, Role role, String organizationName, String businessNo) {
+    private Member(String email, String password, String name, Role role, String organizationName, String businessNo, AgeGroup ageGroup, Job job) {
         this.email = email;
         this.password = password;
         this.name = name;
         this.role = role;
         this.organizationName = organizationName;
         this.businessNo = businessNo;
+        this.ageGroup = ageGroup;
+        this.job = job;
     }
 
-    public static Member newMember(String email, String encodedPassword, String name) {
+    public static Member newMember(String email, String encodedPassword, String name, AgeGroup ageGroup, Job job) {
         return Member.builder()
                 .email(email)
                 .password(encodedPassword)
                 .name(name)
                 .role(Role.MEMBER)
+                .ageGroup(ageGroup)
+                .job(job)
                 .build();
     }
 
