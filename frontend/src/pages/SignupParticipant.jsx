@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { User, CheckCircle2 } from 'lucide-react'
 import TextField from '../components/TextField'
+import SelectField from '../components/SelectField'
 import Button from '../components/Button'
 import { sendEmailCode, verifyEmailCode, signupParticipant } from '../api/auth'
 import { ApiError } from '../api/client'
+import { AGE_GROUPS, JOBS } from '../utils/profileOptions'
 
 // 이메일 인증(#87)이 signup의 선행 조건이라, 같은 카드 안에서 단계만 전환한다:
 // email 입력 → 인증코드 발송 → 코드 확인 → 이름/비밀번호 입력 → 가입.
@@ -15,6 +17,8 @@ export default function SignupParticipant() {
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
+  const [ageGroup, setAgeGroup] = useState('')
+  const [job, setJob] = useState('')
 
   const [sendLoading, setSendLoading] = useState(false)
   const [verifyLoading, setVerifyLoading] = useState(false)
@@ -52,9 +56,13 @@ export default function SignupParticipant() {
   const submit = async (e) => {
     e.preventDefault()
     setError('')
+    if (!ageGroup || !job) {
+      setError('연령대와 직무를 선택해주세요.')
+      return
+    }
     setLoading(true)
     try {
-      await signupParticipant({ email, password, name })
+      await signupParticipant({ email, password, name, ageGroup, job })
       navigate('/login', { state: { justSignedUp: true } })
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '회원가입에 실패했습니다.')
@@ -139,6 +147,24 @@ export default function SignupParticipant() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              <div className="grid grid-cols-2 gap-4">
+                <SelectField
+                  label="연령대"
+                  placeholder="선택"
+                  options={AGE_GROUPS}
+                  value={ageGroup}
+                  onChange={(e) => setAgeGroup(e.target.value)}
+                  required
+                />
+                <SelectField
+                  label="직무"
+                  placeholder="선택"
+                  options={JOBS}
+                  value={job}
+                  onChange={(e) => setJob(e.target.value)}
+                  required
+                />
+              </div>
             </>
           )}
 

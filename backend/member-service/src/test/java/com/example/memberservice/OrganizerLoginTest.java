@@ -5,6 +5,8 @@ import com.example.memberservice.auth.dto.SendCodeRequest;
 import com.example.memberservice.auth.dto.VerifyCodeRequest;
 import com.example.memberservice.auth.service.EmailSender;
 import com.example.memberservice.member.dto.OrganizerSignupRequest;
+import com.example.memberservice.member.entity.AgeGroup;
+import com.example.memberservice.member.entity.Job;
 import com.example.memberservice.member.entity.Member;
 import com.example.memberservice.member.repository.MemberRepository;
 import io.jsonwebtoken.Claims;
@@ -101,7 +103,7 @@ class OrganizerLoginTest {
 
     @Test
     void MEMBER로_로그인하면_JWT에_organizerId_claim이_없다() throws Exception {
-        Member member = Member.newMember("member@example.com", passwordEncoder.encode("password1234"), "참가자");
+        Member member = Member.newMember("member@example.com", passwordEncoder.encode("password1234"), "참가자", AgeGroup.TWENTIES, Job.DEVELOPER);
         memberRepository.save(member);
 
         String accessToken = loginAndGetAccessToken("member@example.com", "password1234");
