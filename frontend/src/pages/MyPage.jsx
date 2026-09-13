@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { Ticket } from 'lucide-react'
+import { Ticket, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getMyReservations, getQueuePosition, getQrTickets } from '../api/reservations'
 import { listConferences, getConference } from '../api/conferences'
+import { updateProfile } from '../api/auth'
 import { ApiError } from '../api/client'
 import Button from '../components/Button'
+import SelectField from '../components/SelectField'
+import { AGE_GROUPS, JOBS } from '../utils/profileOptions'
 
 const TABS = [
   { key: 'ALL', label: '전체' },
@@ -44,6 +47,14 @@ export default function MyPage() {
   const [expandedId, setExpandedId] = useState(null)
   const [tab, setTab] = useState('ALL')
   const [error, setError] = useState('')
+
+  // 프로필(연령대·직무) 수정 — GET /api/members/me가 없어서 현재 값을 미리 채워주지는 못하고,
+  // 이번 세션에서 선택·저장한 값만 화면에 반영한다.
+  const [ageGroup, setAgeGroup] = useState('')
+  const [job, setJob] = useState('')
+  const [profileError, setProfileError] = useState('')
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileSaved, setProfileSaved] = useState(false)
 
   useEffect(() => {
     if (!claims?.memberId) return
@@ -100,6 +111,25 @@ export default function MyPage() {
     }
   }
 
+  const saveProfile = async (e) => {
+    e.preventDefault()
+    setProfileError('')
+    setProfileSaved(false)
+    if (!ageGroup || !job) {
+      setProfileError('연령대와 직무를 선택해주세요.')
+      return
+    }
+    setProfileSaving(true)
+    try {
+      await updateProfile({ ageGroup, job })
+      setProfileSaved(true)
+    } catch (err) {
+      setProfileError(err instanceof ApiError ? err.message : '프로필 저장에 실패했습니다.')
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
   const filtered = useMemo(
     () => (reservations ?? []).filter((r) => tab === 'ALL' || categoryOf(r.status) === tab),
     [reservations, tab],
@@ -127,6 +157,37 @@ export default function MyPage() {
           <p className="text-sm text-text-muted">{claims?.email}</p>
         </div>
       </div>
+
+      <form onSubmit={saveProfile} className="bg-surface border border-border rounded-xl p-5 mb-8">
+        <p className="text-sm font-medium text-text mb-3">프로필</p>
+        <div className="grid grid-cols-2 gap-4">
+          <SelectField
+            label="연령대"
+            placeholder="선택"
+            options={AGE_GROUPS}
+            value={ageGroup}
+            onChange={(e) => setAgeGroup(e.target.value)}
+          />
+          <SelectField
+            label="직무"
+            placeholder="선택"
+            options={JOBS}
+            value={job}
+            onChange={(e) => setJob(e.target.value)}
+          />
+        </div>
+        {profileError && <p className="text-sm text-danger mt-3">{profileError}</p>}
+        <div className="flex items-center gap-3 mt-4">
+          <Button type="submit" variant="secondary" loading={profileSaving}>
+            저장
+          </Button>
+          {profileSaved && (
+            <span className="inline-flex items-center gap-1 text-sm text-success">
+              <CheckCircle2 size={16} /> 저장됐어요
+            </span>
+          )}
+        </div>
+      </form>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
         <div className="bg-surface border border-border rounded-xl p-5">

@@ -8,8 +8,8 @@ export function logout() {
   return apiFetch('/auth/logout', { method: 'POST' })
 }
 
-export function signupParticipant({ email, password, name }) {
-  return apiFetch('/members/signup', { method: 'POST', body: { email, password, name } })
+export function signupParticipant({ email, password, name, ageGroup, job }) {
+  return apiFetch('/members/signup', { method: 'POST', body: { email, password, name, ageGroup, job } })
 }
 
 // 이메일 인증(#87): signup 자체는 바디가 그대로지만, 서버가 signup 시점에 해당 이메일이
@@ -28,6 +28,12 @@ export function signupOrganizer({ email, password, name, organizationName, busin
     method: 'POST',
     body: { email, password, name, organizationName, businessNo },
   })
+}
+
+// 마이페이지 프로필(연령대·직무) 수정. PATCH /api/members/me는 로그인 필요(Bearer) —
+// apiFetch가 accessToken을 자동으로 붙여준다.
+export function updateProfile({ ageGroup, job }) {
+  return apiFetch('/members/me', { method: 'PATCH', body: { ageGroup, job } })
 }
 
 // JWT는 서명 검증 없이 payload만 디코드한다 — 화면 분기용이며 실제 인가는 서버가 매 요청마다 검증한다.
