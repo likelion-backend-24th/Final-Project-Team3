@@ -5,9 +5,9 @@
 > 
 > Notion 원본 URL: `https://app.notion.com/p/3-3c973873401a8045ac7ee8adcaf2b71a`
 > 
-> Snapshot 기준 시점: `Sprint 1 Review 종료 시점 (2026-09-04)`
+> Snapshot 기준 시점: `Sprint 2 Review 종료 시점 (2026-09-11)`
 > 
-> 동기화 시각: `2026-09-04 18:30 KST`
+> 동기화 시각: `2026-09-14 10:00 KST`
 > 
 > 직접 편집 금지: Git Snapshot은 직접 편집하지 않고 Notion 원본을 수정한 뒤 다시 동기화합니다.
 > 
@@ -43,6 +43,7 @@ PBI는 적용 대상인 다음 조건을 모두 만족해야 Done입니다.
 | Story 5 (`#35`) 컨퍼런스 등록 신청  | organizerName/기간/장소/소개/태그까지 실제 저장 | Task 9-2 Acceptance Test PR #67 존재·CI success | 신청자 본인(JWT organizerId) 기준 저장 확인 | PR #57, #65, #67, 프론트 a16b77d | Task 5-1 API [`#36`]  | 폼 입력→제출→DB 저장까지 실제 e2e 확인 | Conference Service CI success | NOT_DONE  |
 | Story 6 (`#27`) 승인·반려  | [[링크]](https://github.com/likelion-backend-24th/Final-Project-Team3/issues/27)  | [구현 후 링크 추가 예정] | 전체관리자만 승인 가능 
 확인  | [PR]  | Task 6-1,6-2 API·연동 [`#38`, `#39`]  |  [Demo 링크]  | [CI 로그]  | NOT_DONE  |
+| Story 8 (`#68`) 세션 승인·반려 | 링크 |  | 전체관리자만 승인 가능 확인  | [PR]  | Task 8-1,8-2 API `#69`, `#70` |  |  | NOT_DONE |
 | Story 9 (`#20`) 세션 신청·홀드  | HOLD/QUEUED 분기 — 오늘 정원 1명 세션으로 QUEUED까지 재현 확인 | Task 3-2 동기 계약(#23, CLOSED), k6 부하 테스트 PR #66 존재·CI success | 오늘은 memberId를 body로 직접 받는 구조라(JWT 미검증) 본인 확인 안 됨 | PR #43, #46, #48, #66 | Task 9-2 동기 
 계약 [`#23`]  | 오늘 실제 hold API로 HOLD/QUEUED 둘 다 재현 | Reservation Service CI success | NOT_DONE  |
 | Story 10 (`#6`) 대기열  | 순번 조회 —  QUEUED 후 순번 화면 진입 확인 | [구현 후 링크 추가 예정] |  본인 신청만 순번 조회 확인 안 됨(위와 동일 갭) | PR #56 | Task 10-1 API [`#7`]  | 오늘 실제 대기열 등록→순번 화면 확인 | Reservation Service CI success | NOT_DONE  |
