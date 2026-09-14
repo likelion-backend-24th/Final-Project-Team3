@@ -1,6 +1,9 @@
 server:
   port: 8083
 
+jwt:
+  secret: ${JWT_SECRET}
+
 spring:
   application:
     name: reservation-service

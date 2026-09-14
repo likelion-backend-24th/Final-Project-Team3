@@ -1,5 +1,6 @@
 package com.example.reservationservice.common.exception;
 
+import com.example.reservationservice.auth.exception.AuthErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import com.example.reservationservice.common.TraceIdProvider;
 import com.example.reservationservice.common.dto.ApiResponse;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -24,6 +26,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e, HttpServletRequest request) {
         ErrorCode errorCode = e.getErrorCode();
         return build(errorCode.getHttpStatus(), errorCode.getCode(), e.getMessage(), request);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException e, HttpServletRequest request) {
+        return build(AuthErrorCode.ACCESS_DENIED.getHttpStatus(), AuthErrorCode.ACCESS_DENIED.getCode(), AuthErrorCode.ACCESS_DENIED.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
