@@ -4,18 +4,13 @@ import com.example.reservationservice.reservation.dto.MyReservationResponse;
 import com.example.reservationservice.reservation.dto.PaymentResult;
 import com.example.reservationservice.reservation.dto.SessionCapacityStatusResponse;
 import com.example.reservationservice.reservation.entity.*;
-import com.example.reservationservice.reservation.repository.QrTicketRepository;
+import com.example.reservationservice.reservation.repository.*;
 import lombok.RequiredArgsConstructor;
 import com.example.reservationservice.common.exception.BusinessException;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
 import com.example.reservationservice.reservation.dto.ReservationResult;
 import com.example.reservationservice.reservation.exception.ConferenceServiceUnavailableException;
 import com.example.reservationservice.reservation.exception.ReservationErrorCode;
-import com.example.reservationservice.reservation.repository.ReservationRepository;
-import com.example.reservationservice.reservation.repository.SessionCapacityLockRepository;
-import com.example.reservationservice.reservation.repository.WaitingQueueRepository;
-import org.aspectj.weaver.IClassFileProvider;
-import org.hibernate.query.sql.internal.ParameterRecognizerImpl;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +28,7 @@ public class ReservationService {
     private final SessionCapacityLockRepository sessionCapacityLockRepository;
     private final ConferenceServiceClient conferenceServiceClient;
     private final QrTicketRepository qrTicketRepository;
+    private final PaymentRepository paymentRepository;
 
     @Transactional
     public ReservationResult createHoldOrQueue(UUID sessionId, UUID memberId, int headcount) {
@@ -153,6 +149,13 @@ public class ReservationService {
         if (updatedRows == 0) {
             throw new BusinessException(ReservationErrorCode.ALREADY_CONFIRMED);
         }
+
+        Payment payment = Payment.builder()
+                .reservationId(reservationId)
+                .amount(amount)
+                .paymentMethod(paymentMethod)
+                .build();
+        paymentRepository.save(payment);
 
 
         if (wasQueued && leftPosition != null) {
