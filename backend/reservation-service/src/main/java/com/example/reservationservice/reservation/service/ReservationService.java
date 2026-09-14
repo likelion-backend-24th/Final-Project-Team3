@@ -1,14 +1,11 @@
 package com.example.reservationservice.reservation.service;
 
-import com.example.reservationservice.reservation.dto.MyReservationResponse;
-import com.example.reservationservice.reservation.dto.PaymentResult;
-import com.example.reservationservice.reservation.dto.SessionCapacityStatusResponse;
+import com.example.reservationservice.reservation.dto.*;
 import com.example.reservationservice.reservation.entity.*;
 import com.example.reservationservice.reservation.repository.*;
 import lombok.RequiredArgsConstructor;
 import com.example.reservationservice.common.exception.BusinessException;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
-import com.example.reservationservice.reservation.dto.ReservationResult;
 import com.example.reservationservice.reservation.exception.ConferenceServiceUnavailableException;
 import com.example.reservationservice.reservation.exception.ReservationErrorCode;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -29,11 +26,30 @@ public class ReservationService {
     private final ConferenceServiceClient conferenceServiceClient;
     private final QrTicketRepository qrTicketRepository;
     private final PaymentRepository paymentRepository;
+    private final AttendeeRepository attendeeRepository;
 
     @Transactional
-    public ReservationResult createHoldOrQueue(UUID sessionId, UUID memberId, int headcount) {
+    public ReservationResult createHoldOrQueue(
+            UUID sessionId, UUID memberId, int headcount,
+            List<AttendeeInfo> attendees, AttendeeInfo groupAttendee) {
 
-        // 중복 신청 방지: 이미 HOLD 또는 QUEUED 상태로 신청한 이력이 있는지 확인
+        // 동반자 정보 검증
+        if (headcount <= 9) {
+            if (attendees == null || attendees.size() != headcount) {
+                throw new BusinessException(ReservationErrorCode.ATTENDEE_INFO_REQUIRED);
+            }
+            for (AttendeeInfo attendee : attendees) {
+                if (attendee.ageGroup() == null || attendee.job() == null) {
+                    throw new BusinessException(ReservationErrorCode.ATTENDEE_INFO_REQUIRED);
+                }
+            }
+        } else {
+            if (groupAttendee == null || groupAttendee.ageGroup() == null || groupAttendee.job() == null) {
+                throw new BusinessException(ReservationErrorCode.ATTENDEE_INFO_REQUIRED);
+            }
+        }
+
+        // 중복 신청 방지
         boolean alreadyReserved = reservationRepository.existsBySessionIdAndMemberIdAndStatusIn(
                 sessionId, memberId, List.of(ReservationStatus.HOLD, ReservationStatus.QUEUED));
 
@@ -59,6 +75,8 @@ public class ReservationService {
                     .build();
             reservationRepository.save(reservation);
 
+            saveAttendees(reservation.getId(), headcount, attendees, groupAttendee);
+
             return ReservationResult.hold(reservation.getId());
         }
 
@@ -70,9 +88,32 @@ public class ReservationService {
         queuedReservation.markAsQueued();
         reservationRepository.save(queuedReservation);
 
+        saveAttendees(queuedReservation.getId(), headcount, attendees, groupAttendee);
+
         WaitingQueue waitingQueue = registerToQueueWithRetry(sessionId, queuedReservation.getId(), memberId);
 
         return ReservationResult.queued(queuedReservation.getId(), waitingQueue.getPosition());
+    }
+
+    private void saveAttendees(UUID reservationId, int headcount,
+                               List<AttendeeInfo> attendees, AttendeeInfo groupAttendee) {
+        if (headcount <= 9) {
+            for (AttendeeInfo info : attendees) {
+                attendeeRepository.save(Attendee.builder()
+                        .reservationId(reservationId)
+                        .ageGroup(info.ageGroup())
+                        .job(info.job())
+                        .build());
+            }
+        } else {
+            for (int i = 0; i < headcount; i++) {
+                attendeeRepository.save(Attendee.builder()
+                        .reservationId(reservationId)
+                        .ageGroup(groupAttendee.ageGroup())
+                        .job(groupAttendee.job())
+                        .build());
+            }
+        }
     }
 
     private int getSessionCapacity(UUID sessionId) {
@@ -163,12 +204,15 @@ public class ReservationService {
             waitingQueueRepository.decrementPositionAfter(reservation.getSessionId(), leftPosition);
         }
 
-        // QR 티켓 발급 (headcount만큼)
+        List<Attendee> attendees = attendeeRepository.findByReservationId(reservationId);
+
         List<QrTicket> tickets = new ArrayList<>();
-        for (int i = 0; i < reservation.getHeadcount(); i++) {
+        for (Attendee attendee : attendees) {
             QrTicket ticket = QrTicket.builder()
                     .reservationId(reservationId)
                     .code(generateQrCode())
+                    .ageGroup(attendee.getAgeGroup())
+                    .job(attendee.getJob())
                     .build();
             qrTicketRepository.save(ticket);
             tickets.add(ticket);

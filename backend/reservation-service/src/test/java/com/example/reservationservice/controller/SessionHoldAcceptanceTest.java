@@ -61,7 +61,8 @@ class SessionHoldAcceptanceTest {
                 {
                     "sessionId": "%s",
                     "memberId": "%s",
-                    "headcount": 1
+                    "headcount": 1,
+                    "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]
                 }
                 """.formatted(sessionId, memberId);
 
@@ -83,7 +84,7 @@ class SessionHoldAcceptanceTest {
 
         for (int i = 0; i < 10; i++) {
             String body = """
-                    {"sessionId": "%s", "memberId": "%s", "headcount": 1}
+                    {"sessionId": "%s", "memberId": "%s", "headcount": 1, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]}
                     """.formatted(sessionId, UUID.randomUUID());
             mockMvc.perform(post("/api/reservations/hold")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -91,7 +92,7 @@ class SessionHoldAcceptanceTest {
         }
 
         String overflowBody = """
-                {"sessionId": "%s", "memberId": "%s", "headcount": 1}
+                {"sessionId": "%s", "memberId": "%s", "headcount": 1, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]}
                 """.formatted(sessionId, UUID.randomUUID());
 
         mockMvc.perform(post("/api/reservations/hold")

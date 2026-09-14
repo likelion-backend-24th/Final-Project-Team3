@@ -268,7 +268,7 @@ public class PaymentQrAcceptanceTest {
         mockMvc.perform(post("/api/reservations/hold")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"sessionId": "%s", "memberId": "%s", "headcount": 1}
+                        {"sessionId": "%s", "memberId": "%s", "headcount": 1, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]}
                         """.formatted(sessionId, memberId)));
 
         UUID anotherSessionId = UUID.randomUUID();
@@ -277,7 +277,7 @@ public class PaymentQrAcceptanceTest {
         mockMvc.perform(post("/api/reservations/hold")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"sessionId": "%s", "memberId": "%s", "headcount": 2}
+                        {"sessionId": "%s", "memberId": "%s", "headcount": 2, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}, {"ageGroup": "THIRTIES", "job": "DESIGNER"}]}
                         """.formatted(anotherSessionId, memberId)));
         mockMvc.perform(get("/api/reservations/my")
                 .param("memberId", memberId.toString()))
@@ -296,13 +296,13 @@ public class PaymentQrAcceptanceTest {
         mockMvc.perform(post("/api/reservations/hold")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"sessionId": "%s", "memberId": "%s", "headcount": 1}
+                        {"sessionId": "%s", "memberId": "%s", "headcount": 1, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]}
                         """.formatted(sessionId, myMemberId)));
 
         mockMvc.perform(post("/api/reservations/hold")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    {"sessionId": "%s", "memberId": "%s", "headcount": 1}
+                    {"sessionId": "%s", "memberId": "%s", "headcount": 1, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]}
                     """.formatted(sessionId, otherMemberId)));
 
         mockMvc.perform(get("/api/reservations/my")
@@ -333,8 +333,14 @@ public class PaymentQrAcceptanceTest {
     }
 
     private String createHoldJson(UUID sessionId, UUID memberId, int headCount) {
+        StringBuilder attendees = new StringBuilder();
+        for (int i = 0; i < headCount; i++) {
+            if (i > 0) attendees.append(",");
+            attendees.append("""
+                {"ageGroup": "TWENTIES", "job": "DEVELOPER"}""");
+        }
         return """
-                {"sessionId": "%s", "memberId": "%s", "headcount": %d}
-                """.formatted(sessionId, memberId, headCount);
+            {"sessionId": "%s", "memberId": "%s", "headcount": %d, "attendees": [%s]}
+            """.formatted(sessionId, memberId, headCount, attendees);
     }
 }

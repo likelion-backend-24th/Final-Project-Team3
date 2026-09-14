@@ -1,6 +1,9 @@
 package com.example.reservationservice.scheduler;
 
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
+import com.example.reservationservice.reservation.dto.AttendeeInfo;
+import com.example.reservationservice.reservation.entity.AgeGroup;
+import com.example.reservationservice.reservation.entity.Job;
 import com.example.reservationservice.reservation.entity.Reservation;
 import com.example.reservationservice.reservation.entity.ReservationStatus;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
@@ -15,6 +18,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,7 +54,8 @@ class HoldExpirationSchedulerTest {
         UUID sessionId = UUID.randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
 
-        reservationService.createHoldOrQueue(sessionId, UUID.randomUUID(), 1);
+        reservationService.createHoldOrQueue(sessionId, UUID.randomUUID(), 1,
+                List.of(new AttendeeInfo(AgeGroup.TWENTIES, Job.DEVELOPER)), null);
 
         // 방금 생성된 예약의 expiresAt을 강제로 과거로 조작
         Reservation reservation = reservationRepository.findAll().get(0);
@@ -70,7 +75,8 @@ class HoldExpirationSchedulerTest {
         UUID sessionId = UUID.randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
 
-        reservationService.createHoldOrQueue(sessionId, UUID.randomUUID(), 1);
+        reservationService.createHoldOrQueue(sessionId, UUID.randomUUID(), 1,
+                List.of(new AttendeeInfo(AgeGroup.TWENTIES, Job.DEVELOPER)), null);
         Reservation reservation = reservationRepository.findAll().get(0);
 
         scheduler.expireOverdueHolds();

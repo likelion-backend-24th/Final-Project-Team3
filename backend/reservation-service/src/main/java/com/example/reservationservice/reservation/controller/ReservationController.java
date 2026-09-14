@@ -1,14 +1,13 @@
 package com.example.reservationservice.reservation.controller;
 
-import com.example.reservationservice.reservation.dto.MyReservationResponse;
-import com.example.reservationservice.reservation.dto.PaymentResult;
-import com.example.reservationservice.reservation.dto.SessionCapacityStatusResponse;
+import com.example.reservationservice.reservation.dto.*;
+import com.example.reservationservice.reservation.entity.AgeGroup;
+import com.example.reservationservice.reservation.entity.Job;
 import com.example.reservationservice.reservation.entity.QrTicket;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import com.example.reservationservice.common.TraceIdProvider;
 import com.example.reservationservice.common.dto.ApiResponse;
-import com.example.reservationservice.reservation.dto.ReservationResult;
 import com.example.reservationservice.reservation.service.ReservationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +32,9 @@ public class ReservationController {
         ReservationResult result = reservationService.createHoldOrQueue(
                 request.sessionId(),
                 request.memberId(),
-                request.headcount()
+                request.headcount(),
+                request.attendees(),
+                request.groupAttendee()
         );
 
         String traceId = traceIdProvider.resolve(httpRequest);
@@ -55,8 +56,13 @@ public class ReservationController {
                 ApiResponse.success("순번 조회 완료", position, traceIdProvider.resolve(httpRequest)));
     }
 
-    public record CreateHoldRequest(UUID sessionId, UUID memberId, int headcount) {}
-
+    public record CreateHoldRequest(
+            UUID sessionId,
+            UUID memberId,
+            int headcount,
+            List<AttendeeInfo> attendees,
+            AttendeeInfo groupAttendee
+    ) {}
     @PostMapping("/{reservationId}/payment")
     public ResponseEntity<ApiResponse<PaymentResult>> processPayment(
             @PathVariable UUID reservationId,

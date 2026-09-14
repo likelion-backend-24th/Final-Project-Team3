@@ -1,6 +1,9 @@
 package com.example.reservationservice.service;
 
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
+import com.example.reservationservice.reservation.dto.AttendeeInfo;
+import com.example.reservationservice.reservation.entity.AgeGroup;
+import com.example.reservationservice.reservation.entity.Job;
 import com.example.reservationservice.reservation.entity.ReservationStatus;
 import com.example.reservationservice.reservation.entity.SessionCapacityLock;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
@@ -62,7 +65,8 @@ class HoldConcurrencyTest {
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
                 try {
-                    reservationService.createHoldOrQueue(sessionId, UUID.randomUUID(), 1);
+                    reservationService.createHoldOrQueue(sessionId, UUID.randomUUID(), 1,
+                            List.of(new AttendeeInfo(AgeGroup.TWENTIES, Job.DEVELOPER)), null);
                 } catch (Exception e) {
                     System.out.println("실패 발생: " + e.getClass().getSimpleName() + " - " + e.getMessage());
                 } finally {

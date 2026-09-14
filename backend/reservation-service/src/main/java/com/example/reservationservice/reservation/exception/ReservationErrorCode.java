@@ -15,7 +15,8 @@ public enum ReservationErrorCode implements ErrorCode {
     CONFERENCE_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "CONFERENCE_SERVICE_UNAVAILABLE", "정원 확인 서비스에 일시적으로 연결할 수 없습니다."),
     DUPLICATE_RESERVATION(HttpStatus.CONFLICT, "RESERVATION_DUPLICATE", "이미 이세션에 신청하셨습니다."),
     ALREADY_CONFIRMED(HttpStatus.CONFLICT, "RESERVATION_ALREADY_CONFIRED", "이미 결제 완료 예약입니다."),
-    PAYMENT_NOT_COMPLETED(HttpStatus.NOT_FOUND, "RESERVATION_PAYMENT_NOT_COMPLETED", "결제 완료되지 않아 QR 티켓을 조회할 수 없습니다.");
+    PAYMENT_NOT_COMPLETED(HttpStatus.NOT_FOUND, "RESERVATION_PAYMENT_NOT_COMPLETED", "결제 완료되지 않아 QR 티켓을 조회할 수 없습니다."),
+    ATTENDEE_INFO_REQUIRED(HttpStatus.BAD_REQUEST, "RESERVATION_ATTENDEE_INFO_REQUIRED", "동반자의 연령대·직무 정보를 모두 입력해야 합니다.");
 
 
     private final HttpStatus httpStatus;
