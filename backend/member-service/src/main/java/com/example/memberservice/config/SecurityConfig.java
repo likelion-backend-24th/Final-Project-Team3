@@ -1,15 +1,25 @@
 package com.example.memberservice.config;
 
+import com.example.memberservice.auth.security.JwtAuthenticationFilter;
+import com.example.memberservice.auth.security.JwtTokenValidator;
+import com.example.memberservice.config.security.RestAuthenticationEntryPoint;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
+
     private static final int BCRYPT_STRENGTH = 12;
+
+    private final JwtTokenValidator jwtTokenValidator;
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
 
     @Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
@@ -28,10 +38,20 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
+                .exceptionHandling(exception -> exception.authenticationEntryPoint(restAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/members/signup", "/api/members/organizers/signup", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout", "/api/auth/email/send-code", "/api/auth/email/verify").permitAll()
+                        .requestMatchers(
+                                "/api/members/signup",
+                                "/api/members/organizers/signup",
+                                "/api/auth/login",
+                                "/api/auth/refresh",
+                                "/api/auth/logout",
+                                "/api/auth/email/send-code",
+                                "/api/auth/email/verify"
+                        ).permitAll()
                         .anyRequest().authenticated()
-                );
+                )
+                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenValidator), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }

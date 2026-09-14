@@ -4,6 +4,7 @@ import com.example.conferenceservice.common.TraceIdProvider;
 import com.example.conferenceservice.common.dto.ApiResponse;
 import com.example.conferenceservice.common.dto.Meta;
 import com.example.conferenceservice.common.dto.PageMeta;
+import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
 import com.example.conferenceservice.conference.dto.ConferenceResponse;
 import com.example.conferenceservice.conference.dto.RejectConferenceRequest;
 import com.example.conferenceservice.conference.service.ConferenceService;
@@ -40,6 +41,14 @@ public class AdminConferenceController {
         Page<ConferenceResponse> page = conferenceService.getPendingConferences(pageable).map(ConferenceResponse::from);
         Meta meta = Meta.builder().pagination(PageMeta.from(page)).build();
         return ResponseEntity.ok(ApiResponse.success("승인 대기 컨퍼런스 목록 조회 성공", page.getContent(), meta, traceIdProvider.resolve(request)));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<ConferenceDetailResponse>> getConferenceDetail(
+            @PathVariable UUID id, HttpServletRequest request) {
+        ConferenceDetailResponse response = conferenceService.getConferenceDetailForAdmin(id);
+        return ResponseEntity.ok(ApiResponse.success("컨퍼런스 상세 조회 성공", response, traceIdProvider.resolve(request)));
     }
 
     @PatchMapping("/{id}/approve")

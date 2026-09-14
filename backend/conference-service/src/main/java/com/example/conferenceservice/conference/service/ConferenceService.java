@@ -169,6 +169,17 @@ public class ConferenceService {
         return ConferenceDetailResponse.from(conference, sessions, tags);
     }
 
+    // 승인 전(PENDING)·반려(REJECTED) 상태도 볼 수 있어야 해서 getConference와 달리 상태 제한이 없고, 세션도 승인 여부와 무관하게 전부 보여준다
+    @Transactional(readOnly = true)
+    public ConferenceDetailResponse getConferenceDetailForAdmin(UUID id) {
+        Conference conference = findConference(id);
+        List<Session> sessions = sessionRepository.findByConferenceId(id);
+        List<String> tags = conferenceTagRepository.findByConferenceId(id).stream()
+                .map(ConferenceTag::getTag)
+                .toList();
+        return ConferenceDetailResponse.from(conference, sessions, tags);
+    }
+
     private List<ConferenceTag> toTags(List<String> tagNames, Conference conference) {
         if (tagNames == null) {
             return List.of();

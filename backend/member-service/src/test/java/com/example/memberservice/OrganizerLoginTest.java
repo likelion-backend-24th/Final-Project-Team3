@@ -1,19 +1,26 @@
 package com.example.memberservice;
 
 import com.example.memberservice.auth.dto.LoginRequest;
+import com.example.memberservice.auth.dto.SendCodeRequest;
+import com.example.memberservice.auth.dto.VerifyCodeRequest;
+import com.example.memberservice.auth.service.EmailSender;
 import com.example.memberservice.member.dto.OrganizerSignupRequest;
+import com.example.memberservice.member.entity.AgeGroup;
+import com.example.memberservice.member.entity.Job;
 import com.example.memberservice.member.entity.Member;
 import com.example.memberservice.member.repository.MemberRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import tools.jackson.databind.JsonNode;
@@ -23,6 +30,10 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -52,6 +63,9 @@ class OrganizerLoginTest {
 
     @Value("${jwt.secret}")
     private String jwtSecret;
+
+    @MockitoBean
+    private EmailSender emailSender;
 
     @Test
     void ORGANIZER_계정도_로그인_API로_로그인할_수_있다() throws Exception {
@@ -89,7 +103,7 @@ class OrganizerLoginTest {
 
     @Test
     void MEMBER로_로그인하면_JWT에_organizerId_claim이_없다() throws Exception {
-        Member member = Member.newMember("member@example.com", passwordEncoder.encode("password1234"), "참가자");
+        Member member = Member.newMember("member@example.com", passwordEncoder.encode("password1234"), "참가자", AgeGroup.TWENTIES, Job.DEVELOPER);
         memberRepository.save(member);
 
         String accessToken = loginAndGetAccessToken("member@example.com", "password1234");
@@ -100,6 +114,8 @@ class OrganizerLoginTest {
     }
 
     private Member createOrganizer(String email, String password, String name, String organizationName, String businessNo) throws Exception {
+        verifyEmail(email);
+
         OrganizerSignupRequest request = new OrganizerSignupRequest(email, password, name, organizationName, businessNo);
 
         mockMvc.perform(post("/api/members/organizers/signup")
@@ -109,6 +125,22 @@ class OrganizerLoginTest {
 
         return memberRepository.findByEmail(email.strip().toLowerCase())
                 .orElseThrow();
+    }
+
+    private void verifyEmail(String email) throws Exception {
+        mockMvc.perform(post("/api/auth/email/send-code")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new SendCodeRequest(email))))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<String> codeCaptor = ArgumentCaptor.forClass(String.class);
+        then(emailSender).should(atLeastOnce()).sendVerificationCode(eq(email), codeCaptor.capture(), anyLong());
+        String code = codeCaptor.getValue();
+
+        mockMvc.perform(post("/api/auth/email/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new VerifyCodeRequest(email, code))))
+                .andExpect(status().isOk());
     }
 
     private String loginAndGetAccessToken(String email, String password) throws Exception {

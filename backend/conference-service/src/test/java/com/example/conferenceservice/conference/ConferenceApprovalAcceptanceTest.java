@@ -121,6 +121,34 @@ class ConferenceApprovalAcceptanceTest {
                 .andExpect(jsonPath("$.error.code").value("ACCESS_DENIED"));
     }
 
+    @Test
+    void getConferenceDetail_pendingConference_returnsDetailForAdmin() throws Exception {
+        Conference pending = conferenceRepository.save(pendingConference("상세보기 대상 컨퍼런스"));
+
+        mockMvc.perform(get("/api/admin/conferences/{id}", pending.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andExpect(jsonPath("$.data.title").value("상세보기 대상 컨퍼런스"));
+    }
+
+    @Test
+    void getConferenceDetail_withoutAdminRole_returnsForbidden() throws Exception {
+        Conference pending = conferenceRepository.save(pendingConference("권한 검증용 컨퍼런스"));
+
+        mockMvc.perform(get("/api/admin/conferences/{id}", pending.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getConferenceDetail_notFound_returns404() throws Exception {
+        mockMvc.perform(get("/api/admin/conferences/{id}", UUID.randomUUID())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("CONFERENCE_NOT_FOUND"));
+    }
+
     private Conference pendingConference(String title) {
         return Conference.builder()
                 .organizerId(UUID.randomUUID())
