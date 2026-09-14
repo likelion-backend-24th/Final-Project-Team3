@@ -159,11 +159,12 @@ class WaitingQueueAcceptanceTest {
 
     private String createRequestJson(UUID sessionId, UUID memberId) {
         return """
-                {
-                    "sessionId": "%s",
-                    "memberId": "%s",
-                    "headcount": 1
-                }
-                """.formatted(sessionId, memberId);
+            {
+                "sessionId": "%s",
+                "memberId": "%s",
+                "headcount": 1,
+                "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]
+            }
+            """.formatted(sessionId, memberId);
     }
 }

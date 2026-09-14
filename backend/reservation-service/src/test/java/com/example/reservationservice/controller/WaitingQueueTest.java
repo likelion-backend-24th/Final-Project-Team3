@@ -98,11 +98,12 @@ public class WaitingQueueTest { // 클래스명 대문자로 수정
 
     private String createRequestJson(UUID sessionId, UUID memberId) {
         return """
-                {
-                    "sessionId": "%s",
-                    "memberId": "%s",
-                    "headcount": 1
-                }
-                """.formatted(sessionId, memberId);
+            {
+                "sessionId": "%s",
+                "memberId": "%s",
+                "headcount": 1,
+                "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]
+            }
+            """.formatted(sessionId, memberId);
     }
 }

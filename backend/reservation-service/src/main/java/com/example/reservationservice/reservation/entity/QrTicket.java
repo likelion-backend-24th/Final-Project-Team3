@@ -2,6 +2,8 @@ package com.example.reservationservice.reservation.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -9,7 +11,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -38,13 +39,22 @@ public class QrTicket {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "age_group")
+    private AgeGroup ageGroup;
+
+    @Enumerated(EnumType.STRING)
+    private Job job;
+
     @Builder
-    public QrTicket(UUID reservationId, String code) {
+    public QrTicket(UUID reservationId, String code, AgeGroup ageGroup, Job job) {
         this.id = UUID.randomUUID();
         this.reservationId = reservationId;
         this.code = code;
         this.used = false;
         this.createdAt = LocalDateTime.now();
+        this.ageGroup = ageGroup;
+        this.job = job;
     }
 
     public void markAsUsed() {
