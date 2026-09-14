@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { Ticket, CheckCircle2 } from 'lucide-react'
+import { Ticket, CheckCircle2, User, Briefcase } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getMyReservations, getQueuePosition, getQrTickets } from '../api/reservations'
 import { listConferences, getConference } from '../api/conferences'
@@ -48,9 +48,13 @@ export default function MyPage() {
   const [tab, setTab] = useState('ALL')
   const [error, setError] = useState('')
 
-  // 프로필(연령대·직무) 수정
+  // 프로필(연령대·직무) 수정 — ageGroup/job은 저장된 값(뱃지 표시용),
+  // draftAgeGroup/draftJob은 "프로필 수정" 모드에서만 쓰는 편집 중 값
   const [ageGroup, setAgeGroup] = useState('')
   const [job, setJob] = useState('')
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [draftAgeGroup, setDraftAgeGroup] = useState('')
+  const [draftJob, setDraftJob] = useState('')
   const [profileError, setProfileError] = useState('')
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
@@ -122,17 +126,27 @@ export default function MyPage() {
     }
   }
 
+  const startEditingProfile = () => {
+    setDraftAgeGroup(ageGroup)
+    setDraftJob(job)
+    setProfileError('')
+    setProfileSaved(false)
+    setEditingProfile(true)
+  }
+
   const saveProfile = async (e) => {
     e.preventDefault()
     setProfileError('')
-    setProfileSaved(false)
-    if (!ageGroup || !job) {
+    if (!draftAgeGroup || !draftJob) {
       setProfileError('연령대와 직무를 선택해주세요.')
       return
     }
     setProfileSaving(true)
     try {
-      await updateProfile({ ageGroup, job })
+      await updateProfile({ ageGroup: draftAgeGroup, job: draftJob })
+      setAgeGroup(draftAgeGroup)
+      setJob(draftJob)
+      setEditingProfile(false)
       setProfileSaved(true)
     } catch (err) {
       setProfileError(err instanceof ApiError ? err.message : '프로필 저장에 실패했습니다.')
@@ -140,6 +154,9 @@ export default function MyPage() {
       setProfileSaving(false)
     }
   }
+
+  const ageLabel = AGE_GROUPS.find((o) => o.value === ageGroup)?.label
+  const jobLabel = JOBS.find((o) => o.value === job)?.label
 
   const filtered = useMemo(
     () => (reservations ?? []).filter((r) => tab === 'ALL' || categoryOf(r.status) === tab),
@@ -159,46 +176,75 @@ export default function MyPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-14 h-14 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xl font-semibold shrink-0">
-          {displayName[0]?.toUpperCase()}
-        </div>
-        <div>
-          <p className="text-lg font-semibold text-text">{displayName}</p>
-          <p className="text-sm text-text-muted">{claims?.email}</p>
-        </div>
-      </div>
-
-      <form onSubmit={saveProfile} className="bg-surface border border-border rounded-xl p-5 mb-8">
-        <p className="text-sm font-medium text-text mb-3">프로필</p>
-        <div className="grid grid-cols-2 gap-4">
-          <SelectField
-            label="연령대"
-            placeholder="선택"
-            options={AGE_GROUPS}
-            value={ageGroup}
-            onChange={(e) => setAgeGroup(e.target.value)}
-          />
-          <SelectField
-            label="직무"
-            placeholder="선택"
-            options={JOBS}
-            value={job}
-            onChange={(e) => setJob(e.target.value)}
-          />
-        </div>
-        {profileError && <p className="text-sm text-danger mt-3">{profileError}</p>}
-        <div className="flex items-center gap-3 mt-4">
-          <Button type="submit" variant="secondary" loading={profileSaving}>
-            저장
-          </Button>
-          {profileSaved && (
-            <span className="inline-flex items-center gap-1 text-sm text-success">
-              <CheckCircle2 size={16} /> 저장됐어요
-            </span>
+      <div className="bg-surface border border-border rounded-xl p-5 mb-8">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xl font-semibold shrink-0">
+              {displayName[0]?.toUpperCase()}
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-text">{displayName}</p>
+              <p className="text-sm text-text-muted">{claims?.email}</p>
+            </div>
+          </div>
+          {!editingProfile && (
+            <Button type="button" variant="secondary" onClick={startEditingProfile}>
+              프로필 수정
+            </Button>
           )}
         </div>
-      </form>
+
+        {editingProfile ? (
+          <form onSubmit={saveProfile} className="mt-4 pt-4 border-t border-border">
+            <div className="grid grid-cols-2 gap-4">
+              <SelectField
+                label="연령대"
+                placeholder="선택"
+                options={AGE_GROUPS}
+                value={draftAgeGroup}
+                onChange={(e) => setDraftAgeGroup(e.target.value)}
+              />
+              <SelectField
+                label="직무"
+                placeholder="선택"
+                options={JOBS}
+                value={draftJob}
+                onChange={(e) => setDraftJob(e.target.value)}
+              />
+            </div>
+            {profileError && <p className="text-sm text-danger mt-3">{profileError}</p>}
+            <div className="flex items-center gap-3 mt-4">
+              <Button type="submit" variant="primary" loading={profileSaving}>
+                저장
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setEditingProfile(false)}>
+                취소
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2 mt-4">
+            {ageLabel && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface2 border border-border text-sm text-text-muted">
+                <User size={14} /> {ageLabel}
+              </span>
+            )}
+            {jobLabel && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface2 border border-border text-sm text-text-muted">
+                <Briefcase size={14} /> {jobLabel}
+              </span>
+            )}
+            {!ageLabel && !jobLabel && (
+              <span className="text-sm text-text-muted">등록된 프로필 정보가 없습니다</span>
+            )}
+            {profileSaved && (
+              <span className="inline-flex items-center gap-1 text-sm text-success">
+                <CheckCircle2 size={16} /> 저장됐어요
+              </span>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
         <div className="bg-surface border border-border rounded-xl p-5">
