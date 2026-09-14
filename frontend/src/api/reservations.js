@@ -2,8 +2,10 @@ import { apiFetch } from './client'
 
 // reservation-service엔 아직 JWT 필터가 없어서(SecurityConfig가 permitAll) memberId를 직접 넘긴다.
 // 로그인한 사람과 memberId가 실제로 일치하는지는 서버가 검증 안 해준다 — 남은 보안 갭.
-export function createHold({ sessionId, memberId, headcount }) {
-  return apiFetch('/reservations/hold', { method: 'POST', body: { sessionId, memberId, headcount } })
+// attendees(좌석별 연령대·직무, 요구사항 v0.5)는 백엔드 계약이 아직 없어서(Task 9-5 필요)
+// 지금은 보내도 서버가 무시한다 — 계약이 생기면 그대로 살아날 자리만 미리 만들어둔 것.
+export function createHold({ sessionId, memberId, headcount, attendees }) {
+  return apiFetch('/reservations/hold', { method: 'POST', body: { sessionId, memberId, headcount, attendees } })
 }
 
 export function getQueuePosition(reservationId) {
