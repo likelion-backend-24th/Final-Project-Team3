@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { X } from 'lucide-react'
 import {
   listPendingConferences,
   approveConference,
@@ -6,14 +7,116 @@ import {
   listPendingSessions,
   approveSession,
   rejectSession,
+  getConferenceDetail,
 } from '../../api/admin'
 import { ApiError } from '../../api/client'
 import { formatDateRange } from '../../utils/date'
 import Button from '../../components/Button'
 import StatusBadge from '../../components/StatusBadge'
 
+// 승인/반려 결정 전에 세션·태그·장소까지 전부 보여주는 상세 모달.
+function ConferenceDetailModal({ conferenceId, onClose }) {
+  const [detail, setDetail] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    getConferenceDetail(conferenceId)
+      .then((res) => {
+        if (!cancelled) setDetail(res.data)
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : '상세 정보를 불러오지 못했습니다.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [conferenceId])
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div
+        className="bg-surface border border-border rounded-xl p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <h2 className="text-lg font-semibold text-text">컨퍼런스 상세</h2>
+          <button onClick={onClose} className="text-text-faint hover:text-text" aria-label="닫기">
+            <X size={20} />
+          </button>
+        </div>
+
+        {error && <p className="text-sm text-danger">{error}</p>}
+        {!detail && !error && <p className="text-sm text-text-muted">불러오는 중...</p>}
+
+        {detail && (
+          <div className="space-y-5">
+            {detail.imageUrl && (
+              <img src={detail.imageUrl} alt={detail.title} className="w-full rounded-lg object-cover max-h-48" />
+            )}
+
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl font-semibold text-text">{detail.title}</h3>
+                <StatusBadge status={detail.status} />
+              </div>
+              <p className="text-sm text-text-muted mt-1">
+                {detail.organizerName} · {formatDateRange(detail.startAt, detail.endAt)}
+              </p>
+            </div>
+
+            {detail.tags?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {detail.tags.map((tag) => (
+                  <span key={tag} className="text-xs bg-surface2 text-text-muted rounded-full px-2.5 py-1">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {detail.description && (
+              <div>
+                <h4 className="text-sm font-medium text-text mb-1">소개글</h4>
+                <p className="text-sm text-text-muted whitespace-pre-wrap">{detail.description}</p>
+              </div>
+            )}
+
+            <div>
+              <h4 className="text-sm font-medium text-text mb-1">장소</h4>
+              <p className="text-sm text-text-muted">{detail.location || '미입력'}</p>
+              {detail.transportation && <p className="text-xs text-text-faint mt-0.5">교통편: {detail.transportation}</p>}
+              {detail.parkingInfo && <p className="text-xs text-text-faint mt-0.5">주차: {detail.parkingInfo}</p>}
+              {detail.amenities && <p className="text-xs text-text-faint mt-0.5">편의시설: {detail.amenities}</p>}
+            </div>
+
+            <div>
+              <h4 className="text-sm font-medium text-text mb-2">세션 ({detail.sessions?.length ?? 0})</h4>
+              {detail.sessions?.length > 0 ? (
+                <div className="space-y-2">
+                  {detail.sessions.map((s) => (
+                    <div key={s.id} className="bg-surface2 rounded-lg p-3 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm text-text">{s.title}</p>
+                        <p className="text-xs text-text-faint">정원 {s.capacity}명 · {formatDateRange(s.startAt, s.endAt)}</p>
+                      </div>
+                      <StatusBadge status={s.status} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-text-muted">등록된 세션이 없어요.</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // 반려 사유 입력 + 승인/반려 버튼을 공용으로 쓰는 한 줄 아이템.
-function ApprovalItem({ title, subtitle, meta, onApprove, onReject, busy }) {
+function ApprovalItem({ title, subtitle, meta, onApprove, onReject, onViewDetail, busy }) {
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState('')
   const [error, setError] = useState('')
@@ -35,7 +138,14 @@ function ApprovalItem({ title, subtitle, meta, onApprove, onReject, busy }) {
           {subtitle && <p className="text-sm text-text-muted mt-0.5">{subtitle}</p>}
           {meta && <p className="text-xs text-text-faint mt-1">{meta}</p>}
         </div>
-        <StatusBadge status="PENDING" />
+        <div className="flex items-center gap-2 shrink-0">
+          {onViewDetail && (
+            <button onClick={onViewDetail} className="text-xs text-accent hover:underline">
+              상세보기
+            </button>
+          )}
+          <StatusBadge status="PENDING" />
+        </div>
       </div>
 
       {rejecting ? (
@@ -77,6 +187,7 @@ export default function Approvals() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
+  const [viewingConferenceId, setViewingConferenceId] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -179,11 +290,16 @@ export default function Approvals() {
                 busy={busyId === c.id}
                 onApprove={() => approveConf(c.id)}
                 onReject={(reason) => rejectConf(c.id, reason)}
+                onViewDetail={() => setViewingConferenceId(c.id)}
               />
             ))}
           </div>
         )}
       </section>
+
+      {viewingConferenceId && (
+        <ConferenceDetailModal conferenceId={viewingConferenceId} onClose={() => setViewingConferenceId(null)} />
+      )}
     </div>
   )
 }

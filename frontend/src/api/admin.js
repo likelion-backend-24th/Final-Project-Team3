@@ -5,6 +5,10 @@ export function listPendingConferences() {
   return apiFetch('/admin/conferences')
 }
 
+export function getConferenceDetail(id) {
+  return apiFetch(`/admin/conferences/${id}`)
+}
+
 export function approveConference(id) {
   return apiFetch(`/admin/conferences/${id}/approve`, { method: 'PATCH' })
 }
