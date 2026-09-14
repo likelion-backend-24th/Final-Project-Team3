@@ -250,4 +250,14 @@ public class ReservationService {
     private String generateQrCode() {
         return UUID.randomUUID().toString().replace("-", "");
     }
+
+    public PaymentSummaryResponse getPaymentSummary(List<UUID> sessionIds) {
+        int totalRevenue = paymentRepository.sumConfirmedAmount(sessionIds);
+        int confirmedCount = paymentRepository.countConfirmed(sessionIds);
+        int refundedAmount = paymentRepository.sumRefundedAmount(sessionIds);
+        int cancelledCount = paymentRepository.countCancelled(sessionIds);
+        int netRevenue = totalRevenue - refundedAmount;
+
+        return new PaymentSummaryResponse(totalRevenue, refundedAmount, netRevenue, confirmedCount, cancelledCount);
+    }
 }
