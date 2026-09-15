@@ -1,4 +1,8 @@
 package com.example.reservationservice.review.dto;
 
-public class CreateReviewRequest {
-}
+import java.util.UUID;
+
+public record CreateReviewRequest(
+        UUID memberId,
+        String content
+) {}
