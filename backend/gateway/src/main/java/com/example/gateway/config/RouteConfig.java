@@ -57,7 +57,11 @@ public class RouteConfig {
     @Bean
     public RouterFunction<ServerResponse> reservationServiceRoute() {
         return route("reservation-service")
-                .route(RequestPredicates.path("/api/reservations/**"), http())
+                .route(
+                        RequestPredicates.path("/api/reservations/**")
+                                .or(RequestPredicates.path("/api/admin/settings/**")),
+                        http()
+                )
                 .before(uri(reservationServiceUrl))
                 .before(this::addTraceId)
                 .build();
