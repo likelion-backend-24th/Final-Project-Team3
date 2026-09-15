@@ -17,7 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -206,6 +208,12 @@ public class ReservationService {
         return PaymentResult.confirmed(reservationId, tickets.size());
     }
 
+    public List<MyReservationResponse> getMyReservations(UUID memberId) {
+        return reservationRepository.findByMemberIdOrderByCreatedAtDesc(memberId).stream()
+                .map(MyReservationResponse::from)
+                .toList();
+    }
+
     public List<QrTicket> getQrTickets(UUID reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
@@ -217,12 +225,6 @@ public class ReservationService {
         return qrTicketService.getTicketsByReservation(reservationId);
     }
 
-    public List<MyReservationResponse> getMyReservations(UUID memberId) {
-        return reservationRepository.findByMemberIdOrderByCreatedAtDesc(memberId).stream()
-                .map(MyReservationResponse::from)
-                .toList();
-    }
-
     public SessionCapacityStatusResponse getCapacityStatus(UUID sessionId) {
         int capacity = getSessionCapacity(sessionId);
         int confirmedCount = sessionCapacityLockRepository.findById(sessionId)
@@ -230,6 +232,10 @@ public class ReservationService {
                 .orElse(0);
         int remaining = capacity - confirmedCount;
         return new SessionCapacityStatusResponse(sessionId, capacity, confirmedCount, remaining);
+    }
+
+    public AttendeeCheckinStatsResponse getAttendeeCheckinStats(List<UUID> sessionIds) {
+        return qrTicketService.getAttendeeCheckinStats(sessionIds);
     }
 
     public SessionStatusSummaryResponse getStatusSummary(UUID sessionId) {
