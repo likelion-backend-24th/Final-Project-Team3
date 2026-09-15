@@ -1,5 +1,7 @@
 package com.example.conferenceservice.conference.controller;
 
+import com.example.conferenceservice.attendeesummary.dto.ConferenceAttendeeSummaryResponse;
+import com.example.conferenceservice.attendeesummary.service.ConferenceAttendeeSummaryService;
 import com.example.conferenceservice.auth.CustomUserDetails;
 import com.example.conferenceservice.common.TraceIdProvider;
 import com.example.conferenceservice.common.dto.ApiResponse;
@@ -44,6 +46,7 @@ public class ConferenceController {
     private final ConferenceService conferenceService;
     private final SessionService sessionService;
     private final ConferenceOperationStatusService conferenceOperationStatusService;
+    private final ConferenceAttendeeSummaryService conferenceAttendeeSummaryService;
     private final TraceIdProvider traceIdProvider;
 
     @GetMapping
@@ -141,5 +144,17 @@ public class ConferenceController {
         ConferenceOperationStatusResponse response =
                 conferenceOperationStatusService.getOperationStatus(conferenceId, currentUser.getMemberId());
         return ResponseEntity.ok(ApiResponse.success("세션별 신청·입장 현황 조회 성공", response, traceIdProvider.resolve(request)));
+    }
+
+    @GetMapping("/{conferenceId}/attendee-summary")
+    @PreAuthorize("hasRole('ORGANIZER')")
+    public ResponseEntity<ApiResponse<ConferenceAttendeeSummaryResponse>> getAttendeeSummary(
+            @PathVariable UUID conferenceId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            HttpServletRequest request
+    ) {
+        ConferenceAttendeeSummaryResponse response =
+                conferenceAttendeeSummaryService.getAttendeeSummary(conferenceId, currentUser.getMemberId());
+        return ResponseEntity.ok(ApiResponse.success("참석자 통계 조회 성공", response, traceIdProvider.resolve(request)));
     }
 }
