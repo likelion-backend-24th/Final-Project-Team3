@@ -14,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -259,6 +261,21 @@ public class ReservationService {
         int netRevenue = totalRevenue - refundedAmount;
 
         return new PaymentSummaryResponse(totalRevenue, refundedAmount, netRevenue, confirmedCount, cancelledCount);
+    }
+
+    public AttendeeCheckinStatsResponse getAttendeeCheckinStats(List<UUID> sessionIds) {
+        List<UUID> reservationIds = reservationRepository.findBySessionIdIn(sessionIds).stream()
+                .map(Reservation::getId)
+                .toList();
+
+        List<QrTicket> checkedInTickets = qrTicketRepository.findByReservationIdInAndUsedTrue(reservationIds);
+
+        Map<AgeGroup, Long> ageGroupDistribution = checkedInTickets.stream()
+                .collect(Collectors.groupingBy(QrTicket::getAgeGroup, Collectors.counting()));
+        Map<Job, Long> jobDistribution = checkedInTickets.stream()
+                .collect(Collectors.groupingBy(QrTicket::getJob, Collectors.counting()));
+
+        return new AttendeeCheckinStatsResponse(checkedInTickets.size(), ageGroupDistribution, jobDistribution);
     }
 
     public SessionStatusSummaryResponse getStatusSummary(UUID sessionId) {

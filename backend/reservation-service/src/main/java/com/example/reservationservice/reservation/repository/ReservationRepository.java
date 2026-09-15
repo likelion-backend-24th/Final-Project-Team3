@@ -24,6 +24,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
 
     List<Reservation> findByStatusAndExpiresAtBefore(ReservationStatus status, LocalDateTime time);
     List<Reservation> findByMemberIdOrderByCreatedAtDesc(UUID memberId);
+    List<Reservation> findBySessionIdIn(List<UUID> sessionIds);
 }
 
 

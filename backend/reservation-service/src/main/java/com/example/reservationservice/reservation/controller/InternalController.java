@@ -2,6 +2,7 @@ package com.example.reservationservice.reservation.controller;
 
 import com.example.reservationservice.common.TraceIdProvider;
 import com.example.reservationservice.common.dto.ApiResponse;
+import com.example.reservationservice.reservation.dto.AttendeeCheckinStatsResponse;
 import com.example.reservationservice.reservation.dto.PaymentSummaryResponse;
 import com.example.reservationservice.reservation.service.ReservationService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,5 +31,14 @@ public class InternalController {
         PaymentSummaryResponse result = reservationService.getPaymentSummary(sessionIds);
         return ResponseEntity.ok(
                 ApiResponse.success("정산 집계 조회 완료", result, traceIdProvider.resolve(httpRequest)));
+    }
+
+    @GetMapping("/attendee-checkin-stats")
+    public ResponseEntity<ApiResponse<AttendeeCheckinStatsResponse>> getAttendeeCheckinStats(
+            @RequestParam List<UUID> sessionIds,
+            HttpServletRequest httpRequest) {
+        AttendeeCheckinStatsResponse result = reservationService.getAttendeeCheckinStats(sessionIds);
+        return ResponseEntity.ok(
+                ApiResponse.success("체크인 집계 조회 완료", result, traceIdProvider.resolve(httpRequest)));
     }
 }
