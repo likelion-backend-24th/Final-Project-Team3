@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.annotation.RequestScope;
 
 import javax.swing.plaf.PanelUI;
+import javax.swing.text.html.HTML;
 import java.util.List;
 import java.util.UUID;
 
@@ -99,6 +100,15 @@ public class ReservationController {
         SessionCapacityStatusResponse result = reservationService.getCapacityStatus(sessionId);
         return ResponseEntity.ok(
                 ApiResponse.success("정원 현황 조회 완료", result, traceIdProvider.resolve(httpRequest)));
+    }
+
+    @GetMapping("/sessions/{sessionId}/status-summary")
+    public ResponseEntity<ApiResponse<SessionStatusSummaryResponse>> getStatusSummary(
+            @PathVariable UUID sessionId,
+            HttpServletRequest httpRequest) {
+        SessionStatusSummaryResponse result = reservationService.getStatusSummary(sessionId);
+        return ResponseEntity.ok(
+                ApiResponse.success("세션 상태 집계 조회 완료", result, traceIdProvider.resolve(httpRequest)));
     }
 
     public record PaymentRequest(String paymentMethod, int amount) {}

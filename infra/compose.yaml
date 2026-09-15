@@ -63,6 +63,7 @@ services:
       RESERVATION_DB_PASSWORD: ${RESERVATION_DB_PASSWORD}
       SERVICES_CONFERENCE_SERVICE_URL: http://conference-service:8082
       JWT_SECRET: ${JWT_SECRET}
+      PG_CREDENTIAL_ENCRYPTION_KEY: ${PG_CREDENTIAL_ENCRYPTION_KEY}
     depends_on:
       mysql:
         condition: service_healthy

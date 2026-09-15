@@ -277,4 +277,15 @@ public class ReservationService {
 
         return new AttendeeCheckinStatsResponse(checkedInTickets.size(), ageGroupDistribution, jobDistribution);
     }
+
+    public SessionStatusSummaryResponse getStatusSummary(UUID sessionId) {
+        long holdCount = reservationRepository.countBySessionIdAndStatus(sessionId, ReservationStatus.HOLD);
+        long queuedCount = reservationRepository.countBySessionIdAndStatus(sessionId, ReservationStatus.QUEUED);
+        long confirmedCount = reservationRepository.countBySessionIdAndStatus(sessionId, ReservationStatus.CONFIRMED);
+        long cancelledCount = reservationRepository.countBySessionIdAndStatus(sessionId, ReservationStatus.CANCELLED);
+        long checkedCount = qrTicketRepository.countCheckedInBySessionId(sessionId);
+
+        return new SessionStatusSummaryResponse(
+                sessionId, holdCount, queuedCount, confirmedCount, cancelledCount, checkedCount);
+    }
 }

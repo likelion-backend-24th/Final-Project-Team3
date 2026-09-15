@@ -4,6 +4,9 @@ server:
 jwt:
   secret: ${JWT_SECRET}
 
+pg-credential:
+  encryption-key: ${PG_CREDENTIAL_ENCRYPTION_KEY}
+
 spring:
   application:
     name: reservation-service
