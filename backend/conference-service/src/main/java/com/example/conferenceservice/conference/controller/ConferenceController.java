@@ -11,6 +11,8 @@ import com.example.conferenceservice.conference.dto.ConferenceLocationUpdateRequ
 import com.example.conferenceservice.conference.dto.ConferenceRequest;
 import com.example.conferenceservice.conference.dto.ConferenceResponse;
 import com.example.conferenceservice.conference.service.ConferenceService;
+import com.example.conferenceservice.operationstatus.dto.ConferenceOperationStatusResponse;
+import com.example.conferenceservice.operationstatus.service.ConferenceOperationStatusService;
 import com.example.conferenceservice.session.dto.SessionCreateRequest;
 import com.example.conferenceservice.session.dto.SessionResponse;
 import com.example.conferenceservice.session.service.SessionService;
@@ -41,6 +43,7 @@ import java.util.UUID;
 public class ConferenceController {
     private final ConferenceService conferenceService;
     private final SessionService sessionService;
+    private final ConferenceOperationStatusService conferenceOperationStatusService;
     private final TraceIdProvider traceIdProvider;
 
     @GetMapping
@@ -126,5 +129,17 @@ public class ConferenceController {
     ) {
         List<SessionResponse> sessions = sessionService.getSessionsByConference(conferenceId, currentUser.getMemberId());
         return ResponseEntity.ok(ApiResponse.success("세션 목록 조회 성공", sessions, traceIdProvider.resolve(request)));
+    }
+
+    @GetMapping("/{conferenceId}/operation-status")
+    @PreAuthorize("hasRole('ORGANIZER')")
+    public ResponseEntity<ApiResponse<ConferenceOperationStatusResponse>> getOperationStatus(
+            @PathVariable UUID conferenceId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            HttpServletRequest request
+    ) {
+        ConferenceOperationStatusResponse response =
+                conferenceOperationStatusService.getOperationStatus(conferenceId, currentUser.getMemberId());
+        return ResponseEntity.ok(ApiResponse.success("세션별 신청·입장 현황 조회 성공", response, traceIdProvider.resolve(request)));
     }
 }
