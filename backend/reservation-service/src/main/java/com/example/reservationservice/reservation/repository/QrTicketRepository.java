@@ -8,4 +8,5 @@ import java.util.UUID;
 
 public interface QrTicketRepository extends JpaRepository<QrTicket, UUID> {
     List<QrTicket> findByReservationId(UUID reservationId);
+    boolean existsByReservationIdAndUsedTrue(UUID reservationId);
 }
