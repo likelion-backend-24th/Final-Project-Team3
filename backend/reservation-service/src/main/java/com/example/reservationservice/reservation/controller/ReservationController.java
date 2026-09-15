@@ -103,11 +103,11 @@ public class ReservationController {
                 ApiResponse.success("세션 상태 집계 조회 완료", result, traceIdProvider.resolve(httpRequest)));
     }
 
-    @PostMapping("/{reservationId}/cancell")
-    public ResponseEntity<ApiResponse<CancellResult>> cancellReservation(
+    @PostMapping("/{reservationId}/cancel")
+    public ResponseEntity<ApiResponse<CancelResult>> cancelReservation(
             @PathVariable UUID reservationId,
             HttpServletRequest httpRequest) {
-        CancellResult result = reservationService.cancellReservation(reservationId);
+        CancelResult result = reservationService.cancelReservation(reservationId);
         return ResponseEntity.ok(
                 ApiResponse.success("예약 취소 완료", result, traceIdProvider.resolve(httpRequest)));
     }
