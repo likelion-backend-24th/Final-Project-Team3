@@ -244,7 +244,8 @@ public class ReservationService {
                 sessionId, holdCount, queuedCount, confirmedCount, cancelledCount, checkedCount);
     }
 
-    public CancellResult cancellReservation(UUID reservationId) {
+    @Transactional
+    public CancelResult cancelReservation(UUID reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
 
@@ -286,7 +287,7 @@ public class ReservationService {
 
         reservation.markAsCancelled();
 
-        return CancellResult.cancelled(reservationId, refundRate, refundAmount);
+        return CancelResult.cancelled(reservationId, refundRate, refundAmount);
     }
 
     private LocalDateTime getSessionStartAt(UUID sessionId) {
