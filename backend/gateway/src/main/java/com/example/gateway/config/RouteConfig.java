@@ -59,7 +59,8 @@ public class RouteConfig {
         return route("reservation-service")
                 .route(
                         RequestPredicates.path("/api/reservations/**")
-                                .or(RequestPredicates.path("/api/admin/settings/**")),
+                                .or(RequestPredicates.path("/api/admin/settings/**"))
+                                .or(RequestPredicates.path("/api/qr-tickets/**")),
                         http()
                 )
                 .before(uri(reservationServiceUrl))

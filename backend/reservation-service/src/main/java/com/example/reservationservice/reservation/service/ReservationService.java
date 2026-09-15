@@ -214,17 +214,6 @@ public class ReservationService {
                 .toList();
     }
 
-    public List<QrTicket> getQrTickets(UUID reservationId) {
-        Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
-
-        if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
-            throw new BusinessException(ReservationErrorCode.PAYMENT_NOT_COMPLETED);
-        }
-
-        return qrTicketService.getTicketsByReservation(reservationId);
-    }
-
     public SessionCapacityStatusResponse getCapacityStatus(UUID sessionId) {
         int capacity = getSessionCapacity(sessionId);
         int confirmedCount = sessionCapacityLockRepository.findById(sessionId)

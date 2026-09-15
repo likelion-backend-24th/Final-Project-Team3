@@ -76,15 +76,6 @@ public class ReservationController {
                 ApiResponse.success("결제 완료", result, traceIdProvider.resolve(httpRequest)));
     }
 
-    @GetMapping("/{reservationId}/qr-tickets")
-    public ResponseEntity<ApiResponse<List<QrTicket>>> getQrTickets(
-            @PathVariable UUID reservationId,
-            HttpServletRequest httpRequest) {
-        List<QrTicket> tickets = reservationService.getQrTickets(reservationId);
-        return ResponseEntity.ok(
-                ApiResponse.success("QR 티켓 조회 완료", tickets, traceIdProvider.resolve(httpRequest)));
-    }
-
     @GetMapping("/my")
     public ResponseEntity<ApiResponse<List<MyReservationResponse>>> getMyReservation(
             @RequestParam UUID memberId,

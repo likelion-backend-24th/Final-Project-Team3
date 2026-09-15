@@ -1,12 +1,11 @@
 package com.example.reservationservice.qrticket.service;
 
+import com.example.reservationservice.common.exception.BusinessException;
 import com.example.reservationservice.qrticket.entity.QrTicket;
 import com.example.reservationservice.qrticket.repository.QrTicketRepository;
 import com.example.reservationservice.reservation.dto.AttendeeCheckinStatsResponse;
-import com.example.reservationservice.reservation.entity.AgeGroup;
-import com.example.reservationservice.reservation.entity.Attendee;
-import com.example.reservationservice.reservation.entity.Job;
-import com.example.reservationservice.reservation.entity.Reservation;
+import com.example.reservationservice.reservation.entity.*;
+import com.example.reservationservice.reservation.exception.ReservationErrorCode;
 import com.example.reservationservice.reservation.repository.AttendeeRepository;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
 import lombok.RequiredArgsConstructor;
@@ -45,10 +44,6 @@ public class QrTicketService {
         return tickets;
     }
 
-    public List<QrTicket> getTicketsByReservation(UUID reservationId) {
-        return qrTicketRepository.findByReservationId(reservationId);
-    }
-
     public long countCheckedInBySessionId(UUID sessionId) {
         return qrTicketRepository.countCheckedInBySessionId(sessionId);
     }
@@ -66,6 +61,17 @@ public class QrTicketService {
                 .collect(Collectors.groupingBy(QrTicket::getJob, Collectors.counting()));
 
         return new AttendeeCheckinStatsResponse(checkedInTickets.size(), ageGroupDistribution, jobDistribution);
+    }
+
+    public List<QrTicket> getConfirmedTickets(UUID reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+
+        if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
+            throw new BusinessException(ReservationErrorCode.PAYMENT_NOT_COMPLETED);
+        }
+
+        return qrTicketRepository.findByReservationId(reservationId);
     }
 
     private String generateQrCode() {

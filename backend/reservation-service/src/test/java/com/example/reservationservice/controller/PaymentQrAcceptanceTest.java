@@ -144,7 +144,7 @@ public class PaymentQrAcceptanceTest {
                     {"paymentMethod": "CARD", "amount": 30000}
                     """));
 
-        mockMvc.perform(get("/api/reservations/{id}/qr-tickets", reservationId))
+        mockMvc.perform(get("/api/qr-tickets/{id}", reservationId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(3));
     }
@@ -162,7 +162,7 @@ public class PaymentQrAcceptanceTest {
 
         String reservationId = JsonPath.read(holdResult.getResponse().getContentAsString(), "$.data.reservationId");
 
-        mockMvc.perform(get("/api/reservations/{id}/qr-tickets", reservationId))
+        mockMvc.perform(get("/api/qr-tickets/{id}", reservationId))
                 .andExpect(status().isNotFound());
     }
 
