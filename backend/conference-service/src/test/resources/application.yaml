@@ -14,3 +14,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+services:
+  reservation-service:
+    url: http://localhost:8083
