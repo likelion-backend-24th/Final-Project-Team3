@@ -1,6 +1,6 @@
-package com.example.reservationservice.reservation.repository;
+package com.example.reservationservice.qrticket.repository;
 
-import com.example.reservationservice.reservation.entity.QrTicket;
+import com.example.reservationservice.qrticket.entity.QrTicket;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

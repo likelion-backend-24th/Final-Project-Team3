@@ -4,7 +4,7 @@ import com.example.reservationservice.reservation.client.ConferenceServiceClient
 import com.example.reservationservice.reservation.entity.Reservation;
 import com.example.reservationservice.reservation.entity.ReservationStatus;
 import com.example.reservationservice.reservation.exception.ReservationErrorCode;
-import com.example.reservationservice.reservation.repository.QrTicketRepository;
+import com.example.reservationservice.qrticket.repository.QrTicketRepository;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
 import com.example.reservationservice.reservation.repository.SessionCapacityLockRepository;
 import com.example.reservationservice.reservation.repository.WaitingQueueRepository;

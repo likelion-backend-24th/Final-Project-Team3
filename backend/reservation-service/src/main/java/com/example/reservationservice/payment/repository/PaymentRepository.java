@@ -1,6 +1,6 @@
-package com.example.reservationservice.reservation.repository;
+package com.example.reservationservice.payment.repository;
 
-import com.example.reservationservice.reservation.entity.Payment;
+import com.example.reservationservice.payment.entity.Payment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

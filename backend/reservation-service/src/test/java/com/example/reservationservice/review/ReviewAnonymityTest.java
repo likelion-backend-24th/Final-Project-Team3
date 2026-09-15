@@ -1,8 +1,8 @@
 package com.example.reservationservice.review;
 
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
-import com.example.reservationservice.reservation.entity.QrTicket;
-import com.example.reservationservice.reservation.repository.QrTicketRepository;
+import com.example.reservationservice.qrticket.entity.QrTicket;
+import com.example.reservationservice.qrticket.repository.QrTicketRepository;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
 import com.example.reservationservice.reservation.repository.SessionCapacityLockRepository;
 import com.example.reservationservice.reservation.repository.WaitingQueueRepository;

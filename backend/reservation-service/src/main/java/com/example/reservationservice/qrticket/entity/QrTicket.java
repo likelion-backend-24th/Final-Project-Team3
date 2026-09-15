@@ -1,4 +1,7 @@
-package com.example.reservationservice.reservation.entity;
+package com.example.reservationservice.qrticket.entity;
+
+import com.example.reservationservice.reservation.entity.AgeGroup;
+import com.example.reservationservice.reservation.entity.Job;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

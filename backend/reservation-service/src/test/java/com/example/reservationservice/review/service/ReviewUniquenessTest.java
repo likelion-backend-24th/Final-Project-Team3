@@ -2,9 +2,9 @@ package com.example.reservationservice.review.service;
 
 import com.example.reservationservice.reservation.entity.AgeGroup;
 import com.example.reservationservice.reservation.entity.Job;
-import com.example.reservationservice.reservation.entity.QrTicket;
+import com.example.reservationservice.qrticket.entity.QrTicket;
 import com.example.reservationservice.reservation.entity.Reservation;
-import com.example.reservationservice.reservation.repository.QrTicketRepository;
+import com.example.reservationservice.qrticket.repository.QrTicketRepository;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
 import com.example.reservationservice.review.entity.Review;
 import com.example.reservationservice.review.repository.ReviewRepository;

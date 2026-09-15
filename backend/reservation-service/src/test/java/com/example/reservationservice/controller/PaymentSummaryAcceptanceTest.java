@@ -1,10 +1,10 @@
 package com.example.reservationservice.controller;
 
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
-import com.example.reservationservice.reservation.entity.Payment;
+import com.example.reservationservice.payment.entity.Payment;
 import com.example.reservationservice.reservation.entity.Reservation;
 import com.example.reservationservice.reservation.entity.ReservationStatus;
-import com.example.reservationservice.reservation.repository.PaymentRepository;
+import com.example.reservationservice.payment.repository.PaymentRepository;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
 import com.example.reservationservice.reservation.repository.SessionCapacityLockRepository;
 import org.junit.jupiter.api.AfterEach;

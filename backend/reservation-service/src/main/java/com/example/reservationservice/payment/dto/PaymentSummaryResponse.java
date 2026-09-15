@@ -1,4 +1,4 @@
-package com.example.reservationservice.reservation.dto;
+package com.example.reservationservice.payment.dto;
 
 public record PaymentSummaryResponse(
         int totalRevenue,

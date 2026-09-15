@@ -1,9 +1,9 @@
-package com.example.reservationservice.reservation.controller;
+package com.example.reservationservice.payment.controller;
 
 import com.example.reservationservice.common.TraceIdProvider;
 import com.example.reservationservice.common.dto.ApiResponse;
-import com.example.reservationservice.reservation.dto.PaymentSummaryResponse;
-import com.example.reservationservice.reservation.service.ReservationService;
+import com.example.reservationservice.payment.dto.PaymentSummaryResponse;
+import com.example.reservationservice.payment.service.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,14 +20,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class InternalController {
 
-    private final ReservationService reservationService;
+    private final PaymentService paymentService;
     private final TraceIdProvider traceIdProvider;
 
     @GetMapping("/payment-summary")
     public ResponseEntity<ApiResponse<PaymentSummaryResponse>> getPaymentSummary(
             @RequestParam List<UUID> sessionIds,
             HttpServletRequest httpRequest) {
-        PaymentSummaryResponse result = reservationService.getPaymentSummary(sessionIds);
+        PaymentSummaryResponse result = paymentService.getPaymentSummary(sessionIds);
         return ResponseEntity.ok(
                 ApiResponse.success("정산 집계 조회 완료", result, traceIdProvider.resolve(httpRequest)));
     }
