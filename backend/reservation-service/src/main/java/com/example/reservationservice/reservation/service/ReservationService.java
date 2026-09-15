@@ -1,5 +1,7 @@
 package com.example.reservationservice.reservation.service;
 
+import com.example.reservationservice.payment.entity.Payment;
+import com.example.reservationservice.payment.repository.PaymentRepository;
 import com.example.reservationservice.reservation.dto.*;
 import com.example.reservationservice.reservation.entity.*;
 import com.example.reservationservice.reservation.repository.*;
@@ -15,7 +17,10 @@ import com.example.reservationservice.reservation.exception.ReservationErrorCode
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +37,7 @@ public class ReservationService {
     private final PaymentService paymentService;
     private final QrTicketService qrTicketService;
     private final AttendeeRepository attendeeRepository;
+    private final PaymentRepository paymentRepository;
 
     @Transactional
     public ReservationResult createHoldOrQueue(
@@ -236,5 +242,58 @@ public class ReservationService {
 
         return new SessionStatusSummaryResponse(
                 sessionId, holdCount, queuedCount, confirmedCount, cancelledCount, checkedCount);
+    }
+
+    public CancellResult cancellReservation(UUID reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+
+        if (reservation.getStatus() == ReservationStatus.CANCELLED) {
+            throw new BusinessException(ReservationErrorCode.ALREADY_CANCELLED);
+        }
+
+        Integer refundRate = null;
+        Integer refundAmount = null;
+
+        if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
+            LocalDateTime sessionStartAt = getSessionStartAt(reservation.getSessionId());
+            long daysUntilStart = ChronoUnit.DAYS.between(LocalDateTime.now(), sessionStartAt);
+
+            if (daysUntilStart >= 7) {
+                refundRate = 100;
+            } else if (daysUntilStart >= 3) {
+                refundRate = 50;
+            } else {
+                refundRate = 0;
+            }
+
+            int originalAmount = paymentRepository.findByReservationId(reservationId)
+                    .map(Payment::getAmount)
+                    .orElse(0);
+            refundAmount = originalAmount * refundRate / 100;
+
+            sessionCapacityLockRepository.decrease(reservation.getSessionId(), reservation.getHeadcount());
+
+        }else if (reservation.getStatus() == ReservationStatus.HOLD) {
+            sessionCapacityLockRepository.decrease(reservation.getSessionId(), reservation.getHeadcount());
+        } else if (reservation.getStatus() == ReservationStatus.QUEUED) {
+            int leftPosition = waitingQueueRepository.findByReservationId(reservationId)
+                    .map(WaitingQueue::getPosition)
+                    .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+            waitingQueueRepository.deleteByReservationId(reservationId);
+            waitingQueueRepository.decrementPositionAfter(reservation.getSessionId(), leftPosition);
+        }
+
+        reservation.markAsCancelled();
+
+        return CancellResult.cancelled(reservationId, refundRate, refundAmount);
+    }
+
+    private LocalDateTime getSessionStartAt(UUID sessionId) {
+        try {
+            return conferenceServiceClient.getSessionStartAt(sessionId);
+        } catch (RestClientException e) {
+            throw new BusinessException(ReservationErrorCode.CONFERENCE_SERVICE_UNAVAILABLE);
+        }
     }
 }
