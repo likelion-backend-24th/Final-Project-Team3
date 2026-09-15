@@ -3,7 +3,8 @@ package com.example.reservationservice.reservation.controller;
 import com.example.reservationservice.reservation.dto.*;
 import com.example.reservationservice.reservation.entity.AgeGroup;
 import com.example.reservationservice.reservation.entity.Job;
-import com.example.reservationservice.reservation.entity.QrTicket;
+import com.example.reservationservice.payment.dto.PaymentResult;
+import com.example.reservationservice.qrticket.entity.QrTicket;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import com.example.reservationservice.common.TraceIdProvider;
@@ -73,15 +74,6 @@ public class ReservationController {
                 reservationId, request.paymentMethod(), request.amount());
         return ResponseEntity.ok(
                 ApiResponse.success("결제 완료", result, traceIdProvider.resolve(httpRequest)));
-    }
-
-    @GetMapping("/{reservationId}/qr-tickets")
-    public ResponseEntity<ApiResponse<List<QrTicket>>> getQrTickets(
-            @PathVariable UUID reservationId,
-            HttpServletRequest httpRequest) {
-        List<QrTicket> tickets = reservationService.getQrTickets(reservationId);
-        return ResponseEntity.ok(
-                ApiResponse.success("QR 티켓 조회 완료", tickets, traceIdProvider.resolve(httpRequest)));
     }
 
     @GetMapping("/my")

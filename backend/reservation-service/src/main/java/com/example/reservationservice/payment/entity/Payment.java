@@ -1,4 +1,4 @@
-package com.example.reservationservice.reservation.entity;
+package com.example.reservationservice.payment.entity;
 
 import com.github.f4b6a3.uuid.UuidCreator;
 import jakarta.persistence.*;

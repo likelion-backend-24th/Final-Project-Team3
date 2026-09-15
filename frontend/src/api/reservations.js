@@ -22,7 +22,7 @@ export function submitPayment(reservationId, { paymentMethod, amount }) {
 }
 
 export function getQrTickets(reservationId) {
-  return apiFetch(`/reservations/${reservationId}/qr-tickets`)
+  return apiFetch(`/qr-tickets/${reservationId}`)
 }
 
 // 내 예약 목록. memberId를 서버가 JWT로 채우는 게 아니라 쿼리로 그대로 받는다(위와 같은 갭).
