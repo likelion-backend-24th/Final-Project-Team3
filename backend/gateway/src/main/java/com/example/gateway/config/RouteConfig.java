@@ -60,6 +60,7 @@ public class RouteConfig {
                 .route(
                         RequestPredicates.path("/api/reservations/**")
                                 .or(RequestPredicates.path("/api/admin/settings/**"))
+                                .or(RequestPredicates.path("/api/admin/settlements/**"))
                                 .or(RequestPredicates.path("/api/qr-tickets/**")),
                         http()
                 )
