@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Users, Calendar, MapPin, Mic } from 'lucide-react'
 import { getConference } from '../api/conferences'
 import { getCapacityStatus } from '../api/reservations'
@@ -9,6 +9,7 @@ import Button from '../components/Button'
 
 export default function ConferenceDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [conference, setConference] = useState(null)
   const [capacityBySession, setCapacityBySession] = useState({})
   const [error, setError] = useState('')
@@ -38,7 +39,7 @@ export default function ConferenceDetail() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
-      <Link to="/conferences" className="text-sm text-text-muted hover:text-text">‹ 컨퍼런스 목록</Link>
+      <button onClick={() => navigate(-1)} className="text-sm text-text-muted hover:text-text">‹ 뒤로</button>
 
       {conference.imageUrl && (
         <div
@@ -52,7 +53,17 @@ export default function ConferenceDetail() {
           <h1 className="text-2xl font-semibold text-text">{conference.title}</h1>
           <StatusBadge status={conference.status} />
         </div>
-        {conference.organizerName && <p className="text-text-muted mb-3">{conference.organizerName}</p>}
+        {conference.organizerName && (
+          <Link to={`/organizers/${conference.organizerId}`} className="inline-block mb-3 group">
+            <p className="text-text-muted group-hover:text-text transition-colors">{conference.organizerName}</p>
+            {conference.organizerPastConferenceCount > 0 && (
+              <p className="text-xs text-text-faint mt-0.5">
+                지난 컨퍼런스 {conference.organizerPastConferenceCount}회
+                {conference.organizerRepresentativeSummary && ` · ${conference.organizerRepresentativeSummary}`}
+              </p>
+            )}
+          </Link>
+        )}
 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-text-muted">
           {dateLabel && (
