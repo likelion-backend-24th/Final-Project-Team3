@@ -1,6 +1,8 @@
 package com.example.conferenceservice.attendeesummary;
 
 import com.example.conferenceservice.attendeesummary.client.AttendeeCheckinStatsClient;
+import com.example.conferenceservice.attendeesummary.client.AttendeeSummaryLlmClient;
+import com.example.conferenceservice.attendeesummary.client.ReviewListClient;
 import com.example.conferenceservice.attendeesummary.repository.ConferenceAttendeeSummaryRepository;
 import com.example.conferenceservice.auth.MemberRole;
 import com.example.conferenceservice.conference.entity.Conference;
@@ -30,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -59,6 +62,12 @@ class AttendeeSummaryAcceptanceTest {
     @MockitoBean
     private AttendeeCheckinStatsClient attendeeCheckinStatsClient;
 
+    @MockitoBean
+    private ReviewListClient reviewListClient;
+
+    @MockitoBean
+    private AttendeeSummaryLlmClient attendeeSummaryLlmClient;
+
     @Value("${jwt.secret}")
     private String jwtSecret;
 
@@ -78,6 +87,8 @@ class AttendeeSummaryAcceptanceTest {
         given(attendeeCheckinStatsClient.getAttendeeCheckinStats(List.of(session.getId())))
                 .willReturn(new AttendeeCheckinStatsClient.AttendeeCheckinStatsResponse(
                         3, Map.of("TWENTIES", 2L, "THIRTIES", 1L), Map.of("DEVELOPER", 3L)));
+        given(reviewListClient.getReviews(anyList())).willReturn(List.of());
+        given(attendeeSummaryLlmClient.generateSummary(any(), any(), any())).willReturn("생성된 요약입니다");
 
         mockMvc.perform(get("/api/conferences/{conferenceId}/attendee-summary", conference.getId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken(organizerId)))
@@ -85,7 +96,8 @@ class AttendeeSummaryAcceptanceTest {
                 .andExpect(jsonPath("$.data.conferenceId").value(conference.getId().toString()))
                 .andExpect(jsonPath("$.data.checkedInCount").value(3))
                 .andExpect(jsonPath("$.data.ageGroupDistribution.TWENTIES").value(2))
-                .andExpect(jsonPath("$.data.jobDistribution.DEVELOPER").value(3));
+                .andExpect(jsonPath("$.data.jobDistribution.DEVELOPER").value(3))
+                .andExpect(jsonPath("$.data.summaryText").value("생성된 요약입니다"));
     }
 
     @Test
