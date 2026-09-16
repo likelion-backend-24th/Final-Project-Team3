@@ -15,6 +15,8 @@ import com.example.conferenceservice.conference.dto.ConferenceResponse;
 import com.example.conferenceservice.conference.service.ConferenceService;
 import com.example.conferenceservice.operationstatus.dto.ConferenceOperationStatusResponse;
 import com.example.conferenceservice.operationstatus.service.ConferenceOperationStatusService;
+import com.example.conferenceservice.settlement.dto.ConferenceSettlementResponse;
+import com.example.conferenceservice.settlement.service.ConferenceSettlementService;
 import com.example.conferenceservice.session.dto.SessionCreateRequest;
 import com.example.conferenceservice.session.dto.SessionResponse;
 import com.example.conferenceservice.session.service.SessionService;
@@ -47,6 +49,7 @@ public class ConferenceController {
     private final SessionService sessionService;
     private final ConferenceOperationStatusService conferenceOperationStatusService;
     private final ConferenceAttendeeSummaryService conferenceAttendeeSummaryService;
+    private final ConferenceSettlementService conferenceSettlementService;
     private final TraceIdProvider traceIdProvider;
 
     @GetMapping
@@ -167,5 +170,17 @@ public class ConferenceController {
     ) {
         List<String> reviews = conferenceAttendeeSummaryService.getReviews(conferenceId, currentUser.getMemberId());
         return ResponseEntity.ok(ApiResponse.success("후기 목록 조회 성공", reviews, traceIdProvider.resolve(request)));
+    }
+
+    @GetMapping("/{conferenceId}/settlement")
+    @PreAuthorize("hasRole('ORGANIZER')")
+    public ResponseEntity<ApiResponse<ConferenceSettlementResponse>> getSettlement(
+            @PathVariable UUID conferenceId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            HttpServletRequest request
+    ) {
+        ConferenceSettlementResponse response =
+                conferenceSettlementService.getSettlement(conferenceId, currentUser.getMemberId());
+        return ResponseEntity.ok(ApiResponse.success("정산 조회 성공", response, traceIdProvider.resolve(request)));
     }
 }
