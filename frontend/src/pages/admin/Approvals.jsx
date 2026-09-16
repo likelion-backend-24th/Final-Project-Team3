@@ -115,6 +115,71 @@ function ConferenceDetailModal({ conferenceId, onClose }) {
   )
 }
 
+// 세션은 이미 목록 조회 시점에 상세 필드를 전부 받아오므로 별도 API 호출 없이 그대로 보여준다.
+function SessionDetailModal({ session, onClose }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div
+        className="bg-surface border border-border rounded-xl p-6 max-w-lg w-full max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <h2 className="text-lg font-semibold text-text">세션 상세</h2>
+          <button onClick={onClose} className="text-text-faint hover:text-text" aria-label="닫기">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-semibold text-text">{session.title}</h3>
+              <StatusBadge status={session.status} />
+            </div>
+            <p className="text-sm text-text-muted mt-1">{session.conferenceTitle ?? '소속 컨퍼런스 미상'}</p>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-medium text-text mb-1">신청 기간</h4>
+            <p className="text-sm text-text-muted">{formatDateRange(session.startAt, session.endAt) || '미입력'}</p>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-medium text-text mb-1">진행 일시</h4>
+            <p className="text-sm text-text-muted">
+              {formatDateRange(session.sessionStartAt, session.sessionEndAt) || '미입력'}
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-medium text-text mb-1">정원 · 가격</h4>
+            <p className="text-sm text-text-muted">
+              정원 {session.capacity}명
+              {session.maxHeadcountPerApplication ? ` · 1회 최대 ${session.maxHeadcountPerApplication}명 신청` : ''}
+              {session.price ? ` · ${session.price.toLocaleString()}원` : ' · 무료'}
+            </p>
+          </div>
+
+          {(session.location || session.speaker) && (
+            <div>
+              <h4 className="text-sm font-medium text-text mb-1">장소·발표자</h4>
+              <p className="text-sm text-text-muted">{session.location || '미입력'}</p>
+              {session.speaker && <p className="text-xs text-text-faint mt-0.5">발표자: {session.speaker}</p>}
+            </div>
+          )}
+
+          {session.rejectionReason && (
+            <div>
+              <h4 className="text-sm font-medium text-text mb-1">반려 사유</h4>
+              <p className="text-sm text-danger">{session.rejectionReason}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // 반려 사유 입력 + 승인/반려 버튼을 공용으로 쓰는 한 줄 아이템.
 function ApprovalItem({ title, subtitle, meta, onApprove, onReject, onViewDetail, busy }) {
   const [rejecting, setRejecting] = useState(false)
@@ -188,6 +253,7 @@ export default function Approvals() {
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState(null)
   const [viewingConferenceId, setViewingConferenceId] = useState(null)
+  const [viewingSession, setViewingSession] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -269,6 +335,7 @@ export default function Approvals() {
                 busy={busyId === s.id}
                 onApprove={() => approveSess(s.id)}
                 onReject={(reason) => rejectSess(s.id, reason)}
+                onViewDetail={() => setViewingSession(s)}
               />
             ))}
           </div>
@@ -299,6 +366,9 @@ export default function Approvals() {
 
       {viewingConferenceId && (
         <ConferenceDetailModal conferenceId={viewingConferenceId} onClose={() => setViewingConferenceId(null)} />
+      )}
+      {viewingSession && (
+        <SessionDetailModal session={viewingSession} onClose={() => setViewingSession(null)} />
       )}
     </div>
   )
