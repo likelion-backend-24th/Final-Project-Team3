@@ -49,6 +49,7 @@ export default function Home() {
     () =>
       conferences.filter(
         (c) =>
+          !(c.endAt && new Date(c.endAt).getTime() < Date.now()) &&
           c.title.toLowerCase().includes(query.toLowerCase()) &&
           (category === '전체' || c.title.includes(category)),
       ),
@@ -161,13 +162,9 @@ export default function Home() {
                   </div>
 
                   <div className="mt-auto flex items-center justify-between pt-4">
-                    {c.sessionCount > 0 ? (
-                      <span className="flex items-center gap-1.5 text-xs text-text-faint">
-                        <Layers size={13} /> {c.sessionCount}개 세션
-                      </span>
-                    ) : (
-                      <span />
-                    )}
+                    <span className="flex items-center gap-1.5 text-xs text-text-faint">
+                      <Layers size={13} /> {c.sessionCount ?? 0}개 세션
+                    </span>
                     <ChevronRight size={16} className="text-text-muted" />
                   </div>
                 </div>
