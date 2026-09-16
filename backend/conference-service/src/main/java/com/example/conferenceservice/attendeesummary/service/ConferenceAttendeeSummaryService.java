@@ -1,8 +1,7 @@
 package com.example.conferenceservice.attendeesummary.service;
 
-import com.example.conferenceservice.attendeesummary.client.AttendeeCheckinStatsClient;
+import com.example.conferenceservice.attendeesummary.client.*;
 import com.example.conferenceservice.attendeesummary.client.AttendeeCheckinStatsClient.AttendeeCheckinStatsResponse;
-import com.example.conferenceservice.attendeesummary.client.AttendeeStatsUnavailableException;
 import com.example.conferenceservice.attendeesummary.dto.ConferenceAttendeeSummaryResponse;
 import com.example.conferenceservice.attendeesummary.entity.ConferenceAttendeeSummary;
 import com.example.conferenceservice.attendeesummary.exception.AttendeeSummaryErrorCode;
@@ -36,12 +35,15 @@ import java.util.UUID;
 public class ConferenceAttendeeSummaryService {
 
     private static final String ZERO_CHECKIN_MESSAGE = "아직 체크인한 참석자가 없습니다.";
+    private static final String LLM_FAILURE_MESSAGE = "요약 정보를 일시적으로 생성하지 못했습니다.";
 
     private final ConferenceRepository conferenceRepository;
     private final SessionRepository sessionRepository;
     private final ConferenceAttendeeSummaryRepository summaryRepository;
     private final AttendeeCheckinStatsClient attendeeCheckinStatsClient;
     private final ObjectMapper objectMapper;
+    private final ReviewListClient reviewListClient;
+    private final AttendeeSummaryLlmClient attendeeSummaryLlmClient;
 
     public ConferenceAttendeeSummaryResponse getAttendeeSummary(UUID conferenceId, UUID requesterId) {
         Conference conference = conferenceRepository.findById(conferenceId)
@@ -58,7 +60,7 @@ public class ConferenceAttendeeSummaryService {
         if (cached.isPresent() && cached.get().getCheckedInCount() == stats.checkedInCount()) {
             return toResponse(cached.get());
         }
-        return toResponse(recalculate(conferenceId, stats, cached));
+        return toResponse(recalculate(conferenceId, sessionIds, stats, cached));
     }
 
     private AttendeeCheckinStatsResponse fetchStats(List<UUID> sessionIds) {
@@ -70,13 +72,14 @@ public class ConferenceAttendeeSummaryService {
         }
     }
 
-    private ConferenceAttendeeSummary recalculate(UUID conferenceId, AttendeeCheckinStatsResponse stats,
+    private ConferenceAttendeeSummary recalculate(UUID conferenceId, List<UUID> sessionIds,
+                                                  AttendeeCheckinStatsResponse stats,
                                                   Optional<ConferenceAttendeeSummary> cached) {
         String ageJson = objectMapper.writeValueAsString(stats.ageGroupDistribution());
         String jobJson = objectMapper.writeValueAsString(stats.jobDistribution());
         String summaryText = stats.checkedInCount() == 0
                 ? ZERO_CHECKIN_MESSAGE
-                : null; // TODO(Task 15-3): LLM 요약 생성으로 교체
+                : generateSummary(sessionIds, stats);
 
         ConferenceAttendeeSummary entity = cached
                 .map(existing -> {
@@ -103,5 +106,23 @@ public class ConferenceAttendeeSummaryService {
                 objectMapper.readValue(entity.getJobDistributionJson(), new TypeReference<Map<String, Long>>() {}),
                 entity.getSummaryText(),
                 entity.getGeneratedAt());
+    }
+
+    private String generateSummary(List<UUID> sessionIds, AttendeeCheckinStatsResponse stats) {
+        List<String> reviews;
+        try {
+            reviews = reviewListClient.getReviews(sessionIds);
+        } catch (AttendeeStatsUnavailableException e) {
+            log.warn("후기 조회 실패, 통계만으로 요약을 생성합니다: sessionIds={}", sessionIds, e);
+            reviews = List.of();
+        }
+
+        try {
+            return attendeeSummaryLlmClient.generateSummary(
+                    stats.ageGroupDistribution(), stats.jobDistribution(), reviews);
+        } catch (AttendeeSummaryLlmException e) {
+            log.warn("LLM 요약 생성 실패, 고정 문구로 대체합니다: sessionIds={}", sessionIds, e);
+            return LLM_FAILURE_MESSAGE;
+        }
     }
 }
