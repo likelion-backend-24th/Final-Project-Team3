@@ -8,6 +8,7 @@ import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
 import com.example.conferenceservice.conference.repository.ConferenceTagRepository;
+import com.example.conferenceservice.organizerprofile.service.OrganizerProfileService;
 import com.example.conferenceservice.session.entity.Session;
 import com.example.conferenceservice.session.entity.SessionStatus;
 import com.example.conferenceservice.session.repository.SessionRepository;
@@ -43,11 +44,14 @@ class ConferenceVisibilityTest {
     @Mock
     private SessionRepository sessionRepository;
 
+    @Mock
+    private OrganizerProfileService organizerProfileService;
+
     private ConferenceService conferenceService;
 
     @org.junit.jupiter.api.BeforeEach
     void setUp() {
-        conferenceService = new ConferenceService(conferenceRepository, conferenceTagRepository, sessionRepository);
+        conferenceService = new ConferenceService(conferenceRepository, conferenceTagRepository, sessionRepository, organizerProfileService);
     }
 
     @Test
@@ -101,6 +105,8 @@ class ConferenceVisibilityTest {
                 .willReturn(Optional.of(approved));
         given(sessionRepository.findByConferenceIdAndStatus(conferenceId, SessionStatus.APPROVED)).willReturn(List.of(session));
         given(conferenceTagRepository.findByConferenceId(conferenceId)).willReturn(List.of());
+        given(organizerProfileService.getOrganizerSummary(any(), any()))
+                .willReturn(new OrganizerProfileService.OrganizerSummary(0, null));
 
         ConferenceDetailResponse result = conferenceService.getConference(conferenceId);
 

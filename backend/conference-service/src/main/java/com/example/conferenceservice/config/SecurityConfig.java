@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/api/conferences/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/sessions/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/organizers/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenValidator), UsernamePasswordAuthenticationFilter.class);

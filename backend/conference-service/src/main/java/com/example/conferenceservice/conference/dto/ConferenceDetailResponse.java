@@ -25,10 +25,12 @@ public record ConferenceDetailResponse(
         String description,
         String imageUrl,
         List<String> tags,
-        List<SessionResponse> sessions
-)
-{
-    public static ConferenceDetailResponse from(Conference conference, List<Session> sessions, List<String> tags) {
+        List<SessionResponse> sessions,
+        int organizerPastConferenceCount,
+        String organizerRepresentativeSummary
+){
+    public static ConferenceDetailResponse from(Conference conference, List<Session> sessions, List<String> tags,
+                                                int organizerPastConferenceCount, String organizerRepresentativeSummary) {
         return new ConferenceDetailResponse(
                 conference.getId(),
                 conference.getOrganizerId(),
@@ -45,7 +47,9 @@ public record ConferenceDetailResponse(
                 conference.getDescription(),
                 conference.getImageUrl(),
                 tags,
-                sessions.stream().map(SessionResponse::from).toList()
+                sessions.stream().map(SessionResponse::from).toList(),
+                organizerPastConferenceCount,
+                organizerRepresentativeSummary
         );
     }
 }
