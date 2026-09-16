@@ -10,6 +10,7 @@ import com.example.conferenceservice.organizerprofile.dto.PastConferenceResponse
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,7 +29,7 @@ public class OrganizerProfileService {
                 .findFirst()
                 .map(Conference::getOrganizerName)
                 .orElse(null);
-        
+
         List<PastConferenceResponse> pastConferences = approvedConferences.stream()
                 .map(this::toPastConferenceResponse)
                 .toList();
@@ -49,5 +50,21 @@ public class OrganizerProfileService {
                 conference.getEndAt(),
                 conference.getLocation(),
                 summaryText);
+    }
+
+    public record OrganizerSummary(int pastConferenceCount, String representativeSummary) {}
+
+    public OrganizerSummary getOrganizerSummary(UUID organizerId, UUID excludeConferenceId) {
+        List<PastConferenceResponse> pastConferences = getOrganizerProfile(organizerId).pastConferences().stream()
+                .filter(pc -> !pc.conferenceId().equals(excludeConferenceId))
+                .toList();
+
+        String representativeSummary = pastConferences.stream()
+                .filter(pc -> pc.summaryText() != null)
+                .max(Comparator.comparing(PastConferenceResponse::endAt))
+                .map(PastConferenceResponse::summaryText)
+                .orElse(null);
+
+        return new OrganizerSummary(pastConferences.size(), representativeSummary);
     }
 }

@@ -8,6 +8,7 @@ import com.example.conferenceservice.conference.entity.ConferenceTag;
 import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
 import com.example.conferenceservice.conference.repository.ConferenceTagRepository;
+import com.example.conferenceservice.organizerprofile.service.OrganizerProfileService;
 import com.example.conferenceservice.session.entity.Session;
 import com.example.conferenceservice.session.entity.SessionStatus;
 import com.example.conferenceservice.session.repository.SessionRepository;
@@ -23,6 +24,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,11 +39,14 @@ class AdminConferenceDetailTest {
     @Mock
     private SessionRepository sessionRepository;
 
+    @Mock
+    private OrganizerProfileService organizerProfileService;
+
     private ConferenceService conferenceService;
 
     @BeforeEach
     void setUp() {
-        conferenceService = new ConferenceService(conferenceRepository, conferenceTagRepository, sessionRepository);
+        conferenceService = new ConferenceService(conferenceRepository, conferenceTagRepository, sessionRepository, organizerProfileService);
     }
 
     @Test
@@ -54,6 +59,8 @@ class AdminConferenceDetailTest {
         given(sessionRepository.findByConferenceId(conferenceId)).willReturn(List.of(approvedSession, pendingSession));
         given(conferenceTagRepository.findByConferenceId(conferenceId))
                 .willReturn(List.of(ConferenceTag.builder().tag("백엔드").build()));
+        given(organizerProfileService.getOrganizerSummary(any(), any()))
+                .willReturn(new OrganizerProfileService.OrganizerSummary(0, null));
 
         ConferenceDetailResponse result = conferenceService.getConferenceDetailForAdmin(conferenceId);
 
@@ -69,6 +76,8 @@ class AdminConferenceDetailTest {
         given(conferenceRepository.findById(conferenceId)).willReturn(Optional.of(rejected));
         given(sessionRepository.findByConferenceId(conferenceId)).willReturn(List.of());
         given(conferenceTagRepository.findByConferenceId(conferenceId)).willReturn(List.of());
+        given(organizerProfileService.getOrganizerSummary(any(), any()))
+                .willReturn(new OrganizerProfileService.OrganizerSummary(0, null));
 
         ConferenceDetailResponse result = conferenceService.getConferenceDetailForAdmin(conferenceId);
 
