@@ -38,9 +38,12 @@ public class AttendeeSummaryLlmClient {
                                   Map<String, Long> jobDistribution,
                                   List<String> reviews) {
         try {
+            // 이 모델은 기본적으로 내부 추론(thinking)을 하는데, 단순 1~2문장 요약엔 불필요하게 토큰을 많이 써서
+            // (thinkingBudget 미지정 시 수백~천 토큰 이상) maxOutputTokens를 다 소진하고 답변이 잘리는 문제가 있었음
+            // -> thinkingBudget을 0으로 꺼서 실제 답변 생성에만 토큰을 쓰도록 함
             GeminiRequest request = new GeminiRequest(
                     List.of(new Content(List.of(new Part(buildPrompt(ageGroupDistribution, jobDistribution, reviews))))),
-                    new GenerationConfig(300));
+                    new GenerationConfig(512, new ThinkingConfig(0)));
 
             GeminiResponse response = restClient.post()
                     .uri(uriBuilder -> uriBuilder
@@ -82,7 +85,8 @@ public class AttendeeSummaryLlmClient {
 
     // ---- Gemini 요청/응답 DTO ----
     private record GeminiRequest(List<Content> contents, GenerationConfig generationConfig) {}
-    private record GenerationConfig(int maxOutputTokens) {}
+    private record GenerationConfig(int maxOutputTokens, ThinkingConfig thinkingConfig) {}
+    private record ThinkingConfig(int thinkingBudget) {}
     private record Content(List<Part> parts) {}
     private record Part(String text) {}
 
