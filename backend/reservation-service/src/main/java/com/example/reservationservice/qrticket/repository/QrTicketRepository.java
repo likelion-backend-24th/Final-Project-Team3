@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface QrTicketRepository extends JpaRepository<QrTicket, UUID> {
@@ -17,4 +18,6 @@ public interface QrTicketRepository extends JpaRepository<QrTicket, UUID> {
             "JOIN Reservation r ON q.reservationId = r.id " +
             "WHERE r.sessionId = :sessionId AND q.used = true")
     long countCheckedInBySessionId(@Param("sessionId") UUID sessionId);
+
+    Optional<QrTicket> findByCode(String code);
 }

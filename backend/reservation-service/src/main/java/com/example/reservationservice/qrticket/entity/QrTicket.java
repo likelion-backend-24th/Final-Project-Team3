@@ -1,5 +1,7 @@
 package com.example.reservationservice.qrticket.entity;
 
+import com.example.reservationservice.qrticket.exception.QrTicketErrorCode;
+import com.example.reservationservice.qrticket.exception.QrTicketException;
 import com.example.reservationservice.reservation.entity.AgeGroup;
 import com.example.reservationservice.reservation.entity.Job;
 
@@ -48,6 +50,14 @@ public class QrTicket {
 
     @Enumerated(EnumType.STRING)
     private Job job;
+
+    public void scan() {
+        if (this.used) {
+            throw new QrTicketException(QrTicketErrorCode.QR_TICKET_ALREADY_USED);
+        }
+        this.used = true;
+        this.usedAt = LocalDateTime.now();
+    }
 
     @Builder
     public QrTicket(UUID reservationId, String code, AgeGroup ageGroup, Job job) {
