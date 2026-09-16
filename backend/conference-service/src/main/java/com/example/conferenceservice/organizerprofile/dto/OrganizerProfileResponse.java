@@ -6,5 +6,6 @@ import java.util.UUID;
 public record OrganizerProfileResponse(
         UUID organizerId,
         String organizerName,
-        List<PastConferenceResponse> pastConferences
+        List<OrganizerConferenceResponse> pastConferences,
+        List<OrganizerConferenceResponse> ongoingConferences
 ) {}

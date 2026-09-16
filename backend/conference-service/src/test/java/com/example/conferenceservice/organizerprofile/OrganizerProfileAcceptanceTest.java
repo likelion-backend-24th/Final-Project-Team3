@@ -65,6 +65,21 @@ class OrganizerProfileAcceptanceTest {
     }
 
     @Test
+    void 아직_종료되지_않은_승인_컨퍼런스는_ongoingConferences로_분류된다() throws Exception {
+        UUID organizerId = UUID.randomUUID();
+        conferenceRepository.save(conference(organizerId, ConferenceStatus.APPROVED, "지난 컨퍼런스"));
+        conferenceRepository.save(conference(organizerId, ConferenceStatus.APPROVED, "예정된 컨퍼런스",
+                LocalDateTime.now().plusDays(10), LocalDateTime.now().plusDays(11)));
+
+        mockMvc.perform(get("/api/organizers/{organizerId}/profile", organizerId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.pastConferences.length()").value(1))
+                .andExpect(jsonPath("$.data.pastConferences[0].title").value("지난 컨퍼런스"))
+                .andExpect(jsonPath("$.data.ongoingConferences.length()").value(1))
+                .andExpect(jsonPath("$.data.ongoingConferences[0].title").value("예정된 컨퍼런스"));
+    }
+
+    @Test
     void 컨퍼런스_상세에_주최자의_지난_컨퍼런스_수와_대표_요약이_함께_노출된다() throws Exception {
         UUID organizerId = UUID.randomUUID();
         Conference past = conferenceRepository.save(conference(organizerId, ConferenceStatus.APPROVED, "지난 컨퍼런스"));
@@ -85,14 +100,19 @@ class OrganizerProfileAcceptanceTest {
     }
 
     private Conference conference(UUID organizerId, ConferenceStatus status, String title) {
+        return conference(organizerId, status, title, LocalDateTime.now().minusDays(10), LocalDateTime.now().minusDays(9));
+    }
+
+    private Conference conference(UUID organizerId, ConferenceStatus status, String title,
+                                   LocalDateTime startAt, LocalDateTime endAt) {
         return Conference.builder()
                 .organizerId(organizerId)
                 .organizerName("주최자")
                 .title(title)
                 .status(status)
                 .capacity(100)
-                .startAt(LocalDateTime.now().minusDays(10))
-                .endAt(LocalDateTime.now().minusDays(9))
+                .startAt(startAt)
+                .endAt(endAt)
                 .location("서울")
                 .build();
     }

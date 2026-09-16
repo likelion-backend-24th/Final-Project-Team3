@@ -46,13 +46,8 @@ public class ConferenceAttendeeSummaryService {
     private final AttendeeSummaryLlmClient attendeeSummaryLlmClient;
 
     public ConferenceAttendeeSummaryResponse getAttendeeSummary(UUID conferenceId, UUID requesterId) {
-        Conference conference = conferenceRepository.findById(conferenceId)
-                .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
-        OwnerScopeGuard.verify(requesterId, conference.getOrganizerId(), ConferenceErrorCode.CONFERENCE_ACCESS_DENIED);
-
-        List<UUID> sessionIds = sessionRepository.findByConferenceId(conferenceId).stream()
-                .map(Session::getId)
-                .toList();
+        verifyOwnership(conferenceId, requesterId);
+        List<UUID> sessionIds = getSessionIds(conferenceId);
 
         AttendeeCheckinStatsResponse stats = fetchStats(sessionIds);
         Optional<ConferenceAttendeeSummary> cached = summaryRepository.findByConferenceId(conferenceId);
@@ -61,6 +56,32 @@ public class ConferenceAttendeeSummaryService {
             return toResponse(cached.get());
         }
         return toResponse(recalculate(conferenceId, sessionIds, stats, cached));
+    }
+
+    // 참석자 통계와 별개로, 주최자가 후기 원문을 직접 훑어보고 싶을 때를 위한 목록 조회(AI 요약을 못 믿을 수도 있으니).
+    public List<String> getReviews(UUID conferenceId, UUID requesterId) {
+        verifyOwnership(conferenceId, requesterId);
+        List<UUID> sessionIds = getSessionIds(conferenceId);
+
+        try {
+            return reviewListClient.getReviews(sessionIds);
+        } catch (AttendeeStatsUnavailableException e) {
+            log.warn("후기 목록 조회 실패: conferenceId={}", conferenceId, e);
+            throw new BusinessException(AttendeeSummaryErrorCode.RESERVATION_SERVICE_UNAVAILABLE);
+        }
+    }
+
+    private Conference verifyOwnership(UUID conferenceId, UUID requesterId) {
+        Conference conference = conferenceRepository.findById(conferenceId)
+                .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
+        OwnerScopeGuard.verify(requesterId, conference.getOrganizerId(), ConferenceErrorCode.CONFERENCE_ACCESS_DENIED);
+        return conference;
+    }
+
+    private List<UUID> getSessionIds(UUID conferenceId) {
+        return sessionRepository.findByConferenceId(conferenceId).stream()
+                .map(Session::getId)
+                .toList();
     }
 
     private AttendeeCheckinStatsResponse fetchStats(List<UUID> sessionIds) {
