@@ -156,7 +156,7 @@ function ConferenceCard({ conference: c, sessions, capacityBySession }) {
         </div>
         {c.status === 'APPROVED' && (
           <div className="flex gap-2">
-            <Link to="/organizer/operations">
+            <Link to={`/organizer/conferences/${c.id}/operations`}>
               <Button variant="secondary">운영 현황</Button>
             </Link>
             {isEnded(c) ? (

@@ -24,9 +24,13 @@ import SessionManage from './pages/organizer/SessionManage'
 import SessionCreate from './pages/organizer/SessionCreate'
 import AttendeeSummary from './pages/organizer/AttendeeSummary'
 import ReviewList from './pages/organizer/ReviewList'
-import ComingSoon from './pages/organizer/ComingSoon'
+import OperationStatus from './pages/organizer/OperationStatus'
+import CheckIn from './pages/organizer/CheckIn'
+import Settlements from './pages/organizer/Settlements'
 
 import AdminApprovals from './pages/admin/Approvals'
+import AdminSettlementDashboard from './pages/admin/SettlementDashboard'
+import AdminSystemSettings from './pages/admin/SystemSettings'
 
 function Layout() {
   return (
@@ -175,10 +179,10 @@ export default function App() {
               }
             />
             <Route
-              path="/organizer/operations"
+              path="/organizer/conferences/:id/operations"
               element={
                 <ProtectedRoute role="ORGANIZER">
-                  <ComingSoon title="운영 현황" />
+                  <OperationStatus />
                 </ProtectedRoute>
               }
             />
@@ -186,7 +190,7 @@ export default function App() {
               path="/organizer/checkin"
               element={
                 <ProtectedRoute role="ORGANIZER">
-                  <ComingSoon title="QR 체크인" />
+                  <CheckIn />
                 </ProtectedRoute>
               }
             />
@@ -194,7 +198,7 @@ export default function App() {
               path="/organizer/settlements"
               element={
                 <ProtectedRoute role="ORGANIZER">
-                  <ComingSoon title="정산 내역" />
+                  <Settlements />
                 </ProtectedRoute>
               }
             />
@@ -204,6 +208,22 @@ export default function App() {
               element={
                 <ProtectedRoute role="ADMIN">
                   <AdminApprovals />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/settlements"
+              element={
+                <ProtectedRoute role="ADMIN">
+                  <AdminSettlementDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute role="ADMIN">
+                  <AdminSystemSettings />
                 </ProtectedRoute>
               }
             />

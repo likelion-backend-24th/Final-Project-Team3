@@ -17,7 +17,11 @@ const organizerNav = [
   { to: '/organizer/settlements', label: '정산 내역' },
 ]
 
-const adminNav = [{ to: '/admin', label: '컨퍼런스 승인', end: true }]
+const adminNav = [
+  { to: '/admin', label: '컨퍼런스 승인', end: true },
+  { to: '/admin/settlements', label: '정산 대시보드' },
+  { to: '/admin/settings', label: '시스템 설정' },
+]
 
 const roleLabel = { MEMBER: '참가자', ORGANIZER: '주최자', ADMIN: '관리자' }
 

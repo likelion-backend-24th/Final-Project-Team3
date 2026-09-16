@@ -28,3 +28,18 @@ export function approveSession(id) {
 export function rejectSession(id, reason) {
   return apiFetch(`/admin/sessions/${id}/reject`, { method: 'PATCH', body: { reason } })
 }
+
+// reservation-service 직접 구현. 응답이 { totalAmount }뿐이라(주최자별/기간별 세부 집계 없음)
+// 프론트도 그 이상은 못 보여준다. startDate/endDate는 선택(YYYY-MM-DD).
+export function getSettlementDashboard({ startDate, endDate } = {}) {
+  const params = new URLSearchParams()
+  if (startDate) params.set('startDate', startDate)
+  if (endDate) params.set('endDate', endDate)
+  const query = params.toString()
+  return apiFetch(`/admin/settlements${query ? `?${query}` : ''}`)
+}
+
+// reservation-service 직접 구현. provider/apiKey/secretKey만 받는다(webhook URL·수수료율은 계약에 없음).
+export function updatePgCredential({ provider, apiKey, secretKey }) {
+  return apiFetch('/admin/settings/pg-key', { method: 'PATCH', body: { provider, apiKey, secretKey } })
+}
