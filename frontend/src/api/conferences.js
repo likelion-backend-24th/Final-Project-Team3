@@ -17,6 +17,16 @@ export function getConference(id) {
   return apiFetch(`/conferences/${id}`)
 }
 
+// 체크인 완료 참석자의 연령대·직무 분포 + AI 요약(Story 15). 소유 주최자만 조회 가능(403).
+export function getAttendeeSummary(conferenceId) {
+  return apiFetch(`/conferences/${conferenceId}/attendee-summary`)
+}
+
+// 체크인 완료 예약의 후기 원문 목록(작성자 식별 정보 없음). AI 요약과 별개로 주최자가 직접 훑어볼 수 있게.
+export function getReviews(conferenceId) {
+  return apiFetch(`/conferences/${conferenceId}/reviews`)
+}
+
 export function createConference({
   title,
   capacity,

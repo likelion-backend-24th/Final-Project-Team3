@@ -9,6 +9,7 @@ import SignupOrganizer from './pages/SignupOrganizer'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import ConferenceDetail from './pages/ConferenceDetail'
+import OrganizerProfile from './pages/OrganizerProfile'
 import SessionApply from './pages/SessionApply'
 import Payment from './pages/Payment'
 import ReservationComplete from './pages/ReservationComplete'
@@ -21,6 +22,8 @@ import Applications from './pages/organizer/Applications'
 import ConferenceSettings from './pages/organizer/ConferenceSettings'
 import SessionManage from './pages/organizer/SessionManage'
 import SessionCreate from './pages/organizer/SessionCreate'
+import AttendeeSummary from './pages/organizer/AttendeeSummary'
+import ReviewList from './pages/organizer/ReviewList'
 import ComingSoon from './pages/organizer/ComingSoon'
 
 import AdminApprovals from './pages/admin/Approvals'
@@ -51,6 +54,7 @@ export default function App() {
             <Route path="/" element={<HomeOrDashboard />} />
             <Route path="/conferences" element={<Home />} />
             <Route path="/conferences/:id" element={<ConferenceDetail />} />
+            <Route path="/organizers/:organizerId" element={<OrganizerProfile />} />
 
             <Route path="/signup" element={<SignupChoice />} />
             <Route path="/signup/participant" element={<SignupParticipant />} />
@@ -151,6 +155,22 @@ export default function App() {
               element={
                 <ProtectedRoute role="ORGANIZER">
                   <SessionCreate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/conferences/:id/attendee-summary"
+              element={
+                <ProtectedRoute role="ORGANIZER">
+                  <AttendeeSummary />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/conferences/:id/reviews"
+              element={
+                <ProtectedRoute role="ORGANIZER">
+                  <ReviewList />
                 </ProtectedRoute>
               }
             />

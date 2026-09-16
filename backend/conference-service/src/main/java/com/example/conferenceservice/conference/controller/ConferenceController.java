@@ -157,4 +157,15 @@ public class ConferenceController {
                 conferenceAttendeeSummaryService.getAttendeeSummary(conferenceId, currentUser.getMemberId());
         return ResponseEntity.ok(ApiResponse.success("참석자 통계 조회 성공", response, traceIdProvider.resolve(request)));
     }
+
+    @GetMapping("/{conferenceId}/reviews")
+    @PreAuthorize("hasRole('ORGANIZER')")
+    public ResponseEntity<ApiResponse<List<String>>> getReviews(
+            @PathVariable UUID conferenceId,
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            HttpServletRequest request
+    ) {
+        List<String> reviews = conferenceAttendeeSummaryService.getReviews(conferenceId, currentUser.getMemberId());
+        return ResponseEntity.ok(ApiResponse.success("후기 목록 조회 성공", reviews, traceIdProvider.resolve(request)));
+    }
 }
