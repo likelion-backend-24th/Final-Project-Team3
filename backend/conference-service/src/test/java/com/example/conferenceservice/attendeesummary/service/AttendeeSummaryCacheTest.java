@@ -1,6 +1,8 @@
 package com.example.conferenceservice.attendeesummary.service;
 
 import com.example.conferenceservice.attendeesummary.client.AttendeeCheckinStatsClient;
+import com.example.conferenceservice.attendeesummary.client.AttendeeSummaryLlmClient;
+import com.example.conferenceservice.attendeesummary.client.ReviewListClient;
 import com.example.conferenceservice.attendeesummary.dto.ConferenceAttendeeSummaryResponse;
 import com.example.conferenceservice.attendeesummary.repository.ConferenceAttendeeSummaryRepository;
 import com.example.conferenceservice.conference.entity.Conference;
@@ -21,6 +23,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 
@@ -46,6 +49,12 @@ class AttendeeSummaryCacheTest {
     @MockitoBean
     private AttendeeCheckinStatsClient attendeeCheckinStatsClient;
 
+    @MockitoBean
+    private ReviewListClient reviewListClient;
+
+    @MockitoBean
+    private AttendeeSummaryLlmClient attendeeSummaryLlmClient;
+
     @AfterEach
     void tearDown() {
         summaryRepository.deleteAll();
@@ -61,13 +70,16 @@ class AttendeeSummaryCacheTest {
 
         given(attendeeCheckinStatsClient.getAttendeeCheckinStats(List.of(session.getId())))
                 .willReturn(new AttendeeCheckinStatsClient.AttendeeCheckinStatsResponse(5, Map.of(), Map.of()));
+        given(reviewListClient.getReviews(anyList())).willReturn(List.of());
+        given(attendeeSummaryLlmClient.generateSummary(any(), any(), any())).willReturn("테스트 요약");
 
         ConferenceAttendeeSummaryResponse first = service.getAttendeeSummary(conference.getId(), organizerId);
         ConferenceAttendeeSummaryResponse second = service.getAttendeeSummary(conference.getId(), organizerId);
 
-        // DB 왕복 시 타임스탬프가 마이크로초 단위로 반올림될 수 있어(나노초 손실) 그 단위로 truncate해서 비교한다.
-        assertThat(second.generatedAt().truncatedTo(ChronoUnit.MICROS))
-                .isEqualTo(first.generatedAt().truncatedTo(ChronoUnit.MICROS));
+        // DB 왕복 시 타임스탬프가 마이크로초 단위에서 반올림(내림이 아님)될 수 있어, MICROS로 truncate해도
+        // 경계값에서 1마이크로초 차이가 남아 간헐적으로 실패할 수 있다. MILLIS 단위로 여유 있게 비교한다.
+        assertThat(second.generatedAt().truncatedTo(ChronoUnit.MILLIS))
+                .isEqualTo(first.generatedAt().truncatedTo(ChronoUnit.MILLIS));
         assertThat(summaryRepository.findByConferenceId(conference.getId())).hasValueSatisfying(
                 entity -> assertThat(entity.getCheckedInCount()).isEqualTo(5));
     }
@@ -80,6 +92,8 @@ class AttendeeSummaryCacheTest {
 
         given(attendeeCheckinStatsClient.getAttendeeCheckinStats(List.of(session.getId())))
                 .willReturn(new AttendeeCheckinStatsClient.AttendeeCheckinStatsResponse(5, Map.of(), Map.of()));
+        given(reviewListClient.getReviews(anyList())).willReturn(List.of());
+        given(attendeeSummaryLlmClient.generateSummary(any(), any(), any())).willReturn("테스트 요약");
         ConferenceAttendeeSummaryResponse first = service.getAttendeeSummary(conference.getId(), organizerId);
 
         Thread.sleep(5); // generatedAt 갱신 여부를 시간 정밀도 문제 없이 비교하기 위한 최소 지연
