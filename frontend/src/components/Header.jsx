@@ -13,13 +13,13 @@ const organizerNav = [
   { to: '/organizer', label: '대시보드', end: true },
   { to: '/organizer/conferences/new', label: '컨퍼런스 등록' },
   { to: '/organizer/applications', label: '신청 현황' },
-  { to: '/organizer/operations', label: '운영 현황' },
   { to: '/organizer/checkin', label: 'QR 체크인' },
   { to: '/organizer/settlements', label: '정산 내역' },
 ]
 
 const adminNav = [
   { to: '/admin', label: '컨퍼런스 승인', end: true },
+  { to: '/admin/settlements', label: '정산 대시보드' },
   { to: '/admin/settings', label: '시스템 설정' },
 ]
 

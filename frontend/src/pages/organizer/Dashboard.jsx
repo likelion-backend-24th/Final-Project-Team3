@@ -144,7 +144,11 @@ function ConferenceCard({ conference: c, sessions, capacityBySession }) {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <p className="text-text font-medium">{c.title}</p>
-            <StatusBadge status={c.status} />
+            {c.status === 'APPROVED' && isEnded(c) ? (
+              <span className="px-2.5 py-1 rounded-md text-xs font-medium text-text-muted bg-surface2">종료됨</span>
+            ) : (
+              <StatusBadge status={c.status} />
+            )}
           </div>
           <p className="text-sm text-text-muted">
             {formatDateRange(c.startAt, c.endAt)} · 정원 {c.capacity}명
@@ -152,7 +156,7 @@ function ConferenceCard({ conference: c, sessions, capacityBySession }) {
         </div>
         {c.status === 'APPROVED' && (
           <div className="flex gap-2">
-            <Link to="/organizer/operations">
+            <Link to={`/organizer/conferences/${c.id}/operations`}>
               <Button variant="secondary">운영 현황</Button>
             </Link>
             {isEnded(c) ? (

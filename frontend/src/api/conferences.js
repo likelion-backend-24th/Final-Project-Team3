@@ -27,6 +27,16 @@ export function getReviews(conferenceId) {
   return apiFetch(`/conferences/${conferenceId}/reviews`)
 }
 
+// 컨퍼런스 단건 정산(매출/환불/순매출/확정·취소 건수). 소유 주최자만 조회 가능(OwnerScopeGuard).
+export function getSettlement(conferenceId) {
+  return apiFetch(`/conferences/${conferenceId}/settlement`)
+}
+
+// 세션별 신청·입장 현황(hold/대기/확정/취소/체크인 건수). 소유 주최자만 조회 가능(OwnerScopeGuard).
+export function getOperationStatus(conferenceId) {
+  return apiFetch(`/conferences/${conferenceId}/operation-status`)
+}
+
 export function createConference({
   title,
   capacity,

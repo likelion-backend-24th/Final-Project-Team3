@@ -234,10 +234,11 @@ public class ReservationService {
     }
 
     public SessionStatusSummaryResponse getStatusSummary(UUID sessionId) {
-        long holdCount = reservationRepository.countBySessionIdAndStatus(sessionId, ReservationStatus.HOLD);
-        long queuedCount = reservationRepository.countBySessionIdAndStatus(sessionId, ReservationStatus.QUEUED);
-        long confirmedCount = reservationRepository.countBySessionIdAndStatus(sessionId, ReservationStatus.CONFIRMED);
-        long cancelledCount = reservationRepository.countBySessionIdAndStatus(sessionId, ReservationStatus.CANCELLED);
+        // 예약 건수가 아니라 인원 수 기준으로 세야 checkedCount(QR 발급 수=1인당 1장)와 단위가 맞는다.
+        long holdCount = reservationRepository.sumHeadcountBySessionIdAndStatus(sessionId, ReservationStatus.HOLD);
+        long queuedCount = reservationRepository.sumHeadcountBySessionIdAndStatus(sessionId, ReservationStatus.QUEUED);
+        long confirmedCount = reservationRepository.sumHeadcountBySessionIdAndStatus(sessionId, ReservationStatus.CONFIRMED);
+        long cancelledCount = reservationRepository.sumHeadcountBySessionIdAndStatus(sessionId, ReservationStatus.CANCELLED);
         long checkedCount = qrTicketService.countCheckedInBySessionId(sessionId);
 
         return new SessionStatusSummaryResponse(
