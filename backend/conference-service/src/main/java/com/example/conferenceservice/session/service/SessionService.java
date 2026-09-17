@@ -6,6 +6,8 @@ import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
+import com.example.conferenceservice.operationstatus.client.ReservationServiceClient;
+import com.example.conferenceservice.operationstatus.client.ReservationServiceUnavailableException;
 import com.example.conferenceservice.session.dto.RejectSessionRequest;
 import com.example.conferenceservice.session.dto.SessionCapacityResponse;
 import com.example.conferenceservice.session.dto.SessionCreateRequest;
@@ -24,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -31,6 +34,7 @@ import java.util.UUID;
 public class SessionService {
     private final SessionRepository sessionRepository;
     private final ConferenceRepository conferenceRepository;
+    private final ReservationServiceClient reservationServiceClient;
 
     @Transactional(readOnly = true)
     public Page<Session> getPendingSessions(Pageable pageable) {
@@ -103,11 +107,45 @@ public class SessionService {
             throw new BusinessException(SessionErrorCode.CONFERENCE_NOT_APPROVED);
         }
         validateWithinConferencePeriod(request.sessionStartAt(), request.sessionEndAt(), session.getConference());
+        validateAgainstActiveReservations(session, request);
         session.updateSchedule(request.capacity(), request.startAt(), request.endAt(),
                 request.sessionStartAt(), request.sessionEndAt(),
                 request.location(), request.speaker(), request.price(),
                 request.maxHeadcountPerApplication());
         return SessionResponse.from(session);
+    }
+
+    // 승인 전 세션은 예약을 받을 수 없으므로 확정 예약이 존재할 수 없다 - 불필요한 외부 호출을 피한다.
+    // 정원 축소·진행 일정 변경처럼 이미 확정된 예약자에게 영향을 줄 수 있는 수정만 예약 현황과 대조한다.
+    private void validateAgainstActiveReservations(Session session, SessionUpdateRequest request) {
+        if (session.getStatus() != SessionStatus.APPROVED) {
+            return;
+        }
+        boolean capacityReduced = request.capacity() < session.getCapacity();
+        boolean scheduleChanged = !Objects.equals(request.sessionStartAt(), session.getSessionStartAt())
+                || !Objects.equals(request.sessionEndAt(), session.getSessionEndAt());
+        if (!capacityReduced && !scheduleChanged) {
+            return;
+        }
+
+        long confirmedCount = fetchConfirmedCount(session.getId());
+        if (confirmedCount == 0) {
+            return;
+        }
+        if (capacityReduced && request.capacity() < confirmedCount) {
+            throw new BusinessException(SessionErrorCode.SESSION_CAPACITY_BELOW_CONFIRMED_COUNT);
+        }
+        if (scheduleChanged) {
+            throw new BusinessException(SessionErrorCode.SESSION_SCHEDULE_CHANGE_WITH_ACTIVE_RESERVATIONS);
+        }
+    }
+
+    private long fetchConfirmedCount(UUID sessionId) {
+        try {
+            return reservationServiceClient.getStatusSummary(sessionId).confirmedCount();
+        } catch (ReservationServiceUnavailableException e) {
+            throw new BusinessException(SessionErrorCode.RESERVATION_SERVICE_UNAVAILABLE);
+        }
     }
 
     private void validateSchedule(int capacity, LocalDateTime startAt, LocalDateTime endAt,

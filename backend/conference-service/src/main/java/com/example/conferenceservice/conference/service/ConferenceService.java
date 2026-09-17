@@ -53,10 +53,6 @@ public class ConferenceService {
             throw new BusinessException(ConferenceErrorCode.INVALID_CONFERENCE_PERIOD);
         }
 
-        String proofFileName = (proofFile != null && !proofFile.isEmpty())
-                ? fileStorageService.store(proofFile)
-                : null;
-
         Conference conference = Conference.builder()
                 .organizerId(currentUser.getMemberId())
                 .organizerName(currentUser.getOrganizationName())
@@ -70,7 +66,6 @@ public class ConferenceService {
                 .amenities(request.amenities())
                 .description(request.description())
                 .imageUrl(request.imageUrl())
-                .proofFileName(proofFileName)
                 .status(ConferenceStatus.PENDING)
                 .build();
         Conference savedConference = conferenceRepository.save(conference);
@@ -78,6 +73,15 @@ public class ConferenceService {
         List<ConferenceTag> tags = toTags(request.tags(), savedConference);
         if (!tags.isEmpty()) {
             conferenceTagRepository.saveAll(tags);
+        }
+
+        // 파일 저장은 DB 저장 이후에 한다 - store()가 실패(잘못된 확장자, IO 오류)하면
+        // 트랜잭션 전체가 롤백되므로, 파일 저장 실패 때문에 컨퍼런스 row만 남는 orphan이 생기지 않는다.
+        // save()/saveAll()은 INSERT를 즉시 flush하지 않을 수 있으므로, flush()로 먼저 실제 INSERT를
+        // 실행시켜 제약조건 위반 등을 파일 쓰기 전에 확인한다 - 그래야 반대 방향(DB만 실패, 파일은 남는) orphan도 막힌다.
+        if (proofFile != null && !proofFile.isEmpty()) {
+            conferenceRepository.flush();
+            savedConference.attachProofFile(fileStorageService.store(proofFile));
         }
 
         return ConferenceResponse.from(savedConference);

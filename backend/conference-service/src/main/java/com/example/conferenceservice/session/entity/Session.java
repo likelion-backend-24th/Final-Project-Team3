@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Builder
@@ -80,6 +81,18 @@ public class Session {
                                 LocalDateTime sessionStartAt, LocalDateTime sessionEndAt,
                                 String location, String speaker, Integer price,
                                 Integer maxHeadcountPerApplication) {
+        // 값이 실제로 하나라도 바뀔 때만 재승인(PENDING) 대상으로 삼는다 - 동일 값 재제출로
+        // APPROVED 세션이 이유 없이 승인 대기 상태로 되돌아가는 것을 막는다.
+        boolean changed = this.capacity != capacity
+                || !Objects.equals(this.startAt, startAt)
+                || !Objects.equals(this.endAt, endAt)
+                || !Objects.equals(this.sessionStartAt, sessionStartAt)
+                || !Objects.equals(this.sessionEndAt, sessionEndAt)
+                || !Objects.equals(this.location, location)
+                || !Objects.equals(this.speaker, speaker)
+                || !Objects.equals(this.price, price)
+                || !Objects.equals(this.maxHeadcountPerApplication, maxHeadcountPerApplication);
+
         this.capacity = capacity;
         this.startAt = startAt;
         this.endAt = endAt;
@@ -89,8 +102,12 @@ public class Session {
         this.speaker = speaker;
         this.price = price;
         this.maxHeadcountPerApplication = maxHeadcountPerApplication;
-        this.status = SessionStatus.PENDING;
-        this.rejectReason = null;
+        // REJECTED는 값이 안 바뀌었어도 재승인 대기로 돌린다 - 그렇지 않으면 반려된 세션은
+        // 아무 필드도 안 건드리는 한 영원히 REJECTED에 갇혀 재심사를 받을 방법이 없어진다.
+        if (changed || this.status == SessionStatus.REJECTED) {
+            this.status = SessionStatus.PENDING;
+            this.rejectReason = null;
+        }
     }
 
     public boolean isPending() {

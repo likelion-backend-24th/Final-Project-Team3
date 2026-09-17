@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -54,6 +55,9 @@ class ConferenceApplicationAcceptanceTest {
 
     @Value("${jwt.secret}")
     private String jwtSecret;
+
+    @Value("${app.upload.conference-proof-dir}")
+    private String uploadDir;
 
     @AfterEach
     void tearDown() {
@@ -188,6 +192,60 @@ class ConferenceApplicationAcceptanceTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken()))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("CONFERENCE_ACCESS_DENIED"));
+    }
+
+    @Test
+    void applyConference_withPathTraversalFilename_staysInsideUploadDir() throws Exception {
+        MockMultipartFile proofFile = new MockMultipartFile(
+                "proofFile", "../../../../etc/cron.d/evil.pdf", MediaType.APPLICATION_PDF_VALUE,
+                "dummy-content".getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/api/conferences")
+                        .file(requestPart("""
+                                {
+                                  "title": "경로 순회 시도 컨퍼런스",
+                                  "capacity": 30,
+                                  "startAt": "2026-12-01T10:00:00",
+                                  "endAt": "2026-12-01T18:00:00",
+                                  "location": "대전",
+                                  "tags": ["개발"]
+                                }
+                                """))
+                        .file(proofFile)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.proofFileAttached").value(true));
+
+        List<Conference> saved = conferenceRepository.findAll();
+        assertThat(saved).hasSize(1);
+        String proofFileName = saved.get(0).getProofFileName();
+        assertThat(proofFileName).doesNotContain("..", "/", "\\").endsWith("_evil.pdf");
+        assertThat(Path.of(uploadDir, proofFileName)).exists();
+    }
+
+    @Test
+    void applyConference_withDisallowedFileExtension_isRejectedWith400() throws Exception {
+        MockMultipartFile proofFile = new MockMultipartFile(
+                "proofFile", "malware.exe", "application/octet-stream",
+                "dummy-content".getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/api/conferences")
+                        .file(requestPart("""
+                                {
+                                  "title": "잘못된 파일 형식 컨퍼런스",
+                                  "capacity": 30,
+                                  "startAt": "2026-12-01T10:00:00",
+                                  "endAt": "2026-12-01T18:00:00",
+                                  "location": "대전",
+                                  "tags": ["개발"]
+                                }
+                                """))
+                        .file(proofFile)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("PROOF_FILE_INVALID_TYPE"));
+
+        assertThat(conferenceRepository.findAll()).isEmpty();
     }
 
     private String organizerToken() {
