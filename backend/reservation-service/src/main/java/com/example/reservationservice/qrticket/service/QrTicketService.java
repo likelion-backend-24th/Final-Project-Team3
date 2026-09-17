@@ -6,6 +6,7 @@ import com.example.reservationservice.qrticket.entity.QrTicket;
 import com.example.reservationservice.qrticket.exception.QrTicketErrorCode;
 import com.example.reservationservice.qrticket.exception.QrTicketException;
 import com.example.reservationservice.qrticket.repository.QrTicketRepository;
+import com.example.reservationservice.reservation.client.ConferenceServiceClient;
 import com.example.reservationservice.reservation.dto.AttendeeCheckinStatsResponse;
 import com.example.reservationservice.reservation.entity.*;
 import com.example.reservationservice.reservation.exception.ReservationErrorCode;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +30,7 @@ public class QrTicketService {
     private final QrTicketRepository qrTicketRepository;
     private final AttendeeRepository attendeeRepository;
     private final ReservationRepository reservationRepository;
+    private final ConferenceServiceClient conferenceServiceClient;
 
     @Transactional
     public List<QrTicket> issueTickets(UUID reservationId) {
@@ -81,6 +84,14 @@ public class QrTicketService {
     public QrTicketScanResponse scan(String code) {
         QrTicket ticket = qrTicketRepository.findByCode(code)
                 .orElseThrow(() -> new QrTicketException(QrTicketErrorCode.QR_TICKET_NOT_FOUND));
+
+        Reservation reservation = reservationRepository.findById(ticket.getReservationId())
+                        .orElseThrow(() -> new QrTicketException(QrTicketErrorCode.QR_TICKET_NOT_FOUND));
+
+        LocalDateTime sessionStartAt = conferenceServiceClient.getSessionStartAt(reservation.getSessionId());
+        if (LocalDateTime.now().isBefore(sessionStartAt)) {
+            throw new QrTicketException(QrTicketErrorCode.SESSION_NOT_STARTED);
+        }
 
         ticket.scan();
 

@@ -5,6 +5,7 @@ import com.example.reservationservice.qrticket.exception.QrTicketException;
 import com.example.reservationservice.reservation.entity.AgeGroup;
 import com.example.reservationservice.reservation.entity.Job;
 
+import com.github.f4b6a3.uuid.UuidCreator;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -61,7 +62,7 @@ public class QrTicket {
 
     @Builder
     public QrTicket(UUID reservationId, String code, AgeGroup ageGroup, Job job) {
-        this.id = UUID.randomUUID();
+        this.id = UuidCreator.getTimeOrderedEpoch();
         this.reservationId = reservationId;
         this.code = code;
         this.used = false;
