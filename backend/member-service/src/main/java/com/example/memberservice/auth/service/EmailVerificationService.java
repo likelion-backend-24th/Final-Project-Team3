@@ -11,12 +11,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.HexFormat;
+
+import static com.example.memberservice.common.HashUtil.sha256;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +34,9 @@ public class EmailVerificationService {
     @Value("${email.max-attempts}")
     private int maxAttempts;
 
+    @Value("${email.resend-cooldown-ms}")
+    private long resendCooldownMs;
+
     @Transactional
     public void sendCode(String rawEmail){
         String email = normalize(rawEmail);
@@ -43,6 +44,10 @@ public class EmailVerificationService {
         if (memberRepository.existsByEmail(email)) {
             throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL);
         }
+
+        emailVerificationRepository.findFirstByEmailOrderByCreatedAtDesc(email)
+                .filter(v -> v.isResendTooSoon(LocalDateTime.now(), resendCooldownMs))
+                .ifPresent(v -> { throw new BusinessException(AuthErrorCode.EMAIL_CODE_RESEND_TOO_SOON); });
 
         // 재발송 시 이전 코드(인증완료 여부 무관)는 전부 무효화하고 새로 발급
         emailVerificationRepository.deleteAllByEmail(email);
@@ -93,16 +98,6 @@ public class EmailVerificationService {
 
     private String normalize(String email) {
         return email.strip().toLowerCase();
-    }
-
-    private String sha256(String value) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 알고리즘을 사용할 수 없습니다.", e);
-        }
     }
 
 }

@@ -35,3 +35,4 @@ cookie:
 email:
   verification-code-validity-ms: 600000
   max-attempts: 5
+  resend-cooldown-ms: 0
