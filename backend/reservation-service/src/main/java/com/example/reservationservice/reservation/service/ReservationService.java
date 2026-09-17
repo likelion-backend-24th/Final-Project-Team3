@@ -178,6 +178,29 @@ public class ReservationService {
             throw new BusinessException(ReservationErrorCode.RESERVATION_ACCESS_DENIED);
         }
 
+        return confirmWithVerifiedPayment(reservation, paymentId);
+    }
+
+    // PortOne 웹훅에서 재사용 — 소유자 검증은 스킵한다(웹훅은 requesterId가 없고, 이미 서명으로 신뢰됨).
+    // 이미 처리된 웹훅(재시도)이 ALREADY_CONFIRMED로 걸리는 건 정상 상황이라 조용히 무시한다.
+    @Transactional
+    public void confirmFromWebhook(UUID reservationId, String paymentId) {
+        Reservation reservation = reservationRepository.findById(reservationId).orElse(null);
+        if (reservation == null) {
+            return;
+        }
+        try {
+            confirmWithVerifiedPayment(reservation, paymentId);
+        } catch (BusinessException e) {
+            if (e.getErrorCode() != ReservationErrorCode.ALREADY_CONFIRMED) {
+                throw e;
+            }
+        }
+    }
+
+    private PaymentResult confirmWithVerifiedPayment(Reservation reservation, String paymentId) {
+        UUID reservationId = reservation.getId();
+
         // 락을 잡기 전에 외부 API(PortOne) 검증부터 끝낸다 — 좌석 락을 쥔 채로 외부 호출을 기다리면 안 됨
         Integer price = conferenceServiceClient.getSessionPrice(reservation.getSessionId());
         int expectedAmount = (price == null ? 0 : price) * reservation.getHeadcount();

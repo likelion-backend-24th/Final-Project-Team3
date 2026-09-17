@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -39,6 +40,12 @@ public class GlobalExceptionHandler {
                 .findFirst()
                 .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
                 .orElse("요청 값이 올바르지 않습니다.");
+        return build(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", message, request);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingHeader(MissingRequestHeaderException e, HttpServletRequest request) {
+        String message = "%s 헤더가 필요합니다.".formatted(e.getHeaderName());
         return build(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", message, request);
     }
 
