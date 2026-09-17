@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name="email_verification")
+@Table(name="email_verification", indexes = @Index(name = "idx_email_verification_email", columnList = "email"))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class EmailVerification extends BaseEntity {
