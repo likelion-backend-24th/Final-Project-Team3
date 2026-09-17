@@ -28,3 +28,8 @@ export function approveSession(id) {
 export function rejectSession(id, reason) {
   return apiFetch(`/admin/sessions/${id}/reject`, { method: 'PATCH', body: { reason } })
 }
+
+// Reservation-Service가 직접 구현. secretKey는 응답에서 마스킹되어 돌아온다.
+export function registerPgCredential({ provider, apiKey, secretKey }) {
+  return apiFetch('/admin/settings/pg-key', { method: 'PATCH', body: { provider, apiKey, secretKey } })
+}
