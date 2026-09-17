@@ -1,6 +1,8 @@
 package com.example.reservationservice.controller;
 
+import com.example.reservationservice.common.exception.BusinessException;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
+import com.example.reservationservice.payment.service.PortOnePaymentVerifier;
 import com.example.reservationservice.reservation.entity.Reservation;
 import com.example.reservationservice.reservation.entity.ReservationStatus;
 import com.example.reservationservice.reservation.exception.ReservationErrorCode;
@@ -29,6 +31,8 @@ import java.util.UUID;
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -44,6 +48,9 @@ public class PaymentQrAcceptanceTest {
 
     @MockitoBean
     private ConferenceServiceClient conferenceServiceClient;
+
+    @MockitoBean
+    private PortOnePaymentVerifier portOnePaymentVerifier;
 
     @Autowired
     private ReservationRepository reservationRepository;
@@ -66,7 +73,8 @@ public class PaymentQrAcceptanceTest {
         waitingQueueRepository.deleteAll();
         reservationRepository.deleteAll();
         sessionCapacityLockRepository.deleteAll();
-        ;
+        given(portOnePaymentVerifier.verify(anyString(), anyInt()))
+                .willReturn(new PortOnePaymentVerifier.VerifiedPayment("CARD"));
     }
 
     @Test
@@ -87,7 +95,7 @@ public class PaymentQrAcceptanceTest {
         mockMvc.perform(post("/api/reservations/{id}/payment", reservationId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"paymentMethod": "CARD", "amount": 20000}
+                        {"paymentId": "test-payment-id"}
                         """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("CONFIRMED"))
@@ -120,7 +128,7 @@ public class PaymentQrAcceptanceTest {
         mockMvc.perform(post("/api/reservations/{id}/payment", reservationId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"paymentMethod": "CARD", "amount": 10000}
+                        {"paymentId": "test-payment-id"}
                         """))
                 .andExpect(status().isForbidden());
     }
@@ -141,7 +149,7 @@ public class PaymentQrAcceptanceTest {
         mockMvc.perform(post("/api/reservations/{id}/payment", reservationId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    {"paymentMethod": "CARD", "amount": 30000}
+                    {"paymentId": "test-payment-id"}
                     """));
 
         mockMvc.perform(get("/api/qr-tickets/{id}", reservationId))
@@ -188,7 +196,7 @@ public class PaymentQrAcceptanceTest {
         mockMvc.perform(post("/api/reservations/{id}/payment", firstReservationId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"paymentMethod": "CARD", "amount": 10000}
+                        {"paymentId": "test-payment-id"}
                         """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("RESERVATION_SESSION_CAPACITY_EXCEEDED"));
@@ -244,7 +252,7 @@ public class PaymentQrAcceptanceTest {
         mockMvc.perform(post("/api/reservations/{id}/payment", secondReservationId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"paymentMethod": "CARD", "amount": 10000}
+                        {"paymentId": "test-payment-id"}
                         """))
                 .andExpect(status().isOk());
 
@@ -252,7 +260,7 @@ public class PaymentQrAcceptanceTest {
         mockMvc.perform(post("/api/reservations/{id}/payment", thirdReservationId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"paymentMethod": "CARD", "amount": 10000}
+                        {"paymentId": "test-payment-id"}
                         """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("RESERVATION_SESSION_CAPACITY_EXCEEDED"));
@@ -330,6 +338,58 @@ public class PaymentQrAcceptanceTest {
                 .andExpect(jsonPath("$.data.capacity").value(10))
                 .andExpect(jsonPath("$.data.confirmedCount").value(5))
                 .andExpect(jsonPath("$.data.remaining").value(5));
+    }
+
+    @Test
+    @DisplayName("PortOne 결제가 실제로 완료되지 않았으면 402를 반환하고 좌석을 확정하지 않는다")
+    void paymentRejectedWhenNotActuallyPaid() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+        given(portOnePaymentVerifier.verify(anyString(), anyInt()))
+                .willThrow(new BusinessException(ReservationErrorCode.PAYMENT_NOT_PAID));
+
+        MvcResult holdResult = mockMvc.perform(post("/api/reservations/hold")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createHoldJson(sessionId, UUID.randomUUID(), 1)))
+                .andReturn();
+        String reservationId = JsonPath.read(holdResult.getResponse().getContentAsString(), "$.data.reservationId");
+
+        mockMvc.perform(post("/api/reservations/{id}/payment", reservationId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"paymentId": "test-payment-id"}
+                                """))
+                .andExpect(status().isPaymentRequired())
+                .andExpect(jsonPath("$.error.code").value("RESERVATION_PAYMENT_NOT_PAID"));
+
+        Reservation reservation = reservationRepository.findById(UUID.fromString(reservationId)).orElseThrow();
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.HOLD);
+    }
+
+    @Test
+    @DisplayName("PortOne에서 조회한 결제 금액이 세션 가격과 다르면 409를 반환하고 좌석을 확정하지 않는다")
+    void paymentRejectedWhenAmountMismatch() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+        given(portOnePaymentVerifier.verify(anyString(), anyInt()))
+                .willThrow(new BusinessException(ReservationErrorCode.PAYMENT_AMOUNT_MISMATCH));
+
+        MvcResult holdResult = mockMvc.perform(post("/api/reservations/hold")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createHoldJson(sessionId, UUID.randomUUID(), 1)))
+                .andReturn();
+        String reservationId = JsonPath.read(holdResult.getResponse().getContentAsString(), "$.data.reservationId");
+
+        mockMvc.perform(post("/api/reservations/{id}/payment", reservationId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"paymentId": "test-payment-id"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("RESERVATION_PAYMENT_AMOUNT_MISMATCH"));
+
+        Reservation reservation = reservationRepository.findById(UUID.fromString(reservationId)).orElseThrow();
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.HOLD);
     }
 
     private String createHoldJson(UUID sessionId, UUID memberId, int headCount) {

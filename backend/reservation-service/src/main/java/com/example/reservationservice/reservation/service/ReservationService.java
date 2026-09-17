@@ -7,6 +7,7 @@ import com.example.reservationservice.reservation.entity.*;
 import com.example.reservationservice.reservation.repository.*;
 import com.example.reservationservice.payment.dto.PaymentResult;
 import com.example.reservationservice.payment.service.PaymentService;
+import com.example.reservationservice.payment.service.PortOnePaymentVerifier;
 import com.example.reservationservice.qrticket.entity.QrTicket;
 import com.example.reservationservice.qrticket.service.QrTicketService;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class ReservationService {
     private final SessionCapacityLockRepository sessionCapacityLockRepository;
     private final ConferenceServiceClient conferenceServiceClient;
     private final PaymentService paymentService;
+    private final PortOnePaymentVerifier portOnePaymentVerifier;
     private final QrTicketService qrTicketService;
     private final AttendeeRepository attendeeRepository;
     private final PaymentRepository paymentRepository;
@@ -168,10 +170,14 @@ public class ReservationService {
     }
 
     @Transactional
-    public PaymentResult processPayment(UUID reservationId, String paymentMethod, int amount) {
+    public PaymentResult processPayment(UUID reservationId, String paymentId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
 
+        // 락을 잡기 전에 외부 API(PortOne) 검증부터 끝낸다 — 좌석 락을 쥔 채로 외부 호출을 기다리면 안 됨
+        Integer price = conferenceServiceClient.getSessionPrice(reservation.getSessionId());
+        int expectedAmount = (price == null ? 0 : price) * reservation.getHeadcount();
+        PortOnePaymentVerifier.VerifiedPayment verifiedPayment = portOnePaymentVerifier.verify(paymentId, expectedAmount);
 
        boolean wasQueued = reservation.getStatus() == ReservationStatus.QUEUED;
         Integer leftPosition = null;
@@ -202,7 +208,7 @@ public class ReservationService {
             throw new BusinessException(ReservationErrorCode.ALREADY_CONFIRMED);
         }
 
-        paymentService.recordPayment(reservationId, paymentMethod, amount);
+        paymentService.recordPayment(reservationId, verifiedPayment.paymentMethod(), expectedAmount);
 
         if (wasQueued && leftPosition != null) {
             waitingQueueRepository.deleteByReservationId(reservationId);

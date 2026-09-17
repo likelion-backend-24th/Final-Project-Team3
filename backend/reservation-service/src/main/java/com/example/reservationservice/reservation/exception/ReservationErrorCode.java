@@ -17,7 +17,12 @@ public enum ReservationErrorCode implements ErrorCode {
     ALREADY_CONFIRMED(HttpStatus.CONFLICT, "RESERVATION_ALREADY_CONFIRED", "이미 결제 완료 예약입니다."),
     PAYMENT_NOT_COMPLETED(HttpStatus.NOT_FOUND, "RESERVATION_PAYMENT_NOT_COMPLETED", "결제 완료되지 않아 QR 티켓을 조회할 수 없습니다."),
     ATTENDEE_INFO_REQUIRED(HttpStatus.BAD_REQUEST, "RESERVATION_ATTENDEE_INFO_REQUIRED", "동반자의 연령대·직무 정보를 모두 입력해야 합니다."),
-    ALREADY_CANCELLED(HttpStatus.CONFLICT, "RESERVATION_ALREADY_CANCELLED", "이미 취소된 예약입니다.");
+    ALREADY_CANCELLED(HttpStatus.CONFLICT, "RESERVATION_ALREADY_CANCELLED", "이미 취소된 예약입니다."),
+    PAYMENT_NOT_PAID(HttpStatus.PAYMENT_REQUIRED, "RESERVATION_PAYMENT_NOT_PAID", "포트원 결제가 완료되지 않았습니다."),
+    PAYMENT_AMOUNT_MISMATCH(HttpStatus.CONFLICT, "RESERVATION_PAYMENT_AMOUNT_MISMATCH", "결제 금액이 예약 금액과 일치하지 않습니다."),
+    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "RESERVATION_PAYMENT_NOT_FOUND", "포트원에서 결제 건을 찾을 수 없습니다."),
+    PORTONE_API_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "RESERVATION_PORTONE_API_ERROR", "결제 검증 서비스에 일시적으로 연결할 수 없습니다."),
+    PG_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "RESERVATION_PG_NOT_CONFIGURED", "PG 연동 정보가 등록되어 있지 않습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
