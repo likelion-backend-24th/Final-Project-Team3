@@ -7,11 +7,13 @@ import com.example.conferenceservice.common.TraceIdProvider;
 import com.example.conferenceservice.common.dto.ApiResponse;
 import com.example.conferenceservice.common.dto.Meta;
 import com.example.conferenceservice.common.dto.PageMeta;
+import com.example.conferenceservice.common.file.FileStorageService;
 import com.example.conferenceservice.conference.dto.ConferenceDescriptionUpdateRequest;
 import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
 import com.example.conferenceservice.conference.dto.ConferenceLocationUpdateRequest;
 import com.example.conferenceservice.conference.dto.ConferenceRequest;
 import com.example.conferenceservice.conference.dto.ConferenceResponse;
+import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.service.ConferenceService;
 import com.example.conferenceservice.operationstatus.dto.ConferenceOperationStatusResponse;
 import com.example.conferenceservice.operationstatus.service.ConferenceOperationStatusService;
@@ -23,10 +25,13 @@ import com.example.conferenceservice.session.service.SessionService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -36,8 +41,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
@@ -50,6 +59,7 @@ public class ConferenceController {
     private final ConferenceOperationStatusService conferenceOperationStatusService;
     private final ConferenceAttendeeSummaryService conferenceAttendeeSummaryService;
     private final ConferenceSettlementService conferenceSettlementService;
+    private final FileStorageService fileStorageService;
     private final TraceIdProvider traceIdProvider;
 
     @GetMapping
@@ -77,16 +87,35 @@ public class ConferenceController {
         return ResponseEntity.ok(ApiResponse.success("컨퍼런스 상세 조회 성공", conference, traceIdProvider.resolve(request)));
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ORGANIZER')")
     public ResponseEntity<ApiResponse<ConferenceResponse>> createConference(
-            @Valid @RequestBody ConferenceRequest request,
+            @Valid @RequestPart("request") ConferenceRequest request,
+            @RequestPart(value = "proofFile", required = false) MultipartFile proofFile,
             @AuthenticationPrincipal CustomUserDetails currentUser,
             HttpServletRequest httpRequest
     ) {
-        ConferenceResponse response = conferenceService.applyConference(currentUser, request);
+        ConferenceResponse response = conferenceService.applyConference(currentUser, request, proofFile);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("컨퍼런스 등록 신청 성공", response, traceIdProvider.resolve(httpRequest)));
+    }
+
+    // 증명 파일은 승인 심사용 자료라 공개하지 않고, 소유 주최자 본인과 관리자만 내려받을 수 있다.
+    @GetMapping("/{id}/proof-file")
+    @PreAuthorize("hasAnyRole('ORGANIZER', 'ADMIN')")
+    public ResponseEntity<Resource> downloadProofFile(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        Conference conference = conferenceService.getConferenceForProofFileAccess(id, currentUser);
+        Resource resource = fileStorageService.loadAsResource(conference.getProofFileName());
+        String originalFilename = fileStorageService.extractOriginalFilename(conference.getProofFileName());
+        String encodedFilename = URLEncoder.encode(originalFilename, StandardCharsets.UTF_8).replace("+", "%20");
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilename)
+                .body(resource);
     }
 
     @PatchMapping("/{id}/description")

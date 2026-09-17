@@ -47,7 +47,9 @@ public class SecurityConfig {
                                 "/api/auth/refresh",
                                 "/api/auth/logout",
                                 "/api/auth/email/send-code",
-                                "/api/auth/email/verify"
+                                "/api/auth/email/verify",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

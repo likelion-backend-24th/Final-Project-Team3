@@ -1,5 +1,7 @@
 package com.example.reservationservice.controller;
 
+import com.example.reservationservice.auth.CustomUserDetails;
+import com.example.reservationservice.auth.MemberRole;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
 import com.example.reservationservice.reservation.repository.SessionCapacityLockRepository;
@@ -13,14 +15,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -54,6 +60,13 @@ class WaitingQueueAcceptanceTest {
         sessionCapacityLockRepository.deleteAll();
     }
 
+    private RequestPostProcessor asUser(UUID memberId) {
+        CustomUserDetails userDetails = new CustomUserDetails(memberId, MemberRole.MEMBER);
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+        return authentication(auth);
+    }
+
     @Test
     @DisplayName("정원 초과 시 대기열에 등록 순서대로 순번이 부여된다")
     void queueRegistrationOrderTest() throws Exception {
@@ -61,21 +74,24 @@ class WaitingQueueAcceptanceTest {
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
 
         mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(UUID.randomUUID()))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestJson(sessionId, UUID.randomUUID())))
+                        .content(createRequestJson(sessionId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.status").value("HOLD"));
 
         mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(UUID.randomUUID()))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestJson(sessionId, UUID.randomUUID())))
+                        .content(createRequestJson(sessionId)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.data.status").value("QUEUED"))
                 .andExpect(jsonPath("$.data.queuePosition").value(1));
 
         mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(UUID.randomUUID()))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestJson(sessionId, UUID.randomUUID())))
+                        .content(createRequestJson(sessionId)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.data.status").value("QUEUED"))
                 .andExpect(jsonPath("$.data.queuePosition").value(2));
@@ -87,15 +103,15 @@ class WaitingQueueAcceptanceTest {
         UUID sessionId = UUID.randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
 
-        // 정원 채움
         mockMvc.perform(post("/api/reservations/hold")
+                .with(asUser(UUID.randomUUID()))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(createRequestJson(sessionId, UUID.randomUUID())));
+                .content(createRequestJson(sessionId)));
 
-        // 대기열 1번째 등록
         MvcResult queuedResult = mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(UUID.randomUUID()))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestJson(sessionId, UUID.randomUUID())))
+                        .content(createRequestJson(sessionId)))
                 .andReturn();
 
         String responseBody = queuedResult.getResponse().getContentAsString();
@@ -111,20 +127,20 @@ class WaitingQueueAcceptanceTest {
         UUID sessionId = UUID.randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
 
-        // 정원 채움
         mockMvc.perform(post("/api/reservations/hold")
+                .with(asUser(UUID.randomUUID()))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(createRequestJson(sessionId, UUID.randomUUID())));
+                .content(createRequestJson(sessionId)));
 
-        // 대기열 1번째 등록
         mockMvc.perform(post("/api/reservations/hold")
+                .with(asUser(UUID.randomUUID()))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(createRequestJson(sessionId, UUID.randomUUID())));
+                .content(createRequestJson(sessionId)));
 
-        // 대기열 2번째 등록 (테스트 대상)
         MvcResult secondQueuedResult = mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(UUID.randomUUID()))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createRequestJson(sessionId, UUID.randomUUID())))
+                        .content(createRequestJson(sessionId)))
                 .andReturn();
 
         String responseBody = secondQueuedResult.getResponse().getContentAsString();
@@ -141,30 +157,29 @@ class WaitingQueueAcceptanceTest {
         UUID memberId = UUID.randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
 
-        String requestJson = createRequestJson(sessionId, memberId);
+        String requestJson = createRequestJson(sessionId);
 
-        // 첫 번째 신청 -> 성공
         mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(memberId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
                 .andExpect(status().isCreated());
 
-        // 같은 사람이 같은 세션에 다시 신청 -> 거부
         mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(memberId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("RESERVATION_DUPLICATE"));
     }
 
-    private String createRequestJson(UUID sessionId, UUID memberId) {
+    private String createRequestJson(UUID sessionId) {
         return """
             {
                 "sessionId": "%s",
-                "memberId": "%s",
                 "headcount": 1,
                 "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]
             }
-            """.formatted(sessionId, memberId);
+            """.formatted(sessionId);
     }
 }

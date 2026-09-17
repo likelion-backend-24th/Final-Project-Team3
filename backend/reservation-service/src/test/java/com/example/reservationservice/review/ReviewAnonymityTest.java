@@ -1,5 +1,7 @@
 package com.example.reservationservice.review;
 
+import com.example.reservationservice.auth.CustomUserDetails;
+import com.example.reservationservice.auth.MemberRole;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
 import com.example.reservationservice.payment.service.PortOnePaymentVerifier;
 import com.example.reservationservice.qrticket.entity.QrTicket;
@@ -16,9 +18,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
 import java.util.UUID;
@@ -26,6 +31,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -62,6 +68,13 @@ class ReviewAnonymityTest {
                 .willReturn(new PortOnePaymentVerifier.VerifiedPayment("CARD"));
     }
 
+    private RequestPostProcessor asUser(UUID memberId) {
+        CustomUserDetails userDetails = new CustomUserDetails(memberId, MemberRole.MEMBER);
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+        return authentication(auth);
+    }
+
     @Test
     @DisplayName("후기 작성 응답에는 작성자 memberId·이름 등 식별 정보가 포함되지 않는다")
     void reviewResponse_doesNotExposeAuthorInfo() throws Exception {
@@ -70,14 +83,16 @@ class ReviewAnonymityTest {
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
 
         MvcResult holdResult = mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(memberId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"sessionId": "%s", "memberId": "%s", "headcount": 1, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]}
-                                """.formatted(sessionId, memberId)))
+                                {"sessionId": "%s", "headcount": 1, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]}
+                                """.formatted(sessionId)))
                 .andReturn();
         String reservationId = JsonPath.read(holdResult.getResponse().getContentAsString(), "$.data.reservationId");
 
         mockMvc.perform(post("/api/reservations/{id}/payment", reservationId)
+                .with(asUser(memberId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"paymentId": "test-payment-id"}
@@ -89,10 +104,11 @@ class ReviewAnonymityTest {
         qrTicketRepository.save(ticket);
 
         mockMvc.perform(post("/api/reservations/{id}/reviews", reservationId)
+                        .with(asUser(memberId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"memberId": "%s", "content": "익명으로 남기는 후기"}
-                                """.formatted(memberId)))
+                                {"content": "익명으로 남기는 후기"}
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.memberId").doesNotExist())
                 .andExpect(jsonPath("$.data.name").doesNotExist())

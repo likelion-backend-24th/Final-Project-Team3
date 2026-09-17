@@ -170,16 +170,20 @@ public class ReservationService {
     }
 
     @Transactional
-    public PaymentResult processPayment(UUID reservationId, String paymentId) {
+    public PaymentResult processPayment(UUID reservationId, UUID requesterId, String paymentId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+
+        if (!reservation.getMemberId().equals(requesterId)) {
+            throw new BusinessException(ReservationErrorCode.RESERVATION_ACCESS_DENIED);
+        }
 
         // 락을 잡기 전에 외부 API(PortOne) 검증부터 끝낸다 — 좌석 락을 쥔 채로 외부 호출을 기다리면 안 됨
         Integer price = conferenceServiceClient.getSessionPrice(reservation.getSessionId());
         int expectedAmount = (price == null ? 0 : price) * reservation.getHeadcount();
         PortOnePaymentVerifier.VerifiedPayment verifiedPayment = portOnePaymentVerifier.verify(paymentId, expectedAmount);
 
-       boolean wasQueued = reservation.getStatus() == ReservationStatus.QUEUED;
+        boolean wasQueued = reservation.getStatus() == ReservationStatus.QUEUED;
         Integer leftPosition = null;
 
         if (wasQueued) {
@@ -252,9 +256,13 @@ public class ReservationService {
     }
 
     @Transactional
-    public CancelResult cancelReservation(UUID reservationId) {
+    public CancelResult cancelReservation(UUID reservationId, UUID requesterId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+
+        if (!reservation.getMemberId().equals(requesterId)) {
+            throw new BusinessException(ReservationErrorCode.RESERVATION_ACCESS_DENIED);
+        }
 
         if (reservation.getStatus() == ReservationStatus.CANCELLED) {
             throw new BusinessException(ReservationErrorCode.ALREADY_CANCELLED);
@@ -282,7 +290,7 @@ public class ReservationService {
 
             sessionCapacityLockRepository.decrease(reservation.getSessionId(), reservation.getHeadcount());
 
-        }else if (reservation.getStatus() == ReservationStatus.HOLD) {
+        } else if (reservation.getStatus() == ReservationStatus.HOLD) {
             sessionCapacityLockRepository.decrease(reservation.getSessionId(), reservation.getHeadcount());
         } else if (reservation.getStatus() == ReservationStatus.QUEUED) {
             int leftPosition = waitingQueueRepository.findByReservationId(reservationId)

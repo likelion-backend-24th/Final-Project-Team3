@@ -1,5 +1,7 @@
 package com.example.reservationservice.controller;
 
+import com.example.reservationservice.auth.CustomUserDetails;
+import com.example.reservationservice.auth.MemberRole;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
 import com.example.reservationservice.reservation.entity.Reservation;
 import com.example.reservationservice.reservation.entity.ReservationStatus;
@@ -13,12 +15,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.UUID;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -49,6 +55,13 @@ public class ReservationStatusSummaryTest {
         sessionCapacityLockRepository.deleteAll();
     }
 
+    private RequestPostProcessor asUser(UUID memberId) {
+        CustomUserDetails userDetails = new CustomUserDetails(memberId, MemberRole.MEMBER);
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+        return authentication(auth);
+    }
+
     @Test
     @DisplayName("상태별 건수 합이 전체 신청 건수와 일치한다")
     void 상태별_건수_합이_전체와_일치한다() throws Exception {
@@ -59,7 +72,8 @@ public class ReservationStatusSummaryTest {
         createReservation(sessionId, ReservationStatus.CONFIRMED);
         createReservation(sessionId, ReservationStatus.CANCELLED);
 
-        mockMvc.perform(get("/api/reservations/sessions/{sessionId}/status-summary", sessionId))
+        mockMvc.perform(get("/api/reservations/sessions/{sessionId}/status-summary", sessionId)
+                        .with(asUser(UUID.randomUUID())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.holdCount").value(1))
                 .andExpect(jsonPath("$.data.queuedCount").value(1))
@@ -87,7 +101,8 @@ public class ReservationStatusSummaryTest {
                 .build();
         qrTicketRepository.save(unusedTicket);
 
-        mockMvc.perform(get("/api/reservations/sessions/{sessionId}/status-summary", sessionId))
+        mockMvc.perform(get("/api/reservations/sessions/{sessionId}/status-summary", sessionId)
+                        .with(asUser(UUID.randomUUID())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.checkedInCount").value(1));
     }

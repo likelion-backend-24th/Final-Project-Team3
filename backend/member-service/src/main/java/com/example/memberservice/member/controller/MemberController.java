@@ -5,6 +5,8 @@ import com.example.memberservice.common.TraceIdProvider;
 import com.example.memberservice.common.dto.ApiResponse;
 import com.example.memberservice.member.dto.*;
 import com.example.memberservice.member.service.MemberService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ public class MemberController {
     private final MemberService memberService;
     private final TraceIdProvider traceIdProvider;
 
+    @Operation(summary = "참가자 회원가입", description = "이메일 인증을 완료한 이메일로 참가자(MEMBER) 계정을 생성한다.")
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<SignupResponse>> signup(
             @Valid @RequestBody SignupRequest request,
@@ -33,6 +36,7 @@ public class MemberController {
                 .body(ApiResponse.success("회원가입이 완료되었습니다.", response, traceId));
     }
 
+    @Operation(summary = "주최자 회원가입", description = "사업자등록번호 검증을 통과하면 즉시 주최자(ORGANIZER) 계정을 생성한다.")
     @PostMapping("/organizers/signup")
     public ResponseEntity<ApiResponse<OrganizerSignupResponse>> signupOrganizer(
             @Valid @RequestBody OrganizerSignupRequest request,
@@ -45,6 +49,8 @@ public class MemberController {
                 .body(ApiResponse.success("주최자 회원가입이 완료되었습니다.", response, traceId));
     }
 
+    @Operation(summary = "내 프로필 조회", description = "Access Token으로 인증된 본인의 프로필을 조회한다.")
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<MemberProfileResponse>> getProfile(
             @AuthenticationPrincipal CustomUserDetails currentUser,
@@ -55,6 +61,8 @@ public class MemberController {
         return ResponseEntity.ok(ApiResponse.success("프로필 조회 성공", response, traceId));
     }
 
+    @Operation(summary = "내 프로필 수정", description = "본인의 연령대·직무를 수정한다.")
+    @SecurityRequirement(name = "bearerAuth")
     @PatchMapping("/me")
     public ResponseEntity<ApiResponse<MemberProfileResponse>> updateProfile(
             @Valid @RequestBody UpdateProfileRequest request,

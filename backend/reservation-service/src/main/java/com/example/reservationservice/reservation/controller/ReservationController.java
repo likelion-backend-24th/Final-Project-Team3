@@ -1,5 +1,6 @@
 package com.example.reservationservice.reservation.controller;
 
+import com.example.reservationservice.auth.CustomUserDetails;
 import com.example.reservationservice.reservation.dto.*;
 import com.example.reservationservice.reservation.entity.AgeGroup;
 import com.example.reservationservice.reservation.entity.Job;
@@ -12,11 +13,11 @@ import com.example.reservationservice.common.dto.ApiResponse;
 import com.example.reservationservice.reservation.service.ReservationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.annotation.RequestScope;
 
-import javax.swing.plaf.PanelUI;
-import javax.swing.text.html.HTML;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,10 +31,11 @@ public class ReservationController {
 
     @PostMapping("/hold")
     public ResponseEntity<ApiResponse<ReservationResult>> createHold(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody CreateHoldRequest request, HttpServletRequest httpRequest) {
         ReservationResult result = reservationService.createHoldOrQueue(
                 request.sessionId(),
-                request.memberId(),
+                userDetails.getMemberId(),
                 request.headcount(),
                 request.attendees(),
                 request.groupAttendee()
@@ -60,7 +62,6 @@ public class ReservationController {
 
     public record CreateHoldRequest(
             UUID sessionId,
-            UUID memberId,
             int headcount,
             List<AttendeeInfo> attendees,
             AttendeeInfo groupAttendee
@@ -68,18 +69,20 @@ public class ReservationController {
     @PostMapping("/{reservationId}/payment")
     public ResponseEntity<ApiResponse<PaymentResult>> processPayment(
             @PathVariable UUID reservationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody PaymentRequest request,
             HttpServletRequest httpRequest) {
-        PaymentResult result = reservationService.processPayment(reservationId, request.paymentId());
+        PaymentResult result = reservationService.processPayment(
+                reservationId, userDetails.getMemberId(), request.paymentId());
         return ResponseEntity.ok(
                 ApiResponse.success("결제 완료", result, traceIdProvider.resolve(httpRequest)));
     }
 
     @GetMapping("/my")
     public ResponseEntity<ApiResponse<List<MyReservationResponse>>> getMyReservation(
-            @RequestParam UUID memberId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpServletRequest httpRequest) {
-        List<MyReservationResponse> reservations = reservationService.getMyReservations(memberId);
+        List<MyReservationResponse> reservations = reservationService.getMyReservations(userDetails.getMemberId());
         return ResponseEntity.ok(
                 ApiResponse.success("내 예약 목록 조회 완료", reservations, traceIdProvider.resolve(httpRequest)));
     }
@@ -105,8 +108,9 @@ public class ReservationController {
     @PostMapping("/{reservationId}/cancel")
     public ResponseEntity<ApiResponse<CancelResult>> cancelReservation(
             @PathVariable UUID reservationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpServletRequest httpRequest) {
-        CancelResult result = reservationService.cancelReservation(reservationId);
+        CancelResult result = reservationService.cancelReservation(reservationId, userDetails.getMemberId());
         return ResponseEntity.ok(
                 ApiResponse.success("예약 취소 완료", result, traceIdProvider.resolve(httpRequest)));
     }
