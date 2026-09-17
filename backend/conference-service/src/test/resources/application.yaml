@@ -15,6 +15,10 @@ spring:
       hibernate:
         format_sql: true
 
+app:
+  upload:
+    conference-proof-dir: build/test-uploads/conference-proof
+
 services:
   reservation-service:
     url: http://localhost:8083

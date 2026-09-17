@@ -70,6 +70,14 @@ public class Conference {
     @Column(name = "image_url")
     private String imageUrl;
 
+    // 등록 신청 시 첨부한 컨퍼런스 증명 파일의 저장 파일명({UUID}_{원본파일명}). 관리자 승인 심사용.
+    @Column(name = "proof_file_name")
+    private String proofFileName;
+
+    public boolean hasProofFile() {
+        return this.proofFileName != null;
+    }
+
     public boolean isPending() {
         return this.status == ConferenceStatus.PENDING;
     }

@@ -52,6 +52,10 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       SERVICES_RESERVATION_SERVICE_URL: http://reservation-service:8083
+      CONFERENCE_PROOF_UPLOAD_DIR: /app/uploads/conference-proof
+    volumes:
+      # 컨테이너가 재배포돼도(docker compose up -d) 증명 파일이 유지되도록 호스트에 마운트
+      - ./uploads/conference-proof:/app/uploads/conference-proof
     depends_on:
       mysql:
         condition: service_healthy
