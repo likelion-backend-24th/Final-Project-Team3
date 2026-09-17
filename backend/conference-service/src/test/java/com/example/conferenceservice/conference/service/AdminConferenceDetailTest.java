@@ -10,6 +10,7 @@ import com.example.conferenceservice.conference.repository.ConferenceRepository;
 import com.example.conferenceservice.conference.repository.ConferenceTagRepository;
 import com.example.conferenceservice.session.entity.Session;
 import com.example.conferenceservice.session.entity.SessionStatus;
+import com.example.conferenceservice.common.file.FileStorageService;
 import com.example.conferenceservice.session.repository.SessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,11 +38,14 @@ class AdminConferenceDetailTest {
     @Mock
     private SessionRepository sessionRepository;
 
+    @Mock
+    private FileStorageService fileStorageService;
+
     private ConferenceService conferenceService;
 
     @BeforeEach
     void setUp() {
-        conferenceService = new ConferenceService(conferenceRepository, conferenceTagRepository, sessionRepository);
+        conferenceService = new ConferenceService(conferenceRepository, conferenceTagRepository, sessionRepository, fileStorageService);
     }
 
     @Test

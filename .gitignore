@@ -5,3 +5,5 @@ build/
 out/
 
 .env
+
+infra/uploads/

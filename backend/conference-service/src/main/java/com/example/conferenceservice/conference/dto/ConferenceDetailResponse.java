@@ -25,7 +25,8 @@ public record ConferenceDetailResponse(
         String description,
         String imageUrl,
         List<String> tags,
-        List<SessionResponse> sessions
+        List<SessionResponse> sessions,
+        boolean proofFileAttached
 )
 {
     public static ConferenceDetailResponse from(Conference conference, List<Session> sessions, List<String> tags) {
@@ -45,7 +46,8 @@ public record ConferenceDetailResponse(
                 conference.getDescription(),
                 conference.getImageUrl(),
                 tags,
-                sessions.stream().map(SessionResponse::from).toList()
+                sessions.stream().map(SessionResponse::from).toList(),
+                conference.hasProofFile()
         );
     }
 }
