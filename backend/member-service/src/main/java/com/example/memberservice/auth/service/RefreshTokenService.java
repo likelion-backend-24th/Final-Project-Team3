@@ -4,14 +4,15 @@ import com.example.memberservice.auth.entity.RefreshToken;
 import com.example.memberservice.auth.exception.AuthErrorCode;
 import com.example.memberservice.auth.repository.RefreshTokenRepository;
 import com.example.memberservice.common.exception.BusinessException;
-import com.github.f4b6a3.uuid.UuidCreator;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.UUID;
 
 import static com.example.memberservice.common.HashUtil.sha256;
@@ -20,6 +21,10 @@ import static com.example.memberservice.common.HashUtil.sha256;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class RefreshTokenService {
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final int TOKEN_BYTE_LENGTH = 32;
+
     private final RefreshTokenRepository refreshTokenRepository;
     private final RefreshTokenRevoker refreshTokenRevoker;
 
@@ -66,7 +71,9 @@ public class RefreshTokenService {
     }
 
     private String generateRawToken() {
-        return UuidCreator.getTimeOrderedEpoch().toString() + UuidCreator.getTimeOrderedEpoch();
+        byte[] bytes = new byte[TOKEN_BYTE_LENGTH];
+        RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     public record RotationResult(UUID memberId, String newRefreshToken) {
