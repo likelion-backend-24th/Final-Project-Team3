@@ -34,6 +34,9 @@ public class EmailVerificationService {
     @Value("${email.max-attempts}")
     private int maxAttempts;
 
+    @Value("${email.resend-cooldown-ms}")
+    private long resendCooldownMs;
+
     @Transactional
     public void sendCode(String rawEmail){
         String email = normalize(rawEmail);
@@ -41,6 +44,10 @@ public class EmailVerificationService {
         if (memberRepository.existsByEmail(email)) {
             throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL);
         }
+
+        emailVerificationRepository.findFirstByEmailOrderByCreatedAtDesc(email)
+                .filter(v -> v.isResendTooSoon(LocalDateTime.now(), resendCooldownMs))
+                .ifPresent(v -> { throw new BusinessException(AuthErrorCode.EMAIL_CODE_RESEND_TOO_SOON); });
 
         // 재발송 시 이전 코드(인증완료 여부 무관)는 전부 무효화하고 새로 발급
         emailVerificationRepository.deleteAllByEmail(email);

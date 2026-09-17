@@ -55,6 +55,10 @@ public class EmailVerification extends BaseEntity {
         return expiresAt.isBefore(now);
     }
 
+    public boolean isResendTooSoon(LocalDateTime now, long cooldownMs) {
+        return getCreatedAt().plusNanos(cooldownMs * 1_000_000).isAfter(now);
+    }
+
     public void markVerified() {
         this.verified = true;
     }

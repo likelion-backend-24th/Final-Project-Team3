@@ -17,7 +17,8 @@ public enum AuthErrorCode implements ErrorCode {
     ORGANIZER_SCOPE_FORBIDDEN(HttpStatus.FORBIDDEN, "AUTH_ORGANIZER_SCOPE_FORBIDDEN", "본인이 소유한 자원이 아닙니다."),
     EMAIL_CODE_INVALID(HttpStatus.BAD_REQUEST, "AUTH_EMAIL_CODE_INVALID", "인증코드가 올바르지 않습니다."),
     EMAIL_CODE_EXPIRED(HttpStatus.BAD_REQUEST, "AUTH_EMAIL_CODE_EXPIRED", "인증코드가 만료되었습니다. 다시 요청해주세요."),
-    EMAIL_CODE_ATTEMPTS_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "AUTH_EMAIL_CODE_ATTEMPTS_EXCEEDED", "인증 시도 횟수를 초과했습니다. 인증코드를 다시 요청해주세요.");
+    EMAIL_CODE_ATTEMPTS_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "AUTH_EMAIL_CODE_ATTEMPTS_EXCEEDED", "인증 시도 횟수를 초과했습니다. 인증코드를 다시 요청해주세요."),
+    EMAIL_CODE_RESEND_TOO_SOON(HttpStatus.TOO_MANY_REQUESTS, "AUTH_EMAIL_CODE_RESEND_TOO_SOON", "잠시 후 다시 시도해주세요.");
 
     private final HttpStatus httpStatus;
     private final String code;
