@@ -50,14 +50,19 @@ class PgCredentialAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "provider": "TOSS",
-                                  "apiKey": "api-key-abc",
-                                  "secretKey": "mySecretKey123"
+                                  "provider": "PORTONE",
+                                  "storeId": "store-abc123",
+                                  "channelKey": "channel-key-toss-general",
+                                  "apiSecret": "apiSecretValue123",
+                                  "webhookSecret": "webhookSecretValue456"
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.provider").value("TOSS"))
-                .andExpect(jsonPath("$.data.secretKey").value("**********y123"));
+                .andExpect(jsonPath("$.data.provider").value("PORTONE"))
+                .andExpect(jsonPath("$.data.storeId").value("store-abc123"))
+                .andExpect(jsonPath("$.data.channelKey").value("channel-key-toss-general"))
+                .andExpect(jsonPath("$.data.apiSecret").value("*************e123"))
+                .andExpect(jsonPath("$.data.webhookSecret").value("*****************e456"));
     }
 
     @Test
@@ -67,9 +72,11 @@ class PgCredentialAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "provider": "TOSS",
-                                  "apiKey": "api-key-abc",
-                                  "secretKey": "mySecretKey123"
+                                  "provider": "PORTONE",
+                                  "storeId": "store-abc123",
+                                  "channelKey": "channel-key-toss-general",
+                                  "apiSecret": "apiSecretValue123",
+                                  "webhookSecret": "webhookSecretValue456"
                                 }
                                 """))
                 .andExpect(status().isForbidden());
@@ -81,9 +88,11 @@ class PgCredentialAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "provider": "TOSS",
-                                  "apiKey": "api-key-abc",
-                                  "secretKey": "mySecretKey123"
+                                  "provider": "PORTONE",
+                                  "storeId": "store-abc123",
+                                  "channelKey": "channel-key-toss-general",
+                                  "apiSecret": "apiSecretValue123",
+                                  "webhookSecret": "webhookSecretValue456"
                                 }
                                 """))
                 .andExpect(status().isUnauthorized());
@@ -96,8 +105,9 @@ class PgCredentialAcceptanceTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "provider": "TOSS",
-                                  "apiKey": "api-key-abc"
+                                  "provider": "PORTONE",
+                                  "storeId": "store-abc123",
+                                  "channelKey": "channel-key-toss-general"
                                 }
                                 """))
                 .andExpect(status().isBadRequest());

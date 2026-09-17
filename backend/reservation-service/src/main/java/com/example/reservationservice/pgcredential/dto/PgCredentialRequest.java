@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 
 public record PgCredentialRequest(
         @NotBlank String provider,
-        @NotBlank String apiKey,
-        @NotBlank String secretKey
+        @NotBlank String storeId,
+        @NotBlank String channelKey,
+        @NotBlank String apiSecret,
+        @NotBlank String webhookSecret
 ) {}

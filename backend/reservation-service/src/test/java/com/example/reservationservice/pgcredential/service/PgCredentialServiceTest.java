@@ -32,57 +32,69 @@ class PgCredentialServiceTest {
         pgCredentialService = new PgCredentialService(pgCredentialRepository, encryptor);
     }
 
+    private PgCredentialRequest request() {
+        return new PgCredentialRequest("PORTONE", "store-abc123", "channel-key-toss-general", "apiSecretValue123", "webhookSecretValue456");
+    }
+
     @Test
     void registerOrUpdate_newProvider_createsCredential() {
-        when(pgCredentialRepository.findByProvider("TOSS")).thenReturn(Optional.empty());
+        when(pgCredentialRepository.findByProvider("PORTONE")).thenReturn(Optional.empty());
         when(pgCredentialRepository.save(any(PgCredential.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        PgCredentialResponse response = pgCredentialService.registerOrUpdate(
-                new PgCredentialRequest("TOSS", "api-key-abc", "supersecret1234"));
+        PgCredentialResponse response = pgCredentialService.registerOrUpdate(request());
 
         verify(pgCredentialRepository).save(any(PgCredential.class));
-        assertThat(response.provider()).isEqualTo("TOSS");
+        assertThat(response.provider()).isEqualTo("PORTONE");
+        assertThat(response.storeId()).isEqualTo("store-abc123");
+        assertThat(response.channelKey()).isEqualTo("channel-key-toss-general");
     }
 
     @Test
     void registerOrUpdate_existingProvider_updatesInPlaceWithoutCreatingNew() {
         PgCredential existing = PgCredential.builder()
-                .provider("TOSS")
-                .apiKey("old-api-key")
-                .secretKey(encryptor.encrypt("oldsecret1234"))
+                .provider("PORTONE")
+                .storeId("store-old")
+                .channelKey("channel-old")
+                .apiSecret(encryptor.encrypt("oldApiSecret"))
+                .webhookSecret(encryptor.encrypt("oldWebhookSecret"))
                 .build();
-        when(pgCredentialRepository.findByProvider("TOSS")).thenReturn(Optional.of(existing));
+        when(pgCredentialRepository.findByProvider("PORTONE")).thenReturn(Optional.of(existing));
 
-        pgCredentialService.registerOrUpdate(new PgCredentialRequest("TOSS", "new-api-key", "newsecret5678"));
+        pgCredentialService.registerOrUpdate(request());
 
         verify(pgCredentialRepository, never()).save(any());
-        assertThat(existing.getApiKey()).isEqualTo("new-api-key");
-        assertThat(encryptor.decrypt(existing.getSecretKey())).isEqualTo("newsecret5678");
+        assertThat(existing.getStoreId()).isEqualTo("store-abc123");
+        assertThat(existing.getChannelKey()).isEqualTo("channel-key-toss-general");
+        assertThat(encryptor.decrypt(existing.getApiSecret())).isEqualTo("apiSecretValue123");
+        assertThat(encryptor.decrypt(existing.getWebhookSecret())).isEqualTo("webhookSecretValue456");
     }
 
     @Test
-    void registerOrUpdate_encryptsSecretKeyBeforeStoring() {
-        when(pgCredentialRepository.findByProvider("TOSS")).thenReturn(Optional.empty());
+    void registerOrUpdate_encryptsBothSecretsBeforeStoring() {
+        when(pgCredentialRepository.findByProvider("PORTONE")).thenReturn(Optional.empty());
         when(pgCredentialRepository.save(any(PgCredential.class))).thenAnswer(invocation -> invocation.getArgument(0));
         ArgumentCaptor<PgCredential> captor = ArgumentCaptor.forClass(PgCredential.class);
 
-        pgCredentialService.registerOrUpdate(new PgCredentialRequest("TOSS", "api-key-abc", "mySecretKey123"));
+        pgCredentialService.registerOrUpdate(request());
 
         verify(pgCredentialRepository).save(captor.capture());
-        String storedSecretKey = captor.getValue().getSecretKey();
-        assertThat(storedSecretKey).isNotEqualTo("mySecretKey123");
-        assertThat(encryptor.decrypt(storedSecretKey)).isEqualTo("mySecretKey123");
+        PgCredential saved = captor.getValue();
+        assertThat(saved.getApiSecret()).isNotEqualTo("apiSecretValue123");
+        assertThat(saved.getWebhookSecret()).isNotEqualTo("webhookSecretValue456");
+        assertThat(encryptor.decrypt(saved.getApiSecret())).isEqualTo("apiSecretValue123");
+        assertThat(encryptor.decrypt(saved.getWebhookSecret())).isEqualTo("webhookSecretValue456");
     }
 
     @Test
-    void registerOrUpdate_masksSecretKeyInResponse_showingOnlyLast4Chars() {
-        when(pgCredentialRepository.findByProvider("TOSS")).thenReturn(Optional.empty());
+    void registerOrUpdate_masksBothSecretsInResponse_showingOnlyLast4Chars() {
+        when(pgCredentialRepository.findByProvider("PORTONE")).thenReturn(Optional.empty());
         when(pgCredentialRepository.save(any(PgCredential.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        PgCredentialResponse response = pgCredentialService.registerOrUpdate(
-                new PgCredentialRequest("TOSS", "api-key-abc", "mySecretKey123"));
+        PgCredentialResponse response = pgCredentialService.registerOrUpdate(request());
 
-        assertThat(response.secretKey()).isEqualTo("**********y123");
-        assertThat(response.secretKey()).doesNotContain("mySecretKey123");
+        assertThat(response.apiSecret()).isEqualTo("*************e123");
+        assertThat(response.apiSecret()).doesNotContain("apiSecretValue123");
+        assertThat(response.webhookSecret()).isEqualTo("*****************e456");
+        assertThat(response.webhookSecret()).doesNotContain("webhookSecretValue456");
     }
 }
