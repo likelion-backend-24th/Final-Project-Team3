@@ -23,11 +23,17 @@ public class PgCredential {
     @Column(nullable = false, unique = true)
     private String provider;
 
-    @Column(name = "api_key", nullable = false)
-    private String apiKey;
+    @Column(name = "store_id", nullable = false)
+    private String storeId;
 
-    @Column(name = "secret_key", nullable = false, columnDefinition = "TEXT")
-    private String secretKey;
+    @Column(name = "channel_key", nullable = false)
+    private String channelKey;
+
+    @Column(name = "api_secret", nullable = false, columnDefinition = "TEXT")
+    private String apiSecret;
+
+    @Column(name = "webhook_secret", nullable = false, columnDefinition = "TEXT")
+    private String webhookSecret;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -36,18 +42,22 @@ public class PgCredential {
     private LocalDateTime updatedAt;
 
     @Builder
-    public PgCredential(String provider, String apiKey, String secretKey) {
+    public PgCredential(String provider, String storeId, String channelKey, String apiSecret, String webhookSecret) {
         this.id = UuidCreator.getTimeOrderedEpoch();
         this.provider = provider;
-        this.apiKey = apiKey;
-        this.secretKey = secretKey;
+        this.storeId = storeId;
+        this.channelKey = channelKey;
+        this.apiSecret = apiSecret;
+        this.webhookSecret = webhookSecret;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
 
-    public void update(String apiKey, String secretKey) {
-        this.apiKey = apiKey;
-        this.secretKey = secretKey;
+    public void update(String storeId, String channelKey, String apiSecret, String webhookSecret) {
+        this.storeId = storeId;
+        this.channelKey = channelKey;
+        this.apiSecret = apiSecret;
+        this.webhookSecret = webhookSecret;
         this.updatedAt = LocalDateTime.now();
     }
 }

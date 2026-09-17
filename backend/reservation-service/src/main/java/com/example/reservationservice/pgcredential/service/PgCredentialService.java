@@ -20,29 +20,32 @@ public class PgCredentialService {
 
     @Transactional
     public PgCredentialResponse registerOrUpdate(PgCredentialRequest request) {
-        String encryptedSecretKey = encryptor.encrypt(request.secretKey());
+        String encryptedApiSecret = encryptor.encrypt(request.apiSecret());
+        String encryptedWebhookSecret = encryptor.encrypt(request.webhookSecret());
 
         PgCredential credential = pgCredentialRepository.findByProvider(request.provider())
                 .map(existing -> {
-                    existing.update(request.apiKey(), encryptedSecretKey);
+                    existing.update(request.storeId(), request.channelKey(), encryptedApiSecret, encryptedWebhookSecret);
                     return existing;
                 })
                 .orElseGet(() -> pgCredentialRepository.save(
                         PgCredential.builder()
                                 .provider(request.provider())
-                                .apiKey(request.apiKey())
-                                .secretKey(encryptedSecretKey)
+                                .storeId(request.storeId())
+                                .channelKey(request.channelKey())
+                                .apiSecret(encryptedApiSecret)
+                                .webhookSecret(encryptedWebhookSecret)
                                 .build()
                 ));
 
-        return PgCredentialResponse.of(credential, mask(request.secretKey()));
+        return PgCredentialResponse.of(credential, mask(request.apiSecret()), mask(request.webhookSecret()));
     }
 
-    private String mask(String plainSecretKey) {
-        if (plainSecretKey.length() <= VISIBLE_SUFFIX_LENGTH) {
-            return "*".repeat(plainSecretKey.length());
+    private String mask(String plainSecret) {
+        if (plainSecret.length() <= VISIBLE_SUFFIX_LENGTH) {
+            return "*".repeat(plainSecret.length());
         }
-        String suffix = plainSecretKey.substring(plainSecretKey.length() - VISIBLE_SUFFIX_LENGTH);
-        return "*".repeat(plainSecretKey.length() - VISIBLE_SUFFIX_LENGTH) + suffix;
+        String suffix = plainSecret.substring(plainSecret.length() - VISIBLE_SUFFIX_LENGTH);
+        return "*".repeat(plainSecret.length() - VISIBLE_SUFFIX_LENGTH) + suffix;
     }
 }

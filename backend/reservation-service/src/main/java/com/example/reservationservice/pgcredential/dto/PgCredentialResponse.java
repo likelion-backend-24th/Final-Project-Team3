@@ -6,15 +6,19 @@ import java.time.LocalDateTime;
 
 public record PgCredentialResponse(
         String provider,
-        String apiKey,
-        String secretKey,
+        String storeId,
+        String channelKey,
+        String apiSecret,
+        String webhookSecret,
         LocalDateTime updatedAt
 ) {
-    public static PgCredentialResponse of(PgCredential credential, String maskedSecretKey) {
+    public static PgCredentialResponse of(PgCredential credential, String maskedApiSecret, String maskedWebhookSecret) {
         return new PgCredentialResponse(
                 credential.getProvider(),
-                credential.getApiKey(),
-                maskedSecretKey,
+                credential.getStoreId(),
+                credential.getChannelKey(),
+                maskedApiSecret,
+                maskedWebhookSecret,
                 credential.getUpdatedAt()
         );
     }
