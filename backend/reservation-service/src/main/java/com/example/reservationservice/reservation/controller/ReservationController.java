@@ -73,7 +73,7 @@ public class ReservationController {
             @RequestBody PaymentRequest request,
             HttpServletRequest httpRequest) {
         PaymentResult result = reservationService.processPayment(
-                reservationId,userDetails.getMemberId(), request.paymentMethod(), request.amount());
+                reservationId, userDetails.getMemberId(), request.paymentId());
         return ResponseEntity.ok(
                 ApiResponse.success("결제 완료", result, traceIdProvider.resolve(httpRequest)));
     }
@@ -115,5 +115,5 @@ public class ReservationController {
                 ApiResponse.success("예약 취소 완료", result, traceIdProvider.resolve(httpRequest)));
     }
 
-    public record PaymentRequest(String paymentMethod, int amount) {}
+    public record PaymentRequest(String paymentId) {}
 }

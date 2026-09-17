@@ -9,6 +9,7 @@ import com.example.conferenceservice.conference.repository.ConferenceRepository;
 import com.example.conferenceservice.session.dto.RejectSessionRequest;
 import com.example.conferenceservice.session.dto.SessionCapacityResponse;
 import com.example.conferenceservice.session.dto.SessionCreateRequest;
+import com.example.conferenceservice.session.dto.SessionPriceResponse;
 import com.example.conferenceservice.session.dto.SessionResponse;
 import com.example.conferenceservice.session.dto.SessionStartAtResponse;
 import com.example.conferenceservice.session.dto.SessionUpdateRequest;
@@ -49,6 +50,13 @@ public class SessionService {
         Session session = sessionRepository.findByIdAndConference_Status(sessionId, ConferenceStatus.APPROVED)
                 .orElseThrow(() -> new BusinessException(SessionErrorCode.SESSION_NOT_FOUND));
         return SessionStartAtResponse.from(session);
+    }
+
+    @Transactional(readOnly = true)
+    public SessionPriceResponse getPrice(UUID sessionId) {
+        Session session = sessionRepository.findByIdAndConference_Status(sessionId, ConferenceStatus.APPROVED)
+                .orElseThrow(() -> new BusinessException(SessionErrorCode.SESSION_NOT_FOUND));
+        return SessionPriceResponse.from(session);
     }
 
     @Transactional(readOnly = true)
