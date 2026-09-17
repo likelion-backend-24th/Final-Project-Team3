@@ -1,7 +1,10 @@
 package com.example.reservationservice.qrticket.service;
 
 import com.example.reservationservice.common.exception.BusinessException;
+import com.example.reservationservice.qrticket.dto.QrTicketScanResponse;
 import com.example.reservationservice.qrticket.entity.QrTicket;
+import com.example.reservationservice.qrticket.exception.QrTicketErrorCode;
+import com.example.reservationservice.qrticket.exception.QrTicketException;
 import com.example.reservationservice.qrticket.repository.QrTicketRepository;
 import com.example.reservationservice.reservation.dto.AttendeeCheckinStatsResponse;
 import com.example.reservationservice.reservation.entity.*;
@@ -72,6 +75,16 @@ public class QrTicketService {
         }
 
         return qrTicketRepository.findByReservationId(reservationId);
+    }
+
+    @Transactional
+    public QrTicketScanResponse scan(String code) {
+        QrTicket ticket = qrTicketRepository.findByCode(code)
+                .orElseThrow(() -> new QrTicketException(QrTicketErrorCode.QR_TICKET_NOT_FOUND));
+
+        ticket.scan();
+
+        return QrTicketScanResponse.from(ticket);
     }
 
     private String generateQrCode() {

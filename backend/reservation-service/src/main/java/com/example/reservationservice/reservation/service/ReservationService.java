@@ -26,279 +26,282 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Service
-@RequiredArgsConstructor
-public class ReservationService {
+    @Service
+    @RequiredArgsConstructor
+    public class ReservationService {
 
-    private final ReservationRepository reservationRepository;
-    private final WaitingQueueRepository waitingQueueRepository;
-    private final SessionCapacityLockRepository sessionCapacityLockRepository;
-    private final ConferenceServiceClient conferenceServiceClient;
-    private final PaymentService paymentService;
-    private final QrTicketService qrTicketService;
-    private final AttendeeRepository attendeeRepository;
-    private final PaymentRepository paymentRepository;
+        private final ReservationRepository reservationRepository;
+        private final WaitingQueueRepository waitingQueueRepository;
+        private final SessionCapacityLockRepository sessionCapacityLockRepository;
+        private final ConferenceServiceClient conferenceServiceClient;
+        private final PaymentService paymentService;
+        private final QrTicketService qrTicketService;
+        private final AttendeeRepository attendeeRepository;
+        private final PaymentRepository paymentRepository;
 
-    @Transactional
-    public ReservationResult createHoldOrQueue(
-            UUID sessionId, UUID memberId, int headcount,
-            List<AttendeeInfo> attendees, AttendeeInfo groupAttendee) {
+        @Transactional
+        public ReservationResult createHoldOrQueue(
+                UUID sessionId, UUID memberId, int headcount,
+                List<AttendeeInfo> attendees, AttendeeInfo groupAttendee) {
 
-        // 동반자 정보 검증
-        if (headcount <= 9) {
-            if (attendees == null || attendees.size() != headcount) {
-                throw new BusinessException(ReservationErrorCode.ATTENDEE_INFO_REQUIRED);
-            }
-            for (AttendeeInfo attendee : attendees) {
-                if (attendee.ageGroup() == null || attendee.job() == null) {
+            // 동반자 정보 검증
+            if (headcount <= 9) {
+                if (attendees == null || attendees.size() != headcount) {
+                    throw new BusinessException(ReservationErrorCode.ATTENDEE_INFO_REQUIRED);
+                }
+                for (AttendeeInfo attendee : attendees) {
+                    if (attendee.ageGroup() == null || attendee.job() == null) {
+                        throw new BusinessException(ReservationErrorCode.ATTENDEE_INFO_REQUIRED);
+                    }
+                }
+            } else {
+                if (groupAttendee == null || groupAttendee.ageGroup() == null || groupAttendee.job() == null) {
                     throw new BusinessException(ReservationErrorCode.ATTENDEE_INFO_REQUIRED);
                 }
             }
-        } else {
-            if (groupAttendee == null || groupAttendee.ageGroup() == null || groupAttendee.job() == null) {
-                throw new BusinessException(ReservationErrorCode.ATTENDEE_INFO_REQUIRED);
+
+            // 중복 신청 방지
+            boolean alreadyReserved = reservationRepository.existsBySessionIdAndMemberIdAndStatusIn(
+                    sessionId, memberId, List.of(ReservationStatus.HOLD, ReservationStatus.QUEUED));
+
+            if (alreadyReserved) {
+                throw new BusinessException(ReservationErrorCode.DUPLICATE_RESERVATION);
             }
-        }
 
-        // 중복 신청 방지
-        boolean alreadyReserved = reservationRepository.existsBySessionIdAndMemberIdAndStatusIn(
-                sessionId, memberId, List.of(ReservationStatus.HOLD, ReservationStatus.QUEUED));
+            int capacity = getSessionCapacity(sessionId);
 
-        if (alreadyReserved) {
-            throw new BusinessException(ReservationErrorCode.DUPLICATE_RESERVATION);
-        }
+            if (headcount > capacity) {
+                throw new BusinessException(ReservationErrorCode.SESSION_CAPACITY_EXCEEDED);
+            }
 
-        int capacity = getSessionCapacity(sessionId);
+            sessionCapacityLockRepository.ensureExists(sessionId);
 
-        if (headcount > capacity) {
-            throw new BusinessException(ReservationErrorCode.SESSION_CAPACITY_EXCEEDED);
-        }
+            int updatedRows = sessionCapacityLockRepository.tryIncrease(sessionId, headcount, capacity);
 
-        sessionCapacityLockRepository.ensureExists(sessionId);
+            if (updatedRows == 1) {
+                Reservation reservation = Reservation.builder()
+                        .sessionId(sessionId)
+                        .memberId(memberId)
+                        .headcount(headcount)
+                        .build();
+                reservationRepository.save(reservation);
 
-        int updatedRows = sessionCapacityLockRepository.tryIncrease(sessionId, headcount, capacity);
+                saveAttendees(reservation.getId(), headcount, attendees, groupAttendee);
 
-        if (updatedRows == 1) {
-            Reservation reservation = Reservation.builder()
+                return ReservationResult.hold(reservation.getId());
+            }
+
+            Reservation queuedReservation = Reservation.builder()
                     .sessionId(sessionId)
                     .memberId(memberId)
                     .headcount(headcount)
                     .build();
-            reservationRepository.save(reservation);
+            queuedReservation.markAsQueued();
+            reservationRepository.save(queuedReservation);
 
-            saveAttendees(reservation.getId(), headcount, attendees, groupAttendee);
+            saveAttendees(queuedReservation.getId(), headcount, attendees, groupAttendee);
 
-            return ReservationResult.hold(reservation.getId());
+            WaitingQueue waitingQueue = registerToQueueWithRetry(sessionId, queuedReservation.getId(), memberId);
+
+            return ReservationResult.queued(queuedReservation.getId(), waitingQueue.getPosition());
         }
 
-        Reservation queuedReservation = Reservation.builder()
-                .sessionId(sessionId)
-                .memberId(memberId)
-                .headcount(headcount)
-                .build();
-        queuedReservation.markAsQueued();
-        reservationRepository.save(queuedReservation);
-
-        saveAttendees(queuedReservation.getId(), headcount, attendees, groupAttendee);
-
-        WaitingQueue waitingQueue = registerToQueueWithRetry(sessionId, queuedReservation.getId(), memberId);
-
-        return ReservationResult.queued(queuedReservation.getId(), waitingQueue.getPosition());
-    }
-
-    private void saveAttendees(UUID reservationId, int headcount,
-                               List<AttendeeInfo> attendees, AttendeeInfo groupAttendee) {
-        if (headcount <= 9) {
-            for (AttendeeInfo info : attendees) {
-                attendeeRepository.save(Attendee.builder()
-                        .reservationId(reservationId)
-                        .ageGroup(info.ageGroup())
-                        .job(info.job())
-                        .build());
-            }
-        } else {
-            for (int i = 0; i < headcount; i++) {
-                attendeeRepository.save(Attendee.builder()
-                        .reservationId(reservationId)
-                        .ageGroup(groupAttendee.ageGroup())
-                        .job(groupAttendee.job())
-                        .build());
-            }
-        }
-    }
-
-    private int getSessionCapacity(UUID sessionId) {
-        try {
-            return conferenceServiceClient.getSessionCapacity(sessionId);
-        } catch (ConferenceServiceUnavailableException e) {
-            throw new BusinessException(ReservationErrorCode.CONFERENCE_SERVICE_UNAVAILABLE);
-        }
-    }
-
-    public int getQueuePosition(UUID reservationId) {
-        return waitingQueueRepository.findByReservationId(reservationId)
-                .map(WaitingQueue::getPosition)
-                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
-    }
-
-    private WaitingQueue registerToQueueWithRetry(UUID sessionId, UUID reservationId, UUID memberId) {
-        int maxRetries = 5;
-        for (int i = 0; i < maxRetries; i++) {
-            try {
-                int nextPosition = waitingQueueRepository.findMaxPositionBySessionId(sessionId) + 1;
-                WaitingQueue waitingQueue = WaitingQueue.builder()
-                        .reservationId(reservationId)
-                        .sessionId(sessionId)
-                        .memberId(memberId)
-                        .position(nextPosition)
-                        .build();
-                return waitingQueueRepository.saveAndFlush(waitingQueue);
-            } catch (DataIntegrityViolationException e) {
-                // 순번 충돌 -> 다음 순번으로 재시도
-            }
-        }
-        throw new IllegalStateException("대기열 등록 재시도 초과");
-    }
-
-    public boolean isQueuePositionReached(UUID reservationId) {
-        WaitingQueue queueEntry = waitingQueueRepository.findByReservationId(reservationId)
-                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
-
-        return queueEntry.getPosition() == 1;
-    }
-
-    @Transactional
-    public PaymentResult processPayment(UUID reservationId, String paymentMethod, int amount) {
-        Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
-
-
-       boolean wasQueued = reservation.getStatus() == ReservationStatus.QUEUED;
-        Integer leftPosition = null;
-
-        if (wasQueued) {
-            boolean reached = isQueuePositionReached(reservationId);
-            if (!reached) {
-                throw new BusinessException(ReservationErrorCode.QUEUE_POSITION_NOT_REACHED);
-            }
-
-            // 대기열 순번 도달 여부와 별개로, 실제 좌석이 비어있는지 원자적으로 재검증한다.
-            // (그렇지 않으면 앞선 HOLD가 아직 살아있어도 대기열 1번이 결제를 통과해 정원을 초과함)
-            int capacity = getSessionCapacity(reservation.getSessionId());
-            int capacityUpdatedRows = sessionCapacityLockRepository.tryIncrease(
-                    reservation.getSessionId(), reservation.getHeadcount(), capacity);
-            if (capacityUpdatedRows == 0) {
-                throw new BusinessException(ReservationErrorCode.SESSION_CAPACITY_EXCEEDED);
-            }
-
-            leftPosition = waitingQueueRepository.findByReservationId(reservationId)
-                    .map(WaitingQueue::getPosition)
-                    .orElse(null);
-        }
-
-        // 조건부 UPDATE로 동시 결제 요청 방어
-        int updatedRows = reservationRepository.confirmIfNotAlready(reservationId);
-        if (updatedRows == 0) {
-            throw new BusinessException(ReservationErrorCode.ALREADY_CONFIRMED);
-        }
-
-        paymentService.recordPayment(reservationId, paymentMethod, amount);
-
-        if (wasQueued && leftPosition != null) {
-            waitingQueueRepository.deleteByReservationId(reservationId);
-            waitingQueueRepository.decrementPositionAfter(reservation.getSessionId(), leftPosition);
-        }
-
-        List<QrTicket> tickets = qrTicketService.issueTickets(reservationId);
-
-        return PaymentResult.confirmed(reservationId, tickets.size());
-    }
-
-    public List<MyReservationResponse> getMyReservations(UUID memberId) {
-        return reservationRepository.findByMemberIdOrderByCreatedAtDesc(memberId).stream()
-                .map(MyReservationResponse::from)
-                .toList();
-    }
-
-    public SessionCapacityStatusResponse getCapacityStatus(UUID sessionId) {
-        int capacity = getSessionCapacity(sessionId);
-        int confirmedCount = sessionCapacityLockRepository.findById(sessionId)
-                .map(SessionCapacityLock::getCurrentActive)
-                .orElse(0);
-        int remaining = capacity - confirmedCount;
-        return new SessionCapacityStatusResponse(sessionId, capacity, confirmedCount, remaining);
-    }
-
-    public AttendeeCheckinStatsResponse getAttendeeCheckinStats(List<UUID> sessionIds) {
-        return qrTicketService.getAttendeeCheckinStats(sessionIds);
-    }
-
-    public SessionStatusSummaryResponse getStatusSummary(UUID sessionId) {
-        long holdCount = reservationRepository.countBySessionIdAndStatus(sessionId, ReservationStatus.HOLD);
-        long queuedCount = reservationRepository.countBySessionIdAndStatus(sessionId, ReservationStatus.QUEUED);
-        long confirmedCount = reservationRepository.countBySessionIdAndStatus(sessionId, ReservationStatus.CONFIRMED);
-        long cancelledCount = reservationRepository.countBySessionIdAndStatus(sessionId, ReservationStatus.CANCELLED);
-        long checkedCount = qrTicketService.countCheckedInBySessionId(sessionId);
-
-        return new SessionStatusSummaryResponse(
-                sessionId, holdCount, queuedCount, confirmedCount, cancelledCount, checkedCount);
-    }
-
-    public CancelResult cancelReservation(UUID reservationId, UUID requesterId) {
-        Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
-
-
-        if (!reservation.getMemberId().equals(requesterId)) {
-            throw new BusinessException(ReservationErrorCode.RESERVATION_ACCESS_DENIED);  // 새 에러코드 필요
-        }
-
-        if (reservation.getStatus() == ReservationStatus.CANCELLED) {
-            throw new BusinessException(ReservationErrorCode.ALREADY_CANCELLED);
-        }
-
-        Integer refundRate = null;
-        Integer refundAmount = null;
-
-        if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
-            LocalDateTime sessionStartAt = getSessionStartAt(reservation.getSessionId());
-            long daysUntilStart = ChronoUnit.DAYS.between(LocalDateTime.now(), sessionStartAt);
-
-            if (daysUntilStart >= 7) {
-                refundRate = 100;
-            } else if (daysUntilStart >= 3) {
-                refundRate = 50;
+        private void saveAttendees(UUID reservationId, int headcount,
+                                   List<AttendeeInfo> attendees, AttendeeInfo groupAttendee) {
+            if (headcount <= 9) {
+                for (AttendeeInfo info : attendees) {
+                    attendeeRepository.save(Attendee.builder()
+                            .reservationId(reservationId)
+                            .ageGroup(info.ageGroup())
+                            .job(info.job())
+                            .build());
+                }
             } else {
-                refundRate = 0;
+                for (int i = 0; i < headcount; i++) {
+                    attendeeRepository.save(Attendee.builder()
+                            .reservationId(reservationId)
+                            .ageGroup(groupAttendee.ageGroup())
+                            .job(groupAttendee.job())
+                            .build());
+                }
             }
+        }
 
-            int originalAmount = paymentRepository.findByReservationId(reservationId)
-                    .map(Payment::getAmount)
-                    .orElse(0);
-            refundAmount = originalAmount * refundRate / 100;
+        private int getSessionCapacity(UUID sessionId) {
+            try {
+                return conferenceServiceClient.getSessionCapacity(sessionId);
+            } catch (ConferenceServiceUnavailableException e) {
+                throw new BusinessException(ReservationErrorCode.CONFERENCE_SERVICE_UNAVAILABLE);
+            }
+        }
 
-            sessionCapacityLockRepository.decrease(reservation.getSessionId(), reservation.getHeadcount());
-
-        }else if (reservation.getStatus() == ReservationStatus.HOLD) {
-            sessionCapacityLockRepository.decrease(reservation.getSessionId(), reservation.getHeadcount());
-        } else if (reservation.getStatus() == ReservationStatus.QUEUED) {
-            int leftPosition = waitingQueueRepository.findByReservationId(reservationId)
+        public int getQueuePosition(UUID reservationId) {
+            return waitingQueueRepository.findByReservationId(reservationId)
                     .map(WaitingQueue::getPosition)
                     .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
-            waitingQueueRepository.deleteByReservationId(reservationId);
-            waitingQueueRepository.decrementPositionAfter(reservation.getSessionId(), leftPosition);
         }
 
-        reservation.markAsCancelled();
+        private WaitingQueue registerToQueueWithRetry(UUID sessionId, UUID reservationId, UUID memberId) {
+            int maxRetries = 5;
+            for (int i = 0; i < maxRetries; i++) {
+                try {
+                    int nextPosition = waitingQueueRepository.findMaxPositionBySessionId(sessionId) + 1;
+                    WaitingQueue waitingQueue = WaitingQueue.builder()
+                            .reservationId(reservationId)
+                            .sessionId(sessionId)
+                            .memberId(memberId)
+                            .position(nextPosition)
+                            .build();
+                    return waitingQueueRepository.saveAndFlush(waitingQueue);
+                } catch (DataIntegrityViolationException e) {
+                    // 순번 충돌 -> 다음 순번으로 재시도
+                }
+            }
+            throw new IllegalStateException("대기열 등록 재시도 초과");
+        }
 
-        return CancelResult.canceled(reservationId, refundRate, refundAmount);
-    }
+        public boolean isQueuePositionReached(UUID reservationId) {
+            WaitingQueue queueEntry = waitingQueueRepository.findByReservationId(reservationId)
+                    .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
 
-    private LocalDateTime getSessionStartAt(UUID sessionId) {
-        try {
-            return conferenceServiceClient.getSessionStartAt(sessionId);
-        } catch (RestClientException e) {
-            throw new BusinessException(ReservationErrorCode.CONFERENCE_SERVICE_UNAVAILABLE);
+            return queueEntry.getPosition() == 1;
+        }
+
+        @Transactional
+        public PaymentResult processPayment(UUID reservationId, UUID requesterId, String paymentMethod, int amount) {
+            Reservation reservation = reservationRepository.findById(reservationId)
+                    .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+
+            if (!reservation.getMemberId().equals(requesterId)) {
+                throw new BusinessException(ReservationErrorCode.RESERVATION_ACCESS_DENIED);
+            }
+
+            boolean wasQueued = reservation.getStatus() == ReservationStatus.QUEUED;
+            Integer leftPosition = null;
+
+            if (wasQueued) {
+                boolean reached = isQueuePositionReached(reservationId);
+                if (!reached) {
+                    throw new BusinessException(ReservationErrorCode.QUEUE_POSITION_NOT_REACHED);
+                }
+
+                int capacity = getSessionCapacity(reservation.getSessionId());
+                int capacityUpdatedRows = sessionCapacityLockRepository.tryIncrease(
+                        reservation.getSessionId(), reservation.getHeadcount(), capacity);
+                if (capacityUpdatedRows == 0) {
+                    throw new BusinessException(ReservationErrorCode.SESSION_CAPACITY_EXCEEDED);
+                }
+
+                leftPosition = waitingQueueRepository.findByReservationId(reservationId)
+                        .map(WaitingQueue::getPosition)
+                        .orElse(null);
+            }
+
+            // 조건부 UPDATE로 동시 결제 요청 방어
+            int updatedRows = reservationRepository.confirmIfNotAlready(reservationId);
+            if (updatedRows == 0) {
+                throw new BusinessException(ReservationErrorCode.ALREADY_CONFIRMED);
+            }
+
+            paymentService.recordPayment(reservationId, paymentMethod, amount);
+
+            if (wasQueued && leftPosition != null) {
+                waitingQueueRepository.deleteByReservationId(reservationId);
+                waitingQueueRepository.decrementPositionAfter(reservation.getSessionId(), leftPosition);
+            }
+
+            List<QrTicket> tickets = qrTicketService.issueTickets(reservationId);
+
+            return PaymentResult.confirmed(reservationId, tickets.size());
+        }
+
+        public List<MyReservationResponse> getMyReservations(UUID memberId) {
+            return reservationRepository.findByMemberIdOrderByCreatedAtDesc(memberId).stream()
+                    .map(MyReservationResponse::from)
+                    .toList();
+        }
+
+        public SessionCapacityStatusResponse getCapacityStatus(UUID sessionId) {
+            int capacity = getSessionCapacity(sessionId);
+            int confirmedCount = sessionCapacityLockRepository.findById(sessionId)
+                    .map(SessionCapacityLock::getCurrentActive)
+                    .orElse(0);
+            int remaining = capacity - confirmedCount;
+            return new SessionCapacityStatusResponse(sessionId, capacity, confirmedCount, remaining);
+        }
+
+        public AttendeeCheckinStatsResponse getAttendeeCheckinStats(List<UUID> sessionIds) {
+            return qrTicketService.getAttendeeCheckinStats(sessionIds);
+        }
+
+        public SessionStatusSummaryResponse getStatusSummary(UUID sessionId) {
+            // 예약 건수가 아니라 인원 수 기준으로 세야 checkedCount(QR 발급 수=1인당 1장)와 단위가 맞는다.
+            long holdCount = reservationRepository.sumHeadcountBySessionIdAndStatus(sessionId, ReservationStatus.HOLD);
+            long queuedCount = reservationRepository.sumHeadcountBySessionIdAndStatus(sessionId, ReservationStatus.QUEUED);
+            long confirmedCount = reservationRepository.sumHeadcountBySessionIdAndStatus(sessionId, ReservationStatus.CONFIRMED);
+            long canceledCount = reservationRepository.sumHeadcountBySessionIdAndStatus(sessionId, ReservationStatus.CANCELLED);
+            long checkedCount = qrTicketService.countCheckedInBySessionId(sessionId);
+
+            return new SessionStatusSummaryResponse(
+                    sessionId, holdCount, queuedCount, confirmedCount, canceledCount, checkedCount);
+        }
+
+        @Transactional
+        public CancelResult cancelReservation(UUID reservationId, UUID requesterId) {
+
+            Reservation reservation = reservationRepository.findById(reservationId)
+                    .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+
+
+            if (!reservation.getMemberId().equals(requesterId)) {
+                throw new BusinessException(ReservationErrorCode.RESERVATION_ACCESS_DENIED);
+            }
+
+            if (reservation.getStatus() == ReservationStatus.CANCELLED) {
+                throw new BusinessException(ReservationErrorCode.ALREADY_CANCELLED);
+            }
+
+            Integer refundRate = null;
+            Integer refundAmount = null;
+
+            if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
+                LocalDateTime sessionStartAt = getSessionStartAt(reservation.getSessionId());
+                long daysUntilStart = ChronoUnit.DAYS.between(LocalDateTime.now(), sessionStartAt);
+
+                if (daysUntilStart >= 7) {
+                    refundRate = 100;
+                } else if (daysUntilStart >= 3) {
+                    refundRate = 50;
+                } else {
+                    refundRate = 0;
+                }
+
+                int originalAmount = paymentRepository.findByReservationId(reservationId)
+                        .map(Payment::getAmount)
+                        .orElse(0);
+                refundAmount = originalAmount * refundRate / 100;
+
+                sessionCapacityLockRepository.decrease(reservation.getSessionId(), reservation.getHeadcount());
+
+            }else if (reservation.getStatus() == ReservationStatus.HOLD) {
+                sessionCapacityLockRepository.decrease(reservation.getSessionId(), reservation.getHeadcount());
+            } else if (reservation.getStatus() == ReservationStatus.QUEUED) {
+                int leftPosition = waitingQueueRepository.findByReservationId(reservationId)
+                        .map(WaitingQueue::getPosition)
+                        .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+                waitingQueueRepository.deleteByReservationId(reservationId);
+                waitingQueueRepository.decrementPositionAfter(reservation.getSessionId(), leftPosition);
+            }
+
+            reservation.markAsCancelled();
+
+            return CancelResult.cancelled(reservationId, refundRate, refundAmount);
+        }
+        private LocalDateTime getSessionStartAt(UUID sessionId) {
+            try {
+                return conferenceServiceClient.getSessionStartAt(sessionId);
+            } catch (RestClientException e) {
+                throw new BusinessException(ReservationErrorCode.CONFERENCE_SERVICE_UNAVAILABLE);
+            }
         }
     }
-}

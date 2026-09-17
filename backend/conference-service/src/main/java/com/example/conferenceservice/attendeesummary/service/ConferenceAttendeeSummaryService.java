@@ -1,0 +1,149 @@
+package com.example.conferenceservice.attendeesummary.service;
+
+import com.example.conferenceservice.attendeesummary.client.*;
+import com.example.conferenceservice.attendeesummary.client.AttendeeCheckinStatsClient.AttendeeCheckinStatsResponse;
+import com.example.conferenceservice.attendeesummary.dto.ConferenceAttendeeSummaryResponse;
+import com.example.conferenceservice.attendeesummary.entity.ConferenceAttendeeSummary;
+import com.example.conferenceservice.attendeesummary.exception.AttendeeSummaryErrorCode;
+import com.example.conferenceservice.attendeesummary.repository.ConferenceAttendeeSummaryRepository;
+import com.example.conferenceservice.common.exception.BusinessException;
+import com.example.conferenceservice.common.security.OwnerScopeGuard;
+import com.example.conferenceservice.conference.entity.Conference;
+import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
+import com.example.conferenceservice.conference.repository.ConferenceRepository;
+import com.example.conferenceservice.session.entity.Session;
+import com.example.conferenceservice.session.repository.SessionRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * 16-2의 ConferenceOperationStatusService와 같은 이유로 @Transactional을 의도적으로 붙이지 않는다:
+ * Reservation-Service 호출이 실패해 지연되면 DB 커넥션 풀을 오래 점유하게 되기 때문.
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ConferenceAttendeeSummaryService {
+
+    private static final String ZERO_CHECKIN_MESSAGE = "아직 체크인한 참석자가 없습니다.";
+    private static final String LLM_FAILURE_MESSAGE = "요약 정보를 일시적으로 생성하지 못했습니다.";
+
+    private final ConferenceRepository conferenceRepository;
+    private final SessionRepository sessionRepository;
+    private final ConferenceAttendeeSummaryRepository summaryRepository;
+    private final AttendeeCheckinStatsClient attendeeCheckinStatsClient;
+    private final ObjectMapper objectMapper;
+    private final ReviewListClient reviewListClient;
+    private final AttendeeSummaryLlmClient attendeeSummaryLlmClient;
+
+    public ConferenceAttendeeSummaryResponse getAttendeeSummary(UUID conferenceId, UUID requesterId) {
+        verifyOwnership(conferenceId, requesterId);
+        List<UUID> sessionIds = getSessionIds(conferenceId);
+
+        AttendeeCheckinStatsResponse stats = fetchStats(sessionIds);
+        Optional<ConferenceAttendeeSummary> cached = summaryRepository.findByConferenceId(conferenceId);
+
+        if (cached.isPresent() && cached.get().getCheckedInCount() == stats.checkedInCount()) {
+            return toResponse(cached.get());
+        }
+        return toResponse(recalculate(conferenceId, sessionIds, stats, cached));
+    }
+
+    // 참석자 통계와 별개로, 주최자가 후기 원문을 직접 훑어보고 싶을 때를 위한 목록 조회(AI 요약을 못 믿을 수도 있으니).
+    public List<String> getReviews(UUID conferenceId, UUID requesterId) {
+        verifyOwnership(conferenceId, requesterId);
+        List<UUID> sessionIds = getSessionIds(conferenceId);
+
+        try {
+            return reviewListClient.getReviews(sessionIds);
+        } catch (AttendeeStatsUnavailableException e) {
+            log.warn("후기 목록 조회 실패: conferenceId={}", conferenceId, e);
+            throw new BusinessException(AttendeeSummaryErrorCode.RESERVATION_SERVICE_UNAVAILABLE);
+        }
+    }
+
+    private Conference verifyOwnership(UUID conferenceId, UUID requesterId) {
+        Conference conference = conferenceRepository.findById(conferenceId)
+                .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
+        OwnerScopeGuard.verify(requesterId, conference.getOrganizerId(), ConferenceErrorCode.CONFERENCE_ACCESS_DENIED);
+        return conference;
+    }
+
+    private List<UUID> getSessionIds(UUID conferenceId) {
+        return sessionRepository.findByConferenceId(conferenceId).stream()
+                .map(Session::getId)
+                .toList();
+    }
+
+    private AttendeeCheckinStatsResponse fetchStats(List<UUID> sessionIds) {
+        try {
+            return attendeeCheckinStatsClient.getAttendeeCheckinStats(sessionIds);
+        } catch (AttendeeStatsUnavailableException e) {
+            log.warn("Reservation-Service 응답 실패로 참석자 통계 조회를 중단합니다: sessionIds={}", sessionIds, e);
+            throw new BusinessException(AttendeeSummaryErrorCode.RESERVATION_SERVICE_UNAVAILABLE);
+        }
+    }
+
+    private ConferenceAttendeeSummary recalculate(UUID conferenceId, List<UUID> sessionIds,
+                                                  AttendeeCheckinStatsResponse stats,
+                                                  Optional<ConferenceAttendeeSummary> cached) {
+        String ageJson = objectMapper.writeValueAsString(stats.ageGroupDistribution());
+        String jobJson = objectMapper.writeValueAsString(stats.jobDistribution());
+        String summaryText = stats.checkedInCount() == 0
+                ? ZERO_CHECKIN_MESSAGE
+                : generateSummary(sessionIds, stats);
+
+        ConferenceAttendeeSummary entity = cached
+                .map(existing -> {
+                    existing.update(stats.checkedInCount(), ageJson, jobJson, summaryText);
+                    return existing;
+                })
+                .orElseGet(() -> ConferenceAttendeeSummary.builder()
+                        .conferenceId(conferenceId)
+                        .checkedInCount(stats.checkedInCount())
+                        .ageGroupDistributionJson(ageJson)
+                        .jobDistributionJson(jobJson)
+                        .summaryText(summaryText)
+                        .generatedAt(Instant.now())
+                        .build());
+
+        return summaryRepository.save(entity);
+    }
+
+    private ConferenceAttendeeSummaryResponse toResponse(ConferenceAttendeeSummary entity) {
+        return new ConferenceAttendeeSummaryResponse(
+                entity.getConferenceId(),
+                entity.getCheckedInCount(),
+                objectMapper.readValue(entity.getAgeGroupDistributionJson(), new TypeReference<Map<String, Long>>() {}),
+                objectMapper.readValue(entity.getJobDistributionJson(), new TypeReference<Map<String, Long>>() {}),
+                entity.getSummaryText(),
+                entity.getGeneratedAt());
+    }
+
+    private String generateSummary(List<UUID> sessionIds, AttendeeCheckinStatsResponse stats) {
+        List<String> reviews;
+        try {
+            reviews = reviewListClient.getReviews(sessionIds);
+        } catch (AttendeeStatsUnavailableException e) {
+            log.warn("후기 조회 실패, 통계만으로 요약을 생성합니다: sessionIds={}", sessionIds, e);
+            reviews = List.of();
+        }
+
+        try {
+            return attendeeSummaryLlmClient.generateSummary(
+                    stats.ageGroupDistribution(), stats.jobDistribution(), reviews);
+        } catch (AttendeeSummaryLlmException e) {
+            log.warn("LLM 요약 생성 실패, 고정 문구로 대체합니다: sessionIds={}", sessionIds, e);
+            return LLM_FAILURE_MESSAGE;
+        }
+    }
+}

@@ -9,6 +9,7 @@ import SignupOrganizer from './pages/SignupOrganizer'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import ConferenceDetail from './pages/ConferenceDetail'
+import OrganizerProfile from './pages/OrganizerProfile'
 import SessionApply from './pages/SessionApply'
 import Payment from './pages/Payment'
 import ReservationComplete from './pages/ReservationComplete'
@@ -21,9 +22,15 @@ import Applications from './pages/organizer/Applications'
 import ConferenceSettings from './pages/organizer/ConferenceSettings'
 import SessionManage from './pages/organizer/SessionManage'
 import SessionCreate from './pages/organizer/SessionCreate'
-import ComingSoon from './pages/organizer/ComingSoon'
+import AttendeeSummary from './pages/organizer/AttendeeSummary'
+import ReviewList from './pages/organizer/ReviewList'
+import OperationStatus from './pages/organizer/OperationStatus'
+import CheckIn from './pages/organizer/CheckIn'
+import Settlements from './pages/organizer/Settlements'
 
 import AdminApprovals from './pages/admin/Approvals'
+import AdminPgSettings from './pages/admin/PgSettings'
+import AdminSettlementDashboard from './pages/admin/SettlementDashboard'
 
 function Layout() {
   return (
@@ -51,6 +58,7 @@ export default function App() {
             <Route path="/" element={<HomeOrDashboard />} />
             <Route path="/conferences" element={<Home />} />
             <Route path="/conferences/:id" element={<ConferenceDetail />} />
+            <Route path="/organizers/:organizerId" element={<OrganizerProfile />} />
 
             <Route path="/signup" element={<SignupChoice />} />
             <Route path="/signup/participant" element={<SignupParticipant />} />
@@ -155,10 +163,26 @@ export default function App() {
               }
             />
             <Route
-              path="/organizer/operations"
+              path="/organizer/conferences/:id/attendee-summary"
               element={
                 <ProtectedRoute role="ORGANIZER">
-                  <ComingSoon title="운영 현황" />
+                  <AttendeeSummary />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/conferences/:id/reviews"
+              element={
+                <ProtectedRoute role="ORGANIZER">
+                  <ReviewList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/conferences/:id/operations"
+              element={
+                <ProtectedRoute role="ORGANIZER">
+                  <OperationStatus />
                 </ProtectedRoute>
               }
             />
@@ -166,7 +190,7 @@ export default function App() {
               path="/organizer/checkin"
               element={
                 <ProtectedRoute role="ORGANIZER">
-                  <ComingSoon title="QR 체크인" />
+                  <CheckIn />
                 </ProtectedRoute>
               }
             />
@@ -174,7 +198,7 @@ export default function App() {
               path="/organizer/settlements"
               element={
                 <ProtectedRoute role="ORGANIZER">
-                  <ComingSoon title="정산 내역" />
+                  <Settlements />
                 </ProtectedRoute>
               }
             />
@@ -184,6 +208,22 @@ export default function App() {
               element={
                 <ProtectedRoute role="ADMIN">
                   <AdminApprovals />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/settlements"
+              element={
+                <ProtectedRoute role="ADMIN">
+                  <AdminSettlementDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute role="ADMIN">
+                  <AdminPgSettings />
                 </ProtectedRoute>
               }
             />

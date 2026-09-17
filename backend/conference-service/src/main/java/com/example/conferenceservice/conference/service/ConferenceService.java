@@ -15,6 +15,7 @@ import com.example.conferenceservice.conference.repository.ConferenceRepository;
 import com.example.conferenceservice.conference.repository.ConferenceTagRepository;
 import com.example.conferenceservice.common.exception.BusinessException;
 import com.example.conferenceservice.common.security.OwnerScopeGuard;
+import com.example.conferenceservice.organizerprofile.service.OrganizerProfileService;
 import com.example.conferenceservice.session.entity.Session;
 import com.example.conferenceservice.session.entity.SessionStatus;
 import com.example.conferenceservice.session.repository.SessionRepository;
@@ -37,6 +38,7 @@ public class ConferenceService {
     private final ConferenceRepository conferenceRepository;
     private final ConferenceTagRepository conferenceTagRepository;
     private final SessionRepository sessionRepository;
+    private final OrganizerProfileService organizerProfileService;
 
     @Transactional
     public ConferenceResponse applyConference(CustomUserDetails currentUser, ConferenceRequest request) {
@@ -166,7 +168,10 @@ public class ConferenceService {
         List<String> tags = conferenceTagRepository.findByConferenceId(id).stream()
                 .map(ConferenceTag::getTag)
                 .toList();
-        return ConferenceDetailResponse.from(conference, sessions, tags);
+        OrganizerProfileService.OrganizerSummary organizerSummary =
+                organizerProfileService.getOrganizerSummary(conference.getOrganizerId(), conference.getId());
+        return ConferenceDetailResponse.from(conference, sessions, tags,
+                organizerSummary.pastConferenceCount(), organizerSummary.representativeSummary());
     }
 
     // 승인 전(PENDING)·반려(REJECTED) 상태도 볼 수 있어야 해서 getConference와 달리 상태 제한이 없고, 세션도 승인 여부와 무관하게 전부 보여준다
@@ -177,7 +182,10 @@ public class ConferenceService {
         List<String> tags = conferenceTagRepository.findByConferenceId(id).stream()
                 .map(ConferenceTag::getTag)
                 .toList();
-        return ConferenceDetailResponse.from(conference, sessions, tags);
+        OrganizerProfileService.OrganizerSummary organizerSummary =
+                organizerProfileService.getOrganizerSummary(conference.getOrganizerId(), conference.getId());
+        return ConferenceDetailResponse.from(conference, sessions, tags,
+                organizerSummary.pastConferenceCount(), organizerSummary.representativeSummary());
     }
 
     private List<ConferenceTag> toTags(List<String> tagNames, Conference conference) {

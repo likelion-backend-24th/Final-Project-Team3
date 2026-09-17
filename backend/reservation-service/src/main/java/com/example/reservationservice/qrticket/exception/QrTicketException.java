@@ -7,3 +7,4 @@ public class QrTicketException extends BusinessException {
         super(errorCode);
     }
 }
+

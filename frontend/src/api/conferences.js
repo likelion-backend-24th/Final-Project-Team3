@@ -17,6 +17,26 @@ export function getConference(id) {
   return apiFetch(`/conferences/${id}`)
 }
 
+// 체크인 완료 참석자의 연령대·직무 분포 + AI 요약(Story 15). 소유 주최자만 조회 가능(403).
+export function getAttendeeSummary(conferenceId) {
+  return apiFetch(`/conferences/${conferenceId}/attendee-summary`)
+}
+
+// 체크인 완료 예약의 후기 원문 목록(작성자 식별 정보 없음). AI 요약과 별개로 주최자가 직접 훑어볼 수 있게.
+export function getReviews(conferenceId) {
+  return apiFetch(`/conferences/${conferenceId}/reviews`)
+}
+
+// 컨퍼런스 단건 정산(매출/환불/순매출/확정·취소 건수). 소유 주최자만 조회 가능(OwnerScopeGuard).
+export function getSettlement(conferenceId) {
+  return apiFetch(`/conferences/${conferenceId}/settlement`)
+}
+
+// 세션별 신청·입장 현황(hold/대기/확정/취소/체크인 건수). 소유 주최자만 조회 가능(OwnerScopeGuard).
+export function getOperationStatus(conferenceId) {
+  return apiFetch(`/conferences/${conferenceId}/operation-status`)
+}
+
 export function createConference({
   title,
   capacity,

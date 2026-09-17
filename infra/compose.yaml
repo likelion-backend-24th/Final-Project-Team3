@@ -50,6 +50,8 @@ services:
       CONFERENCE_DB_USER: ${CONFERENCE_DB_USER}
       CONFERENCE_DB_PASSWORD: ${CONFERENCE_DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      SERVICES_RESERVATION_SERVICE_URL: http://reservation-service:8083
     depends_on:
       mysql:
         condition: service_healthy

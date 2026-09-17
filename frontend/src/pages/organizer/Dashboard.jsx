@@ -7,6 +7,11 @@ import { formatDateRange } from '../../utils/date'
 import StatusBadge from '../../components/StatusBadge'
 import Button from '../../components/Button'
 
+// endAt이 지났으면 운영 중이 아니라고 보고, 세션/설정 수정 대신 통계·리뷰 조회 쪽 액션을 보여준다.
+function isEnded(conference) {
+  return conference.endAt && new Date(conference.endAt).getTime() < Date.now()
+}
+
 export default function Dashboard() {
   const location = useLocation()
   const [conferences, setConferences] = useState(null)
@@ -53,6 +58,8 @@ export default function Dashboard() {
 
   const pending = conferences?.filter((c) => c.status === 'PENDING').length ?? 0
   const approved = conferences?.filter((c) => c.status === 'APPROVED').length ?? 0
+  const ongoing = conferences?.filter((c) => !isEnded(c)) ?? []
+  const ended = conferences?.filter((c) => isEnded(c)) ?? []
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
@@ -89,55 +96,100 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <h2 className="text-sm font-medium text-text-muted mb-3">내 컨퍼런스</h2>
       {error && <p className="text-danger">{error}</p>}
-      <div className="space-y-3">
-        {conferences?.map((c) => (
-          <div key={c.id} className="bg-surface border border-border rounded-xl p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-text font-medium">{c.title}</p>
-                  <StatusBadge status={c.status} />
-                </div>
-                <p className="text-sm text-text-muted">
-                  {formatDateRange(c.startAt, c.endAt)} · 정원 {c.capacity}명
-                </p>
-              </div>
-              {c.status === 'APPROVED' && (
-                <div className="flex gap-2">
-                  <Link to="/organizer/operations">
-                    <Button variant="secondary">운영 현황</Button>
-                  </Link>
-                  <Link to={`/organizer/conferences/${c.id}/sessions`}>
-                    <Button variant="secondary">세션 설정</Button>
-                  </Link>
-                  <Link to={`/organizer/conferences/${c.id}/settings`}>
-                    <Button variant="secondary">설정</Button>
-                  </Link>
-                </div>
-              )}
-            </div>
 
-            {c.status === 'PENDING' && (
-              <p className="text-sm text-warning mt-3">
-                전체관리자 검토 중입니다. 승인 후 세션 설정 및 운영이 가능합니다.
-              </p>
-            )}
+      {conferences?.length === 0 && (
+        <p className="text-text-muted text-sm py-10 text-center">등록한 컨퍼런스가 아직 없어요.</p>
+      )}
 
-            {c.status === 'APPROVED' && sessionsByConference[c.id]?.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-                {sessionsByConference[c.id].map((s) => (
-                  <SessionProgress key={s.id} session={s} capacity={capacityBySession[s.id]} />
-                ))}
-              </div>
+      {ongoing.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-sm font-medium text-text-muted mb-3">진행중·예정 컨퍼런스</h2>
+          <div className="space-y-3">
+            {ongoing.map((c) => (
+              <ConferenceCard
+                key={c.id}
+                conference={c}
+                sessions={sessionsByConference[c.id]}
+                capacityBySession={capacityBySession}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {ended.length > 0 && (
+        <div>
+          <h2 className="text-sm font-medium text-text-muted mb-3">지난 컨퍼런스</h2>
+          <div className="space-y-3">
+            {ended.map((c) => (
+              <ConferenceCard
+                key={c.id}
+                conference={c}
+                sessions={sessionsByConference[c.id]}
+                capacityBySession={capacityBySession}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ConferenceCard({ conference: c, sessions, capacityBySession }) {
+  return (
+    <div className="bg-surface border border-border rounded-xl p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-text font-medium">{c.title}</p>
+            {c.status === 'APPROVED' && isEnded(c) ? (
+              <span className="px-2.5 py-1 rounded-md text-xs font-medium text-text-muted bg-surface2">종료됨</span>
+            ) : (
+              <StatusBadge status={c.status} />
             )}
           </div>
-        ))}
-        {conferences?.length === 0 && (
-          <p className="text-text-muted text-sm py-10 text-center">등록한 컨퍼런스가 아직 없어요.</p>
+          <p className="text-sm text-text-muted">
+            {formatDateRange(c.startAt, c.endAt)} · 정원 {c.capacity}명
+          </p>
+        </div>
+        {c.status === 'APPROVED' && (
+          <div className="flex gap-2">
+            <Link to={`/organizer/conferences/${c.id}/operations`}>
+              <Button variant="secondary">운영 현황</Button>
+            </Link>
+            {isEnded(c) ? (
+              <Link to={`/organizer/conferences/${c.id}/attendee-summary`}>
+                <Button variant="secondary">참석자 통계</Button>
+              </Link>
+            ) : (
+              <>
+                <Link to={`/organizer/conferences/${c.id}/sessions`}>
+                  <Button variant="secondary">세션 설정</Button>
+                </Link>
+                <Link to={`/organizer/conferences/${c.id}/settings`}>
+                  <Button variant="secondary">설정</Button>
+                </Link>
+              </>
+            )}
+          </div>
         )}
       </div>
+
+      {c.status === 'PENDING' && (
+        <p className="text-sm text-warning mt-3">
+          전체관리자 검토 중입니다. 승인 후 세션 설정 및 운영이 가능합니다.
+        </p>
+      )}
+
+      {c.status === 'APPROVED' && sessions?.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+          {sessions.map((s) => (
+            <SessionProgress key={s.id} session={s} capacity={capacityBySession[s.id]} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

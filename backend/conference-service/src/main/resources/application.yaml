@@ -22,3 +22,12 @@ spring:
 services:
   reservation-service:
     url: http://localhost:8083
+
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  api-base-url: https://generativelanguage.googleapis.com
+
+llm:
+  summary:
+    attendee-stats:
+      model: gemini-3.6-flash

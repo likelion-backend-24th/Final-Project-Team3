@@ -8,7 +8,7 @@ public record CancelResult(
         Integer refundRate,
         Integer refundAmount
 ) {
-    public static CancelResult canceled(UUID reservationId, Integer refundRate, Integer refundAmount) {
+    public static CancelResult cancelled(UUID reservationId, Integer refundRate, Integer refundAmount) {
         return new CancelResult(reservationId, "CANCELLED", refundRate, refundAmount);
     }
 }

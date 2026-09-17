@@ -25,6 +25,12 @@ export function getQrTickets(reservationId) {
   return apiFetch(`/qr-tickets/${reservationId}`)
 }
 
+// QR 코드 문자열(발급 시 대시 없는 UUID)로 입장 처리. 응답은 {code, used, usedAt}뿐 -
+// 참가자 이름/세션 정보는 이 엔드포인트가 안 줘서 프론트에서 못 붙인다.
+export function scanQrTicket(code) {
+  return apiFetch(`/qr-tickets/${code}/scan`, { method: 'POST' })
+}
+
 // 내 예약 목록. memberId를 서버가 JWT로 채우는 게 아니라 쿼리로 그대로 받는다(위와 같은 갭).
 // 응답은 reservationId/sessionId/status/headcount/createdAt뿐이라 세션 제목 등은 따로 조합해야 한다.
 export function getMyReservations(memberId) {

@@ -9,6 +9,7 @@ import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
 import com.example.conferenceservice.conference.repository.ConferenceTagRepository;
+import com.example.conferenceservice.organizerprofile.service.OrganizerProfileService;
 import com.example.conferenceservice.session.repository.SessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,11 +36,14 @@ class ConferenceSettingServiceTest {
     @Mock
     private SessionRepository sessionRepository;
 
+    @Mock
+    private OrganizerProfileService organizerProfileService;
+
     private ConferenceService conferenceService;
 
     @BeforeEach
     void setUp() {
-        conferenceService = new ConferenceService(conferenceRepository, conferenceTagRepository, sessionRepository);
+        conferenceService = new ConferenceService(conferenceRepository, conferenceTagRepository, sessionRepository, organizerProfileService);
     }
 
     @Test
