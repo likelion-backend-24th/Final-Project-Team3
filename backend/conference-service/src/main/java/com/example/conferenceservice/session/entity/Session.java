@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -83,11 +84,13 @@ public class Session {
                                 Integer maxHeadcountPerApplication) {
         // 값이 실제로 하나라도 바뀔 때만 재승인(PENDING) 대상으로 삼는다 - 동일 값 재제출로
         // APPROVED 세션이 이유 없이 승인 대기 상태로 되돌아가는 것을 막는다.
+        // 초 단위로 truncate 후 비교 - DB 컬럼(MySQL DATETIME)이 나노초를 버리므로, 저장 전/후 값을
+        // 그대로 비교하면 프론트가 안 보내는 미세 정밀도 차이 때문에 "안 바뀐 값"이 바뀐 것으로 오판될 수 있다.
         boolean changed = this.capacity != capacity
-                || !Objects.equals(this.startAt, startAt)
-                || !Objects.equals(this.endAt, endAt)
-                || !Objects.equals(this.sessionStartAt, sessionStartAt)
-                || !Objects.equals(this.sessionEndAt, sessionEndAt)
+                || !Objects.equals(truncateToSeconds(this.startAt), truncateToSeconds(startAt))
+                || !Objects.equals(truncateToSeconds(this.endAt), truncateToSeconds(endAt))
+                || !Objects.equals(truncateToSeconds(this.sessionStartAt), truncateToSeconds(sessionStartAt))
+                || !Objects.equals(truncateToSeconds(this.sessionEndAt), truncateToSeconds(sessionEndAt))
                 || !Objects.equals(this.location, location)
                 || !Objects.equals(this.speaker, speaker)
                 || !Objects.equals(this.price, price)
@@ -108,6 +111,10 @@ public class Session {
             this.status = SessionStatus.PENDING;
             this.rejectReason = null;
         }
+    }
+
+    private static LocalDateTime truncateToSeconds(LocalDateTime value) {
+        return value == null ? null : value.truncatedTo(ChronoUnit.SECONDS);
     }
 
     public boolean isPending() {

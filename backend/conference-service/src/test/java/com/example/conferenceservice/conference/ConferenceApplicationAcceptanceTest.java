@@ -20,7 +20,10 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import javax.crypto.SecretKey;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -60,9 +63,27 @@ class ConferenceApplicationAcceptanceTest {
     private String uploadDir;
 
     @AfterEach
-    void tearDown() {
+    void tearDown() throws IOException {
         conferenceTagRepository.deleteAll();
         conferenceRepository.deleteAll();
+        deleteUploadedTestFiles();
+    }
+
+    // 증명 파일 테스트가 build/test-uploads 아래에 남긴 파일이 테스트 실행마다 누적되지 않도록 정리한다.
+    private void deleteUploadedTestFiles() throws IOException {
+        Path dir = Path.of(uploadDir);
+        if (!Files.isDirectory(dir)) {
+            return;
+        }
+        try (var files = Files.list(dir)) {
+            files.forEach(file -> {
+                try {
+                    Files.deleteIfExists(file);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        }
     }
 
     @Test

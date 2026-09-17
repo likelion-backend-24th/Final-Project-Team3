@@ -85,6 +85,7 @@ public class SessionService {
             throw new BusinessException(SessionErrorCode.CONFERENCE_NOT_APPROVED);
         }
         validateWithinConferencePeriod(request.sessionStartAt(), request.sessionEndAt(), conference);
+        validateCapacityWithinConference(conference, request.capacity());
 
         Session session = Session.builder()
                 .conference(conference)
@@ -115,6 +116,7 @@ public class SessionService {
             throw new BusinessException(SessionErrorCode.CONFERENCE_NOT_APPROVED);
         }
         validateWithinConferencePeriod(request.sessionStartAt(), request.sessionEndAt(), session.getConference());
+        validateCapacityWithinConference(session.getConference(), request.capacity());
         validateAgainstActiveReservations(session, request);
         session.updateSchedule(request.capacity(), request.startAt(), request.endAt(),
                 request.sessionStartAt(), request.sessionEndAt(),
@@ -152,7 +154,7 @@ public class SessionService {
         try {
             return reservationServiceClient.getStatusSummary(sessionId).confirmedCount();
         } catch (ReservationServiceUnavailableException e) {
-            throw new BusinessException(SessionErrorCode.RESERVATION_SERVICE_UNAVAILABLE);
+            throw new BusinessException(SessionErrorCode.SESSION_RESERVATION_SERVICE_UNAVAILABLE);
         }
     }
 
@@ -179,6 +181,12 @@ public class SessionService {
     private void validateWithinConferencePeriod(LocalDateTime sessionStartAt, LocalDateTime sessionEndAt, Conference conference) {
         if (sessionStartAt.isBefore(conference.getStartAt()) || sessionEndAt.isAfter(conference.getEndAt())) {
             throw new BusinessException(SessionErrorCode.SESSION_SCHEDULE_OUTSIDE_CONFERENCE_PERIOD);
+        }
+    }
+
+    private void validateCapacityWithinConference(Conference conference, int requestedCapacity) {
+        if (requestedCapacity > conference.getCapacity()) {
+            throw new BusinessException(SessionErrorCode.SESSION_CAPACITY_EXCEEDS_CONFERENCE_CAPACITY);
         }
     }
 
