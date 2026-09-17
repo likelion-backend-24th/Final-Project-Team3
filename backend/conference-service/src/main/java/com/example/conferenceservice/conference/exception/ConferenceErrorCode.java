@@ -14,7 +14,9 @@ public enum ConferenceErrorCode implements ErrorCode {
     INVALID_CONFERENCE_PERIOD(HttpStatus.BAD_REQUEST, "INVALID_CONFERENCE_PERIOD", "종료 일시는 시작 일시보다 이후여야 합니다."),
     CONFERENCE_ALREADY_DECIDED(HttpStatus.CONFLICT, "CONFERENCE_ALREADY_DECIDED", "이미 처리된 컨퍼런스입니다."),
     CONFERENCE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CONFERENCE_ACCESS_DENIED", "본인이 등록한 컨퍼런스만 관리할 수 있습니다."),
-    CONFERENCE_LOCATION_ADDRESS_LOCKED(HttpStatus.CONFLICT, "CONFERENCE_LOCATION_ADDRESS_LOCKED", "승인된 컨퍼런스는 주소를 변경할 수 없습니다. 교통편·주차·편의시설 정보만 수정할 수 있습니다.");
+    CONFERENCE_LOCATION_ADDRESS_LOCKED(HttpStatus.CONFLICT, "CONFERENCE_LOCATION_ADDRESS_LOCKED", "승인된 컨퍼런스는 주소를 변경할 수 없습니다. 교통편·주차·편의시설 정보만 수정할 수 있습니다."),
+    PROOF_FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "PROOF_FILE_UPLOAD_FAILED", "증명 파일 업로드에 실패했습니다."),
+    PROOF_FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "PROOF_FILE_NOT_FOUND", "첨부된 증명 파일이 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

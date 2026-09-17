@@ -16,6 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import javax.crypto.SecretKey;
@@ -28,7 +29,8 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,10 +63,8 @@ class ConferenceApplicationAcceptanceTest {
 
     @Test
     void applyConference_savesConferenceAsPending() throws Exception {
-        mockMvc.perform(post("/api/conferences")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
+        mockMvc.perform(multipart("/api/conferences")
+                        .file(requestPart("""
                                 {
                                   "title": "신청된 컨퍼런스",
                                   "capacity": 100,
@@ -74,8 +74,10 @@ class ConferenceApplicationAcceptanceTest {
                                   "tags": ["개발"]
                                 }
                                 """))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken()))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.status").value("PENDING"));
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andExpect(jsonPath("$.data.proofFileAttached").value(false));
 
         List<Conference> saved = conferenceRepository.findAll();
         assertThat(saved).hasSize(1);
@@ -84,10 +86,8 @@ class ConferenceApplicationAcceptanceTest {
 
     @Test
     void applyConference_organizerNameIsTakenFromJwtOrganizationNameClaim_notRequestBody() throws Exception {
-        mockMvc.perform(post("/api/conferences")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
+        mockMvc.perform(multipart("/api/conferences")
+                        .file(requestPart("""
                                 {
                                   "title": "주최기관명 검증용 컨퍼런스",
                                   "capacity": 100,
@@ -97,6 +97,7 @@ class ConferenceApplicationAcceptanceTest {
                                   "tags": ["개발"]
                                 }
                                 """))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken()))
                 .andExpect(status().isCreated());
 
         List<Conference> saved = conferenceRepository.findAll();
@@ -106,10 +107,8 @@ class ConferenceApplicationAcceptanceTest {
 
     @Test
     void applyConference_whenJwtHasNoOrganizationNameClaim_isRejectedWith401() throws Exception {
-        mockMvc.perform(post("/api/conferences")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerTokenWithoutOrganizationName())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
+        mockMvc.perform(multipart("/api/conferences")
+                        .file(requestPart("""
                                 {
                                   "title": "주최기관명 없는 토큰",
                                   "capacity": 100,
@@ -119,6 +118,7 @@ class ConferenceApplicationAcceptanceTest {
                                   "tags": ["개발"]
                                 }
                                 """))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerTokenWithoutOrganizationName()))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("ORGANIZATION_NAME_NOT_FOUND"));
 
@@ -127,10 +127,8 @@ class ConferenceApplicationAcceptanceTest {
 
     @Test
     void applyConference_thenNotExposedInListOrDetail() throws Exception {
-        String response = mockMvc.perform(post("/api/conferences")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
+        String response = mockMvc.perform(multipart("/api/conferences")
+                        .file(requestPart("""
                                 {
                                   "title": "비공개 상태 확인용 컨퍼런스",
                                   "capacity": 50,
@@ -140,6 +138,7 @@ class ConferenceApplicationAcceptanceTest {
                                   "tags": ["개발"]
                                 }
                                 """))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken()))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
 
@@ -152,6 +151,43 @@ class ConferenceApplicationAcceptanceTest {
         mockMvc.perform(get("/api/conferences/{id}", conferenceId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("CONFERENCE_NOT_FOUND"));
+    }
+
+    @Test
+    void applyConference_withProofFile_canBeDownloadedByOwnerButNotByOtherOrganizer() throws Exception {
+        String organizerToken = organizerToken();
+        MockMultipartFile proofFile = new MockMultipartFile(
+                "proofFile", "사업자등록증.pdf", MediaType.APPLICATION_PDF_VALUE,
+                "dummy-content".getBytes(StandardCharsets.UTF_8));
+
+        String response = mockMvc.perform(multipart("/api/conferences")
+                        .file(requestPart("""
+                                {
+                                  "title": "증명 파일 첨부 컨퍼런스",
+                                  "capacity": 30,
+                                  "startAt": "2026-12-01T10:00:00",
+                                  "endAt": "2026-12-01T18:00:00",
+                                  "location": "대전",
+                                  "tags": ["개발"]
+                                }
+                                """))
+                        .file(proofFile)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.proofFileAttached").value(true))
+                .andReturn().getResponse().getContentAsString();
+
+        UUID conferenceId = UUID.fromString(JsonPath.read(response, "$.data.id"));
+
+        mockMvc.perform(get("/api/conferences/{id}/proof-file", conferenceId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes("dummy-content".getBytes(StandardCharsets.UTF_8)));
+
+        mockMvc.perform(get("/api/conferences/{id}/proof-file", conferenceId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("CONFERENCE_ACCESS_DENIED"));
     }
 
     private String organizerToken() {
@@ -175,5 +211,10 @@ class ConferenceApplicationAcceptanceTest {
                 .expiration(Date.from(Instant.now().plus(1, ChronoUnit.HOURS)))
                 .signWith(key)
                 .compact();
+    }
+
+    // multipart/form-data 요청의 "request" JSON part - 컨트롤러가 @RequestPart("request")로 받는다.
+    private MockMultipartFile requestPart(String json) {
+        return new MockMultipartFile("request", "", MediaType.APPLICATION_JSON_VALUE, json.getBytes(StandardCharsets.UTF_8));
     }
 }

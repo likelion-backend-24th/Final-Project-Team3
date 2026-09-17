@@ -18,6 +18,14 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+app:
+  upload:
+    conference-proof-dir: ${CONFERENCE_PROOF_UPLOAD_DIR:uploads/conference-proof}
 
 services:
   reservation-service:
