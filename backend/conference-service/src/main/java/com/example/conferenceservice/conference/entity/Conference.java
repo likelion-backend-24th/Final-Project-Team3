@@ -78,6 +78,10 @@ public class Conference {
         return this.proofFileName != null;
     }
 
+    public void attachProofFile(String proofFileName) {
+        this.proofFileName = proofFileName;
+    }
+
     public boolean isPending() {
         return this.status == ConferenceStatus.PENDING;
     }

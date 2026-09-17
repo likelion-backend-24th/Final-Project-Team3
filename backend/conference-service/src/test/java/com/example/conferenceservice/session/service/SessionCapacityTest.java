@@ -7,6 +7,7 @@ import com.example.conferenceservice.session.dto.SessionCapacityResponse;
 import com.example.conferenceservice.session.entity.Session;
 import com.example.conferenceservice.session.exception.SessionErrorCode;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
+import com.example.conferenceservice.operationstatus.client.ReservationServiceClient;
 import com.example.conferenceservice.session.repository.SessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,11 +37,14 @@ class SessionCapacityTest {
     @Mock
     private ConferenceRepository conferenceRepository;
 
+    @Mock
+    private ReservationServiceClient reservationServiceClient;
+
     private SessionService sessionService;
 
     @BeforeEach
     void setUp() {
-        sessionService = new SessionService(sessionRepository, conferenceRepository);
+        sessionService = new SessionService(sessionRepository, conferenceRepository, reservationServiceClient);
     }
 
     @Test

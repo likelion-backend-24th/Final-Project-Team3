@@ -18,7 +18,10 @@ public enum SessionErrorCode implements ErrorCode {
     SESSION_SCHEDULE_OUTSIDE_CONFERENCE_PERIOD(HttpStatus.BAD_REQUEST, "SESSION_SCHEDULE_OUTSIDE_CONFERENCE_PERIOD", "세션 진행 일정은 컨퍼런스 진행 기간 내여야 합니다."),
     CONFERENCE_NOT_APPROVED(HttpStatus.CONFLICT, "CONFERENCE_NOT_APPROVED", "승인된 컨퍼런스에만 세션을 등록할 수 있습니다."),
     SESSION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "SESSION_ACCESS_DENIED", "본인이 등록한 컨퍼런스의 세션만 관리할 수 있습니다."),
-    SESSION_ALREADY_DECIDED(HttpStatus.CONFLICT, "SESSION_ALREADY_DECIDED", "이미 처리된 세션입니다.");
+    SESSION_ALREADY_DECIDED(HttpStatus.CONFLICT, "SESSION_ALREADY_DECIDED", "이미 처리된 세션입니다."),
+    SESSION_CAPACITY_BELOW_CONFIRMED_COUNT(HttpStatus.CONFLICT, "SESSION_CAPACITY_BELOW_CONFIRMED_COUNT", "확정된 예약 인원보다 정원을 적게 설정할 수 없습니다."),
+    SESSION_SCHEDULE_CHANGE_WITH_ACTIVE_RESERVATIONS(HttpStatus.CONFLICT, "SESSION_SCHEDULE_CHANGE_WITH_ACTIVE_RESERVATIONS", "확정된 예약자가 있는 세션은 진행 일정을 변경할 수 없습니다."),
+    RESERVATION_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "SESSION_RESERVATION_SERVICE_UNAVAILABLE", "예약 현황을 확인할 수 없어 세션 수정을 처리할 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
