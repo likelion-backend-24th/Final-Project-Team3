@@ -1,9 +1,10 @@
 package com.example.reservationservice.controller;
 
+import com.example.reservationservice.auth.CustomUserDetails;
+import com.example.reservationservice.auth.MemberRole;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
 import com.example.reservationservice.reservation.repository.SessionCapacityLockRepository;
 import com.example.reservationservice.reservation.repository.WaitingQueueRepository;
-// Client 패키지 경로는 실제 프로젝트에 맞게 수정해주세요
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,12 +13,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any; // 추가됨
-import static org.mockito.BDDMockito.given; // 추가됨
+import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -37,7 +42,6 @@ class SessionHoldAcceptanceTest {
     @Autowired
     private SessionCapacityLockRepository sessionCapacityLockRepository;
 
-    // 1. 외부 서비스 호출을 담당하는 Client를 Mocking 합니다.
     @MockitoBean
     private ConferenceServiceClient conferenceServiceClient;
 
@@ -48,25 +52,31 @@ class SessionHoldAcceptanceTest {
         sessionCapacityLockRepository.deleteAll();
     }
 
+    private RequestPostProcessor asUser(UUID memberId) {
+        CustomUserDetails userDetails = new CustomUserDetails(memberId, MemberRole.MEMBER);
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+        return authentication(auth);
+    }
+
     @Test
     @DisplayName("정원 내 신청 시 홀드가 생성되고 201을 반환한다")
     void createHold_success() throws Exception {
         UUID sessionId = UUID.randomUUID();
         UUID memberId = UUID.randomUUID();
 
-        // 2. 가짜 응답 세팅: 해당 sessionId로 요청이 오면 정원 10명을 반환하도록 설정
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
 
         String requestBody = """
                 {
                     "sessionId": "%s",
-                    "memberId": "%s",
                     "headcount": 1,
                     "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]
                 }
-                """.formatted(sessionId, memberId);
+                """.formatted(sessionId);
 
         mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(memberId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -79,23 +89,24 @@ class SessionHoldAcceptanceTest {
     void createHold_queued_whenCapacityExceeded() throws Exception {
         UUID sessionId = UUID.randomUUID();
 
-        // 2. 가짜 응답 세팅: 이 테스트에서도 정원을 10명으로 고정
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
 
         for (int i = 0; i < 10; i++) {
             String body = """
-                    {"sessionId": "%s", "memberId": "%s", "headcount": 1, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]}
-                    """.formatted(sessionId, UUID.randomUUID());
+                    {"sessionId": "%s", "headcount": 1, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]}
+                    """.formatted(sessionId);
             mockMvc.perform(post("/api/reservations/hold")
+                    .with(asUser(UUID.randomUUID()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(body));
         }
 
         String overflowBody = """
-                {"sessionId": "%s", "memberId": "%s", "headcount": 1, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]}
-                """.formatted(sessionId, UUID.randomUUID());
+                {"sessionId": "%s", "headcount": 1, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]}
+                """.formatted(sessionId);
 
         mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(UUID.randomUUID()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(overflowBody))
                 .andExpect(status().isConflict())

@@ -19,6 +19,14 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.example.reservationservice.auth.CustomUserDetails;
+import com.example.reservationservice.auth.MemberRole;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -49,6 +57,13 @@ public class CancelReservationAcceptanceTest {
     @MockitoBean
     private ConferenceServiceClient conferenceServiceClient;
 
+    private RequestPostProcessor asUser(UUID memberId) {
+        CustomUserDetails userDetails = new CustomUserDetails(memberId, MemberRole.MEMBER);
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+        return authentication(auth);
+    }
+
     @AfterEach
     void tearDown() {
         paymentRepository.deleteAll();
@@ -67,7 +82,8 @@ public class CancelReservationAcceptanceTest {
         Reservation reservation = createConfirmedReservation(sessionId);
         createPayment(reservation.getId(), 10000);
 
-        mockMvc.perform(post("/api/reservations/{id}/cancel", reservation.getId()))
+        mockMvc.perform(post("/api/reservations/{id}/cancel", reservation.getId())
+                        .with(asUser(reservation.getMemberId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.refundRate").value(100))
                 .andExpect(jsonPath("$.data.refundAmount").value(10000));
@@ -83,7 +99,8 @@ public class CancelReservationAcceptanceTest {
         Reservation reservation = createConfirmedReservation(sessionId);
         createPayment(reservation.getId(), 10000);
 
-        mockMvc.perform(post("/api/reservations/{id}/cancel", reservation.getId()))
+        mockMvc.perform(post("/api/reservations/{id}/cancel", reservation.getId())
+                .with(asUser(reservation.getMemberId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.refundRate").value(50))
                 .andExpect(jsonPath("$.data.refundAmount").value(5000));
@@ -99,7 +116,8 @@ public class CancelReservationAcceptanceTest {
         Reservation reservation = createConfirmedReservation(sessionId);
         createPayment(reservation.getId(), 10000);
 
-        mockMvc.perform(post("/api/reservations/{id}/cancel", reservation.getId()))
+        mockMvc.perform(post("/api/reservations/{id}/cancel", reservation.getId())
+                        .with(asUser(reservation.getMemberId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.refundRate").value(0))
                 .andExpect(jsonPath("$.data.refundAmount").value(0));
@@ -117,7 +135,8 @@ public class CancelReservationAcceptanceTest {
                 .build();
         reservationRepository.save(reservation);
 
-        mockMvc.perform(post("/api/reservations/{id}/cancel", reservation.getId()))
+        mockMvc.perform(post("/api/reservations/{id}/cancel", reservation.getId())
+                        .with(asUser(reservation.getMemberId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("CANCELLED"))
                 .andExpect(jsonPath("$.data.refundRate").doesNotExist());
@@ -136,7 +155,8 @@ public class CancelReservationAcceptanceTest {
         reservation.markAsCancelled();
         reservationRepository.saveAndFlush(reservation);
 
-        mockMvc.perform(post("/api/reservations/{id}/cancel", reservation.getId()))
+        mockMvc.perform(post("/api/reservations/{id}/cancel", reservation.getId())
+                        .with(asUser(reservation.getMemberId())))
                 .andExpect(status().isConflict());
     }
 

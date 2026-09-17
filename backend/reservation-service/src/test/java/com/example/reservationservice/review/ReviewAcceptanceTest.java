@@ -1,5 +1,7 @@
 package com.example.reservationservice.review;
 
+import com.example.reservationservice.auth.CustomUserDetails;
+import com.example.reservationservice.auth.MemberRole;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
 import com.example.reservationservice.qrticket.entity.QrTicket;
 import com.example.reservationservice.qrticket.repository.QrTicketRepository;
@@ -15,15 +17,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -56,6 +62,13 @@ class ReviewAcceptanceTest {
         sessionCapacityLockRepository.deleteAll();
     }
 
+    private RequestPostProcessor asUser(UUID memberId) {
+        CustomUserDetails userDetails = new CustomUserDetails(memberId, MemberRole.MEMBER);
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+        return authentication(auth);
+    }
+
     @Test
     @DisplayName("체크인 완료된 예약은 후기를 작성할 수 있고, 응답에 저장한 내용이 그대로 반환된다")
     void writeReview_afterCheckIn_succeeds() throws Exception {
@@ -67,10 +80,11 @@ class ReviewAcceptanceTest {
         markFirstTicketAsUsed(reservationId);
 
         mockMvc.perform(post("/api/reservations/{id}/reviews", reservationId)
+                        .with(asUser(memberId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"memberId": "%s", "content": "좋은 세션이었어요"}
-                                """.formatted(memberId)))
+                                {"content": "좋은 세션이었어요"}
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").value("좋은 세션이었어요"))
                 .andExpect(jsonPath("$.data.reservationId").value(reservationId));
@@ -87,10 +101,11 @@ class ReviewAcceptanceTest {
         // markFirstTicketAsUsed 호출 안 함 -> 체크인 안 된 상태
 
         mockMvc.perform(post("/api/reservations/{id}/reviews", reservationId)
+                        .with(asUser(memberId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"memberId": "%s", "content": "후기"}
-                                """.formatted(memberId)))
+                                {"content": "후기"}
+                                """))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("REVIEW_NOT_ELIGIBLE"));
     }
@@ -99,10 +114,11 @@ class ReviewAcceptanceTest {
     @DisplayName("존재하지 않는 예약으로 작성 요청하면 404로 거부된다")
     void writeReview_reservationNotFound_rejected() throws Exception {
         mockMvc.perform(post("/api/reservations/{id}/reviews", UUID.randomUUID())
-                        .contentType(MediaType.APPLICATION_JSON)
+                .with(asUser(UUID.randomUUID()))
+                .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"memberId": "%s", "content": "후기"}
-                                """.formatted(UUID.randomUUID())))
+                                {"content": "후기"}
+                                """))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("REVIEW_RESERVATION_NOT_FOUND"));
     }
@@ -119,10 +135,11 @@ class ReviewAcceptanceTest {
         markFirstTicketAsUsed(reservationId);
 
         mockMvc.perform(post("/api/reservations/{id}/reviews", reservationId)
+                        .with(asUser(strangerId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"memberId": "%s", "content": "후기"}
-                                """.formatted(strangerId)))
+                                {"content": "후기"}
+                                """))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("REVIEW_NOT_OWNER"));
     }
@@ -138,16 +155,18 @@ class ReviewAcceptanceTest {
         markFirstTicketAsUsed(reservationId);
 
         mockMvc.perform(post("/api/reservations/{id}/reviews", reservationId)
+                .with(asUser(memberId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"memberId": "%s", "content": "처음 작성한 후기"}
-                        """.formatted(memberId)));
+                        {"content": "처음 작성한 후기"}
+                        """));
 
         mockMvc.perform(post("/api/reservations/{id}/reviews", reservationId)
+                        .with(asUser(memberId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"memberId": "%s", "content": "수정한 후기"}
-                                """.formatted(memberId)))
+                                {"content": "수정한 후기"}
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").value("수정한 후기"));
 
@@ -156,14 +175,16 @@ class ReviewAcceptanceTest {
 
     private String holdAndPay(UUID sessionId, UUID memberId) throws Exception {
         MvcResult holdResult = mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(memberId))  // ← 추가
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"sessionId": "%s", "memberId": "%s", "headcount": 1, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]}
-                                """.formatted(sessionId, memberId)))
+                                {"sessionId": "%s", "headcount": 1, "attendees": [{"ageGroup": "TWENTIES", "job": "DEVELOPER"}]}
+                                """.formatted(sessionId)))
                 .andReturn();
         String reservationId = JsonPath.read(holdResult.getResponse().getContentAsString(), "$.data.reservationId");
 
         mockMvc.perform(post("/api/reservations/{id}/payment", reservationId)
+                .with(asUser(memberId))  // ← 추가
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"paymentMethod": "CARD", "amount": 10000}
