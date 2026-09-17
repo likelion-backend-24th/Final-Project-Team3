@@ -244,9 +244,14 @@ public class ReservationService {
                 sessionId, holdCount, queuedCount, confirmedCount, cancelledCount, checkedCount);
     }
 
-    public CancellResult cancellReservation(UUID reservationId) {
+    public CancelResult cancelReservation(UUID reservationId, UUID requesterId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+
+
+        if (!reservation.getMemberId().equals(requesterId)) {
+            throw new BusinessException(ReservationErrorCode.RESERVATION_ACCESS_DENIED);  // 새 에러코드 필요
+        }
 
         if (reservation.getStatus() == ReservationStatus.CANCELLED) {
             throw new BusinessException(ReservationErrorCode.ALREADY_CANCELLED);
@@ -286,7 +291,7 @@ public class ReservationService {
 
         reservation.markAsCancelled();
 
-        return CancellResult.cancelled(reservationId, refundRate, refundAmount);
+        return CancelResult.canceled(reservationId, refundRate, refundAmount);
     }
 
     private LocalDateTime getSessionStartAt(UUID sessionId) {

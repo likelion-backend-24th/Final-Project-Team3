@@ -17,7 +17,8 @@ public enum ReservationErrorCode implements ErrorCode {
     ALREADY_CONFIRMED(HttpStatus.CONFLICT, "RESERVATION_ALREADY_CONFIRED", "이미 결제 완료 예약입니다."),
     PAYMENT_NOT_COMPLETED(HttpStatus.NOT_FOUND, "RESERVATION_PAYMENT_NOT_COMPLETED", "결제 완료되지 않아 QR 티켓을 조회할 수 없습니다."),
     ATTENDEE_INFO_REQUIRED(HttpStatus.BAD_REQUEST, "RESERVATION_ATTENDEE_INFO_REQUIRED", "동반자의 연령대·직무 정보를 모두 입력해야 합니다."),
-    ALREADY_CANCELLED(HttpStatus.CONFLICT, "RESERVATION_ALREADY_CANCELLED", "이미 취소된 예약입니다.");
+    ALREADY_CANCELLED(HttpStatus.CONFLICT, "RESERVATION_ALREADY_CANCELLED", "이미 취소된 예약입니다."),
+    RESERVATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "RESERVATION_ACCESS_DENIED", "본인의 예약만 취소할 수 있습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

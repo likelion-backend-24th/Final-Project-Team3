@@ -1,5 +1,6 @@
 package com.example.reservationservice.reservation.controller;
 
+import com.example.reservationservice.auth.CustomUserDetails;
 import com.example.reservationservice.reservation.dto.*;
 import com.example.reservationservice.reservation.entity.AgeGroup;
 import com.example.reservationservice.reservation.entity.Job;
@@ -12,6 +13,7 @@ import com.example.reservationservice.common.dto.ApiResponse;
 import com.example.reservationservice.reservation.service.ReservationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.annotation.RequestScope;
 
@@ -103,11 +105,12 @@ public class ReservationController {
                 ApiResponse.success("세션 상태 집계 조회 완료", result, traceIdProvider.resolve(httpRequest)));
     }
 
-    @PostMapping("/{reservationId}/cancell")
-    public ResponseEntity<ApiResponse<CancellResult>> cancellReservation(
+    @PostMapping("/{reservationId}/cancel")
+    public ResponseEntity<ApiResponse<CancelResult>> cancelReservation(
             @PathVariable UUID reservationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpServletRequest httpRequest) {
-        CancellResult result = reservationService.cancellReservation(reservationId);
+        CancelResult result = reservationService.cancelReservation(reservationId, userDetails.getMemberId());
         return ResponseEntity.ok(
                 ApiResponse.success("예약 취소 완료", result, traceIdProvider.resolve(httpRequest)));
     }
