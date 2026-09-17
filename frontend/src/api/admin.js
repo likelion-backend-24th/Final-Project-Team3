@@ -33,3 +33,13 @@ export function rejectSession(id, reason) {
 export function registerPgCredential({ provider, apiKey, secretKey }) {
   return apiFetch('/admin/settings/pg-key', { method: 'PATCH', body: { provider, apiKey, secretKey } })
 }
+
+// Reservation-Service가 직접 구현. CONFIRMED 예약에 연결된 payment.amount 합계(CANCELLED 자동 제외).
+// startDate/endDate는 둘 다 선택(YYYY-MM-DD) — 안 넘기면 전체 기간.
+export function getSettlementDashboard({ startDate, endDate } = {}) {
+  const params = new URLSearchParams()
+  if (startDate) params.set('startDate', startDate)
+  if (endDate) params.set('endDate', endDate)
+  const query = params.toString()
+  return apiFetch(`/admin/settlements${query ? `?${query}` : ''}`)
+}

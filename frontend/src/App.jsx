@@ -28,6 +28,7 @@ import ComingSoon from './pages/organizer/ComingSoon'
 
 import AdminApprovals from './pages/admin/Approvals'
 import AdminPgSettings from './pages/admin/PgSettings'
+import AdminSettlements from './pages/admin/Settlements'
 
 function Layout() {
   return (
@@ -213,6 +214,14 @@ export default function App() {
               element={
                 <ProtectedRoute role="ADMIN">
                   <AdminPgSettings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/settlements"
+              element={
+                <ProtectedRoute role="ADMIN">
+                  <AdminSettlements />
                 </ProtectedRoute>
               }
             />

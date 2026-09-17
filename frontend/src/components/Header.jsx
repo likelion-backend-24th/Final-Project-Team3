@@ -20,6 +20,7 @@ const organizerNav = [
 
 const adminNav = [
   { to: '/admin', label: '컨퍼런스 승인', end: true },
+  { to: '/admin/settlements', label: '정산 대시보드' },
   { to: '/admin/settings', label: '시스템 설정' },
 ]
 
