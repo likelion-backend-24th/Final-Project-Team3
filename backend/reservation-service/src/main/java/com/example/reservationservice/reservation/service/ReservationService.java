@@ -137,6 +137,14 @@ public class ReservationService {
         }
     }
 
+    private Integer getSessionPrice(UUID sessionId) {
+        try {
+            return conferenceServiceClient.getSessionPrice(sessionId);
+        } catch (ConferenceServiceUnavailableException e) {
+            throw new BusinessException(ReservationErrorCode.CONFERENCE_SERVICE_UNAVAILABLE);
+        }
+    }
+
     public int getQueuePosition(UUID reservationId) {
         return waitingQueueRepository.findByReservationId(reservationId)
                 .map(WaitingQueue::getPosition)
@@ -202,7 +210,7 @@ public class ReservationService {
         UUID reservationId = reservation.getId();
 
         // 락을 잡기 전에 외부 API(PortOne) 검증부터 끝낸다 — 좌석 락을 쥔 채로 외부 호출을 기다리면 안 됨
-        Integer price = conferenceServiceClient.getSessionPrice(reservation.getSessionId());
+        Integer price = getSessionPrice(reservation.getSessionId());
         int expectedAmount = (price == null ? 0 : price) * reservation.getHeadcount();
         // 무료 세션(price가 명시적으로 0)만 PortOne 조회를 건너뛴다. price가 null인 경우
         // (마이그레이션 없이 컬럼만 추가돼 값이 비어있는 legacy row)는 무료로 간주하지 않고
