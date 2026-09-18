@@ -9,6 +9,7 @@ import com.example.reservationservice.reservation.repository.SessionCapacityLock
 import com.example.reservationservice.reservation.repository.WaitingQueueRepository;
 import com.example.reservationservice.payment.entity.Payment;
 import com.example.reservationservice.payment.repository.PaymentRepository;
+import com.example.reservationservice.payment.service.PortOnePaymentVerifier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,12 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -56,6 +62,9 @@ public class CancelReservationAcceptanceTest {
 
     @MockitoBean
     private ConferenceServiceClient conferenceServiceClient;
+
+    @MockitoBean
+    private PortOnePaymentVerifier portOnePaymentVerifier;
 
     private RequestPostProcessor asUser(UUID memberId) {
         CustomUserDetails userDetails = new CustomUserDetails(memberId, MemberRole.MEMBER);
@@ -87,6 +96,8 @@ public class CancelReservationAcceptanceTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.refundRate").value(100))
                 .andExpect(jsonPath("$.data.refundAmount").value(10000));
+
+        verify(portOnePaymentVerifier).cancel(eq(reservation.getId().toString()), eq(10000), anyString());
     }
 
     @Test
@@ -104,6 +115,8 @@ public class CancelReservationAcceptanceTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.refundRate").value(50))
                 .andExpect(jsonPath("$.data.refundAmount").value(5000));
+
+        verify(portOnePaymentVerifier).cancel(eq(reservation.getId().toString()), eq(5000), anyString());
     }
 
     @Test
@@ -121,6 +134,8 @@ public class CancelReservationAcceptanceTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.refundRate").value(0))
                 .andExpect(jsonPath("$.data.refundAmount").value(0));
+
+        verify(portOnePaymentVerifier, never()).cancel(anyString(), any(), anyString());
     }
 
     @Test
