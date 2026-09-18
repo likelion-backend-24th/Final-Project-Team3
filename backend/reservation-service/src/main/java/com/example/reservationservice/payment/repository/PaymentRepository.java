@@ -31,7 +31,7 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             "WHERE r.sessionId IN :sessionIds AND r.status = 'CONFIRMED'")
     int countConfirmed(@Param("sessionIds") List<UUID> sessionIds);
 
-    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
+    @Query("SELECT COALESCE(SUM(p.refundedAmount), 0) FROM Payment p " +
             "JOIN Reservation r ON p.reservationId = r.id " +
             "WHERE r.sessionId IN :sessionIds AND r.status = 'CANCELLED'")
     int sumRefundedAmount(@Param("sessionIds") List<UUID> sessionIds);

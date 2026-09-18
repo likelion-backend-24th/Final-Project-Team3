@@ -25,3 +25,7 @@ spring:
 services:
   conference-service:
     url: http://localhost:8082
+
+springdoc:
+  paths-to-exclude:
+    - /internal/**

@@ -1,22 +1,21 @@
+// ReservationResult.java 전체를 record로 교체
 package com.example.reservationservice.reservation.dto;
 
-import lombok.Getter;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.UUID;
 
-@Getter
-public class ReservationResult {
+@Schema(description = "세션 신청(홀드·대기열 등록) 결과")
+public record ReservationResult(
+        @Schema(description = "생성된 예약 ID")
+        UUID reservationId,
 
-    private final UUID reservationId;
-    private final String status; // "HOLD" or "QUEUED"
-    private final Integer queuePosition; // QUEUED일 때만 값 있음
+        @Schema(description = "신청 상태", example = "HOLD")
+        String status,
 
-    private ReservationResult(UUID reservationId, String status, Integer queuePosition) {
-        this.reservationId = reservationId;
-        this.status = status;
-        this.queuePosition = queuePosition;
-    }
-
+        @Schema(description = "대기열 순번. QUEUED일 때만 값 있음", example = "3", nullable = true)
+        Integer queuePosition
+) {
     public static ReservationResult hold(UUID reservationId) {
         return new ReservationResult(reservationId, "HOLD", null);
     }

@@ -6,6 +6,7 @@ import com.example.reservationservice.reservation.entity.AgeGroup;
 import com.example.reservationservice.reservation.entity.Job;
 
 import com.github.f4b6a3.uuid.UuidCreator;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,31 +25,40 @@ import java.util.UUID;
 @Table(name = "qr_ticket")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Schema(description = "QR 티켓 정보")
 public class QrTicket {
 
+    @Schema(description = "QR 티켓 ID")
     @Id
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
+    @Schema(description = "예약 ID")
     @Column(name = "reservation_id", nullable = false, columnDefinition = "BINARY(16)")
     private UUID reservationId;
 
+    @Schema(description = "QR 코드 문자열")
     @Column(nullable = false, unique = true, length = 64)
     private String code;
 
+    @Schema(description = "사용(입장 처리) 여부")
     @Column(nullable = false)
     private boolean used;
 
+    @Schema(description = "입장 처리된 시각")
     @Column(name = "used_at")
     private LocalDateTime usedAt;
 
+    @Schema(description = "생성 시각")
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Schema(description = "연령대")
     @Enumerated(EnumType.STRING)
     @Column(name = "age_group")
     private AgeGroup ageGroup;
 
+    @Schema(description = "직무")
     @Enumerated(EnumType.STRING)
     private Job job;
 
