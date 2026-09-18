@@ -70,9 +70,9 @@ public class ConferenceService {
                 .build();
         Conference savedConference = conferenceRepository.save(conference);
 
-        List<ConferenceTag> tags = toTags(request.tags(), savedConference);
-        if (!tags.isEmpty()) {
-            conferenceTagRepository.saveAll(tags);
+        List<String> tagNames = dedupeIgnoringCase(request.tags() == null ? List.of() : request.tags());
+        if (!tagNames.isEmpty()) {
+            conferenceTagRepository.saveAll(toTags(tagNames, savedConference));
         }
 
         // 파일 저장은 DB 저장 이후에 한다 - store()가 실패(잘못된 확장자, IO 오류)하면
@@ -84,7 +84,7 @@ public class ConferenceService {
             savedConference.attachProofFile(fileStorageService.store(proofFile));
         }
 
-        return ConferenceResponse.from(savedConference);
+        return ConferenceResponse.from(savedConference, 0, tagNames);
     }
 
     @Transactional(readOnly = true)
@@ -100,8 +100,23 @@ public class ConferenceService {
     }
 
     private Page<ConferenceResponse> toResponsePage(Page<Conference> conferences, Map<UUID, Long> sessionCounts) {
+        Map<UUID, List<String>> tagsByConference = tagsByConference(conferences.getContent());
         return conferences.map(conference ->
-                ConferenceResponse.from(conference, sessionCounts.getOrDefault(conference.getId(), 0L)));
+                ConferenceResponse.from(
+                        conference,
+                        sessionCounts.getOrDefault(conference.getId(), 0L),
+                        tagsByConference.getOrDefault(conference.getId(), List.of())));
+    }
+
+    private Map<UUID, List<String>> tagsByConference(List<Conference> conferences) {
+        if (conferences.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> conferenceIds = conferences.stream().map(Conference::getId).toList();
+        return conferenceTagRepository.findByConferenceIdIn(conferenceIds).stream()
+                .collect(Collectors.groupingBy(
+                        tag -> tag.getConference().getId(),
+                        Collectors.mapping(ConferenceTag::getTag, Collectors.toList())));
     }
 
     private Map<UUID, Long> countApprovedSessionsByConference(List<Conference> conferences) {
@@ -135,6 +150,14 @@ public class ConferenceService {
         return conferenceRepository.findByStatus(ConferenceStatus.PENDING, pageable);
     }
 
+    @Transactional(readOnly = true)
+    public Page<ConferenceResponse> getPendingConferenceResponses(Pageable pageable) {
+        Page<Conference> conferences = getPendingConferences(pageable);
+        Map<UUID, List<String>> tagsByConference = tagsByConference(conferences.getContent());
+        return conferences.map(conference ->
+                ConferenceResponse.from(conference, 0, tagsByConference.getOrDefault(conference.getId(), List.of())));
+    }
+
     @Transactional
     public ConferenceResponse approveConference(UUID id) {
         Conference conference = findConference(id);
@@ -142,7 +165,7 @@ public class ConferenceService {
             throw new BusinessException(ConferenceErrorCode.CONFERENCE_ALREADY_DECIDED);
         }
         conference.approve();
-        return ConferenceResponse.from(conference);
+        return ConferenceResponse.from(conference, 0, tagsOf(conference));
     }
 
     @Transactional
@@ -152,7 +175,7 @@ public class ConferenceService {
             throw new BusinessException(ConferenceErrorCode.CONFERENCE_ALREADY_DECIDED);
         }
         conference.reject(request.reason());
-        return ConferenceResponse.from(conference);
+        return ConferenceResponse.from(conference, 0, tagsOf(conference));
     }
 
     @Transactional
@@ -160,7 +183,7 @@ public class ConferenceService {
         Conference conference = findConference(id);
         OwnerScopeGuard.verify(requesterId, conference.getOrganizerId(), ConferenceErrorCode.CONFERENCE_ACCESS_DENIED);
         conference.updateDescription(request.description());
-        return ConferenceResponse.from(conference, countApprovedSessions(conference));
+        return ConferenceResponse.from(conference, countApprovedSessions(conference), tagsOf(conference));
     }
 
     @Transactional
@@ -171,7 +194,13 @@ public class ConferenceService {
             throw new BusinessException(ConferenceErrorCode.CONFERENCE_LOCATION_ADDRESS_LOCKED);
         }
         conference.updateLocation(request.location(), request.transportation(), request.parkingInfo(), request.amenities());
-        return ConferenceResponse.from(conference, countApprovedSessions(conference));
+        return ConferenceResponse.from(conference, countApprovedSessions(conference), tagsOf(conference));
+    }
+
+    private List<String> tagsOf(Conference conference) {
+        return conferenceTagRepository.findByConferenceId(conference.getId()).stream()
+                .map(ConferenceTag::getTag)
+                .toList();
     }
 
     @Transactional(readOnly = true)
