@@ -12,10 +12,13 @@ import java.util.UUID;
 
 @Repository
 public interface EmailVerificationRepository extends JpaRepository<EmailVerification, UUID> {
+
     // 검증 시 조회 - 아직 verified=false인 가장 최근 코드
     Optional<EmailVerification> findFirstByEmailAndVerifiedFalseOrderByCreatedAtDesc(String email);
+
     // 회원가입 시 게이트 체크 - 이 이메일이 인증 완료 상태인지
     boolean existsByEmailAndVerifiedTrue(String email);
+
     // 재발송 전 기존 코드 정리 + 가입 성공 후 소진 처리에 재사용
     @Modifying
     @Query("delete from EmailVerification e where e.email = :email")
@@ -25,4 +28,7 @@ public interface EmailVerificationRepository extends JpaRepository<EmailVerifica
     @Modifying
     @Query("update EmailVerification e set e.attempts = e.attempts + 1 where e.id = :id")
     int increaseAttempts(@Param("id") UUID id);
+
+    // 재발송 쿨다운 체크용
+    Optional<EmailVerification> findFirstByEmailOrderByCreatedAtDesc(String email);
 }

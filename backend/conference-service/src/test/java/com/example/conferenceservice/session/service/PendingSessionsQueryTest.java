@@ -3,6 +3,7 @@ package com.example.conferenceservice.session.service;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
+import com.example.conferenceservice.operationstatus.client.ReservationServiceClient;
 import com.example.conferenceservice.session.entity.Session;
 import com.example.conferenceservice.session.entity.SessionStatus;
 import com.example.conferenceservice.session.repository.SessionRepository;
@@ -34,11 +35,14 @@ class PendingSessionsQueryTest {
     @Mock
     private ConferenceRepository conferenceRepository;
 
+    @Mock
+    private ReservationServiceClient reservationServiceClient;
+
     private SessionService sessionService;
 
     @BeforeEach
     void setUp() {
-        sessionService = new SessionService(sessionRepository, conferenceRepository);
+        sessionService = new SessionService(sessionRepository, conferenceRepository, reservationServiceClient);
     }
 
     @Test

@@ -39,7 +39,11 @@ export function getSettlementDashboard({ startDate, endDate } = {}) {
   return apiFetch(`/admin/settlements${query ? `?${query}` : ''}`)
 }
 
-// Reservation-Service가 직접 구현. secretKey는 응답에서 마스킹되어 돌아온다.
-export function registerPgCredential({ provider, apiKey, secretKey }) {
-  return apiFetch('/admin/settings/pg-key', { method: 'PATCH', body: { provider, apiKey, secretKey } })
+// Reservation-Service가 직접 구현. 포트원(PortOne) 연동 값 — storeId·channelKey는 식별자,
+// apiSecret·webhookSecret은 응답에서 마스킹되어 돌아온다.
+export function registerPgCredential({ provider, storeId, channelKey, apiSecret, webhookSecret }) {
+  return apiFetch('/admin/settings/pg-key', {
+    method: 'PATCH',
+    body: { provider, storeId, channelKey, apiSecret, webhookSecret },
+  })
 }

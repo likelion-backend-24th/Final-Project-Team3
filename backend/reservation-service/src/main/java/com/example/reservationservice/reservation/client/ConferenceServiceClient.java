@@ -38,6 +38,22 @@ public class ConferenceServiceClient {
         }
     }
 
+    public Integer getSessionPrice(UUID sessionId) {
+        try {
+            ApiResponseEnvelope<SessionPriceResponse> response = restClient.get()
+                    .uri("/api/sessions/{sessionId}/price", sessionId)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<>() {});
+
+            if (response == null || response.data() == null) {
+                throw new ConferenceServiceUnavailableException(sessionId, null);
+            }
+            return response.data().price();
+        } catch (RestClientException e) {
+            throw new ConferenceServiceUnavailableException(sessionId, e);
+        }
+    }
+
     public LocalDateTime getSessionStartAt(UUID sessionId) {
         try {
             ApiResponseEnvelope<SessionStartAtResponse> response = restClient.get()
@@ -58,6 +74,8 @@ public class ConferenceServiceClient {
     public record ApiResponseEnvelope<T>(boolean success, T data, String message) {}
 
     public record SessionCapacityResponse(UUID sessionId, int capacity) {}
+
+    public record SessionPriceResponse(UUID sessionId, Integer price) {}
 
     public record SessionStartAtResponse(UUID sessionId, LocalDateTime sessionStartAt) {}
 }

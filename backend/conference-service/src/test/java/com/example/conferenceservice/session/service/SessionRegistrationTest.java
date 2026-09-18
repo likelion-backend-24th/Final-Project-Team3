@@ -5,6 +5,7 @@ import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
+import com.example.conferenceservice.operationstatus.client.ReservationServiceClient;
 import com.example.conferenceservice.session.dto.SessionCreateRequest;
 import com.example.conferenceservice.session.dto.SessionResponse;
 import com.example.conferenceservice.session.dto.SessionUpdateRequest;
@@ -28,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
  * Task 7-1 검증: 주최자가 승인된 컨퍼런스에 세션을 등록·수정한다.
@@ -46,11 +48,14 @@ class SessionRegistrationTest {
     @Mock
     private ConferenceRepository conferenceRepository;
 
+    @Mock
+    private ReservationServiceClient reservationServiceClient;
+
     private SessionService sessionService;
 
     @BeforeEach
     void setUp() {
-        sessionService = new SessionService(sessionRepository, conferenceRepository);
+        sessionService = new SessionService(sessionRepository, conferenceRepository, reservationServiceClient);
     }
 
     @Test
@@ -203,6 +208,19 @@ class SessionRegistrationTest {
     }
 
     @Test
+    void 세션_정원이_컨퍼런스_정원을_초과하면_409로_거절된다() {
+        UUID conferenceId = UUID.randomUUID();
+        Conference approved = approvedConference(conferenceId);
+        SessionCreateRequest request = SessionRequestFixtures.validCreateRequest("세션 B", 150);
+        given(conferenceRepository.findById(conferenceId)).willReturn(Optional.of(approved));
+
+        assertThatThrownBy(() -> sessionService.createSession(conferenceId, request, ORGANIZER_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(SessionErrorCode.SESSION_CAPACITY_EXCEEDS_CONFERENCE_CAPACITY);
+    }
+
+    @Test
     void 세션의_정원과_기간을_수정할_수_있다() {
         UUID sessionId = UUID.randomUUID();
         Session existing = Session.builder()
@@ -293,6 +311,131 @@ class SessionRegistrationTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(SessionErrorCode.SESSION_NOT_FOUND);
+    }
+
+    @Test
+    void 승인된_세션의_정원을_확정_예약_인원보다_낮게_줄이면_409로_거절된다() {
+        UUID sessionId = UUID.randomUUID();
+        Session existing = approvedSessionWithSchedule(sessionId, 10);
+        SessionUpdateRequest request = requestWithCapacity(existing, 6);
+        given(sessionRepository.findById(sessionId)).willReturn(Optional.of(existing));
+        given(reservationServiceClient.getStatusSummary(sessionId)).willReturn(statusSummary(sessionId, 8));
+
+        assertThatThrownBy(() -> sessionService.updateSession(sessionId, request, ORGANIZER_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(SessionErrorCode.SESSION_CAPACITY_BELOW_CONFIRMED_COUNT);
+    }
+
+    @Test
+    void 승인된_세션의_정원을_확정_예약_인원_이상으로_줄이면_허용된다() {
+        UUID sessionId = UUID.randomUUID();
+        Session existing = approvedSessionWithSchedule(sessionId, 10);
+        SessionUpdateRequest request = requestWithCapacity(existing, 8);
+        given(sessionRepository.findById(sessionId)).willReturn(Optional.of(existing));
+        given(reservationServiceClient.getStatusSummary(sessionId)).willReturn(statusSummary(sessionId, 8));
+
+        SessionResponse response = sessionService.updateSession(sessionId, request, ORGANIZER_ID);
+
+        assertThat(response.capacity()).isEqualTo(8);
+    }
+
+    @Test
+    void 확정_예약이_있는_승인된_세션의_진행_일정을_바꾸면_409로_거절된다() {
+        UUID sessionId = UUID.randomUUID();
+        Session existing = approvedSessionWithSchedule(sessionId, 10);
+        SessionUpdateRequest request = new SessionUpdateRequest(
+                existing.getCapacity(), existing.getStartAt(), existing.getEndAt(),
+                existing.getSessionStartAt().plusDays(10), existing.getSessionEndAt().plusDays(10),
+                existing.getLocation(), existing.getSpeaker(), existing.getPrice(), existing.getMaxHeadcountPerApplication());
+        given(sessionRepository.findById(sessionId)).willReturn(Optional.of(existing));
+        given(reservationServiceClient.getStatusSummary(sessionId)).willReturn(statusSummary(sessionId, 2));
+
+        assertThatThrownBy(() -> sessionService.updateSession(sessionId, request, ORGANIZER_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(SessionErrorCode.SESSION_SCHEDULE_CHANGE_WITH_ACTIVE_RESERVATIONS);
+    }
+
+    @Test
+    void 세션_수정시_정원이_컨퍼런스_정원을_초과하면_409로_거절된다() {
+        UUID sessionId = UUID.randomUUID();
+        Session existing = Session.builder()
+                .id(sessionId).conference(approvedConference(UUID.randomUUID())).title("세션 A").capacity(10)
+                .build();
+        SessionUpdateRequest request = SessionRequestFixtures.validUpdateRequest(150);
+        given(sessionRepository.findById(sessionId)).willReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> sessionService.updateSession(sessionId, request, ORGANIZER_ID))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(SessionErrorCode.SESSION_CAPACITY_EXCEEDS_CONFERENCE_CAPACITY);
+    }
+
+    @Test
+    void 승인_전_세션의_정원_축소는_예약_현황을_조회하지_않는다() {
+        UUID sessionId = UUID.randomUUID();
+        Session existing = Session.builder()
+                .id(sessionId).conference(approvedConference(UUID.randomUUID())).title("세션 A").capacity(10)
+                .build();
+        SessionUpdateRequest request = SessionRequestFixtures.validUpdateRequest(5);
+        given(sessionRepository.findById(sessionId)).willReturn(Optional.of(existing));
+
+        SessionResponse response = sessionService.updateSession(sessionId, request, ORGANIZER_ID);
+
+        assertThat(response.capacity()).isEqualTo(5);
+        verifyNoInteractions(reservationServiceClient);
+    }
+
+    @Test
+    void 승인된_세션을_동일한_값으로_재제출하면_승인_상태가_유지된다() {
+        UUID sessionId = UUID.randomUUID();
+        Session existing = approvedSessionWithSchedule(sessionId, 50);
+        SessionUpdateRequest request = requestWithCapacity(existing, existing.getCapacity());
+        given(sessionRepository.findById(sessionId)).willReturn(Optional.of(existing));
+
+        SessionResponse response = sessionService.updateSession(sessionId, request, ORGANIZER_ID);
+
+        assertThat(response.status()).isEqualTo(SessionStatus.APPROVED);
+        verifyNoInteractions(reservationServiceClient);
+    }
+
+    @Test
+    void 반려된_세션을_동일한_값으로_재제출하면_재승인_대기로_전환된다() {
+        UUID sessionId = UUID.randomUUID();
+        Session existing = approvedSessionWithSchedule(sessionId, 50);
+        existing.reject("정원이 너무 많습니다");
+        SessionUpdateRequest request = requestWithCapacity(existing, existing.getCapacity());
+        given(sessionRepository.findById(sessionId)).willReturn(Optional.of(existing));
+
+        SessionResponse response = sessionService.updateSession(sessionId, request, ORGANIZER_ID);
+
+        assertThat(response.status()).isEqualTo(SessionStatus.PENDING);
+        assertThat(response.rejectionReason()).isNull();
+    }
+
+    private ReservationServiceClient.SessionStatusSummaryResponse statusSummary(UUID sessionId, long confirmedCount) {
+        return new ReservationServiceClient.SessionStatusSummaryResponse(sessionId, 0, 0, confirmedCount, 0, 0);
+    }
+
+    // existing 세션의 일정·장소·발표자·가격·최대인원 필드는 그대로 두고 capacity만 바꾼 요청을 만든다.
+    // LocalDateTime.now()를 별도로 다시 호출하지 않아, "일정은 안 바뀜"이 나노초 단위까지 보장된다.
+    private SessionUpdateRequest requestWithCapacity(Session existing, int capacity) {
+        return new SessionUpdateRequest(
+                capacity, existing.getStartAt(), existing.getEndAt(),
+                existing.getSessionStartAt(), existing.getSessionEndAt(),
+                existing.getLocation(), existing.getSpeaker(), existing.getPrice(), existing.getMaxHeadcountPerApplication());
+    }
+
+    private Session approvedSessionWithSchedule(UUID sessionId, int capacity) {
+        LocalDateTime sessionStartAt = LocalDateTime.now().plusDays(5);
+        return Session.builder()
+                .id(sessionId).conference(approvedConference(UUID.randomUUID())).title("세션 A").capacity(capacity)
+                .status(SessionStatus.APPROVED)
+                .startAt(LocalDateTime.now().plusDays(3)).endAt(LocalDateTime.now().plusDays(4))
+                .sessionStartAt(sessionStartAt).sessionEndAt(sessionStartAt.plusHours(1))
+                .location("그랜드홀 A").speaker("김연수 CTO").price(10000).maxHeadcountPerApplication(2)
+                .build();
     }
 
     private Conference approvedConference(UUID id) {

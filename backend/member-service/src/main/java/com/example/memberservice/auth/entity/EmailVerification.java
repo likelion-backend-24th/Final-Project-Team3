@@ -1,5 +1,6 @@
 package com.example.memberservice.auth.entity;
 
+import com.example.memberservice.common.BaseEntity;
 import com.github.f4b6a3.uuid.UuidCreator;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -13,14 +14,10 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name="email_verification")
+@Table(name="email_verification", indexes = @Index(name = "idx_email_verification_email", columnList = "email"))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners(AuditingEntityListener.class)
-public class EmailVerification {
-
-    @Id
-    private UUID id;
+public class EmailVerification extends BaseEntity {
 
     @Column(nullable = false, length = 255)
     private String email;
@@ -36,17 +33,6 @@ public class EmailVerification {
 
     @Column(nullable = false)
     private int attempts;
-
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    private void assignId() {
-        if (this.id == null) {
-            this.id = UuidCreator.getTimeOrderedEpoch();
-        }
-    }
 
     @Builder
     private EmailVerification(String email, String codeHash, LocalDateTime expiresAt) {
@@ -67,6 +53,10 @@ public class EmailVerification {
 
     public boolean isExpired(LocalDateTime now) {
         return expiresAt.isBefore(now);
+    }
+
+    public boolean isResendTooSoon(LocalDateTime now, long cooldownMs) {
+        return getCreatedAt().plusNanos(cooldownMs * 1_000_000).isAfter(now);
     }
 
     public void markVerified() {

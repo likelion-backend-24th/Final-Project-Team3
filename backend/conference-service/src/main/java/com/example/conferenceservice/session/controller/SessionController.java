@@ -4,6 +4,7 @@ import com.example.conferenceservice.auth.CustomUserDetails;
 import com.example.conferenceservice.common.TraceIdProvider;
 import com.example.conferenceservice.common.dto.ApiResponse;
 import com.example.conferenceservice.session.dto.SessionCapacityResponse;
+import com.example.conferenceservice.session.dto.SessionPriceResponse;
 import com.example.conferenceservice.session.dto.SessionResponse;
 import com.example.conferenceservice.session.dto.SessionStartAtResponse;
 import com.example.conferenceservice.session.dto.SessionUpdateRequest;
@@ -52,5 +53,11 @@ public class SessionController {
     public ResponseEntity<ApiResponse<SessionStartAtResponse>> getStartAt(@PathVariable UUID sessionId, HttpServletRequest request) {
         SessionStartAtResponse startAt = sessionService.getStartAt(sessionId);
         return ResponseEntity.ok(ApiResponse.success("세션 시작 일시 조회 성공", startAt, traceIdProvider.resolve(request)));
+    }
+
+    @GetMapping("/{sessionId}/price")
+    public ResponseEntity<ApiResponse<SessionPriceResponse>> getPrice(@PathVariable UUID sessionId, HttpServletRequest request) {
+        SessionPriceResponse price = sessionService.getPrice(sessionId);
+        return ResponseEntity.ok(ApiResponse.success("세션 가격 조회 성공", price, traceIdProvider.resolve(request)));
     }
 }

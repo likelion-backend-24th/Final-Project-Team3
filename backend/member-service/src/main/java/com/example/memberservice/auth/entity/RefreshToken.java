@@ -1,5 +1,6 @@
 package com.example.memberservice.auth.entity;
 
+import com.example.memberservice.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -12,14 +13,10 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "refresh_token")
+@Table(name = "refresh_token", indexes = @Index(name = "idx_refresh_token_member_id", columnList = "member_id"))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners(AuditingEntityListener.class)
-public class RefreshToken {
-
-    @Id
-    private UUID id;
+public class RefreshToken extends BaseEntity {
 
     @Column(name="member_id", nullable = false)
     private UUID memberId;
@@ -32,17 +29,6 @@ public class RefreshToken {
 
     @Column(nullable = false)
     private boolean revoked;
-
-    @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    private void assignId() {
-        if (this.id == null) {
-            this.id = com.github.f4b6a3.uuid.UuidCreator.getTimeOrderedEpoch();
-        }
-    }
 
     @Builder
     private RefreshToken(UUID memberId, String tokenHash, LocalDateTime expiresAt) {

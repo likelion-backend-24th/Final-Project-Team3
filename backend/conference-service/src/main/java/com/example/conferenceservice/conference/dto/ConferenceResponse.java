@@ -22,7 +22,8 @@ public record ConferenceResponse(
         String description,
         String imageUrl,
         long sessionCount,
-        String rejectionReason
+        String rejectionReason,
+        boolean proofFileAttached
 )
 {
     public static ConferenceResponse from(Conference conference) {
@@ -46,7 +47,8 @@ public record ConferenceResponse(
                 conference.getDescription(),
                 conference.getImageUrl(),
                 sessionCount,
-                conference.getRejectionReason()
+                conference.getRejectionReason(),
+                conference.hasProofFile()
         );
     }
 }

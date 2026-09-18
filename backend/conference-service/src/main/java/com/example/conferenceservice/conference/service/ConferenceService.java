@@ -1,6 +1,8 @@
 package com.example.conferenceservice.conference.service;
 
 import com.example.conferenceservice.auth.CustomUserDetails;
+import com.example.conferenceservice.auth.MemberRole;
+import com.example.conferenceservice.common.file.FileStorageService;
 import com.example.conferenceservice.conference.dto.ConferenceDescriptionUpdateRequest;
 import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
 import com.example.conferenceservice.conference.dto.ConferenceLocationUpdateRequest;
@@ -24,6 +26,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,9 +42,10 @@ public class ConferenceService {
     private final ConferenceTagRepository conferenceTagRepository;
     private final SessionRepository sessionRepository;
     private final OrganizerProfileService organizerProfileService;
+    private final FileStorageService fileStorageService;
 
     @Transactional
-    public ConferenceResponse applyConference(CustomUserDetails currentUser, ConferenceRequest request) {
+    public ConferenceResponse applyConference(CustomUserDetails currentUser, ConferenceRequest request, MultipartFile proofFile) {
         if (currentUser.getOrganizationName() == null || currentUser.getOrganizationName().isBlank()) {
             throw new BusinessException(ConferenceErrorCode.ORGANIZATION_NAME_NOT_FOUND);
         }
@@ -69,6 +73,15 @@ public class ConferenceService {
         List<ConferenceTag> tags = toTags(request.tags(), savedConference);
         if (!tags.isEmpty()) {
             conferenceTagRepository.saveAll(tags);
+        }
+
+        // 파일 저장은 DB 저장 이후에 한다 - store()가 실패(잘못된 확장자, IO 오류)하면
+        // 트랜잭션 전체가 롤백되므로, 파일 저장 실패 때문에 컨퍼런스 row만 남는 orphan이 생기지 않는다.
+        // save()/saveAll()은 INSERT를 즉시 flush하지 않을 수 있으므로, flush()로 먼저 실제 INSERT를
+        // 실행시켜 제약조건 위반 등을 파일 쓰기 전에 확인한다 - 그래야 반대 방향(DB만 실패, 파일은 남는) orphan도 막힌다.
+        if (proofFile != null && !proofFile.isEmpty()) {
+            conferenceRepository.flush();
+            savedConference.attachProofFile(fileStorageService.store(proofFile));
         }
 
         return ConferenceResponse.from(savedConference);
@@ -214,5 +227,18 @@ public class ConferenceService {
     private Conference findConference(UUID id) {
         return conferenceRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ConferenceErrorCode.CONFERENCE_NOT_FOUND));
+    }
+
+    // 증명 파일은 본인(주최자) 또는 관리자만 열람 가능 - 승인 심사 목적이지 공개 자료가 아니다.
+    @Transactional(readOnly = true)
+    public Conference getConferenceForProofFileAccess(UUID id, CustomUserDetails currentUser) {
+        Conference conference = findConference(id);
+        if (currentUser.getRole() != MemberRole.ADMIN) {
+            OwnerScopeGuard.verify(currentUser.getMemberId(), conference.getOrganizerId(), ConferenceErrorCode.CONFERENCE_ACCESS_DENIED);
+        }
+        if (!conference.hasProofFile()) {
+            throw new BusinessException(ConferenceErrorCode.PROOF_FILE_NOT_FOUND);
+        }
+        return conference;
     }
 }

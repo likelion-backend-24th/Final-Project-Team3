@@ -78,7 +78,8 @@ public class ReservationController {
 
             @Schema(description = "10명 이상일 때 일괄 입력하는 동반자 정보(전원 동일하게 적용)")
             AttendeeInfo groupAttendee
-    ) {}
+    ) {
+    }
 
     @Operation(summary = "결제 처리", description = "HOLD 또는 대기열 순번 도달 예약에 대해 결제를 진행하고, 성공 시 좌석을 확정하고 QR 티켓을 발급한다")
     @PostMapping("/{reservationId}/payment")
@@ -88,7 +89,7 @@ public class ReservationController {
             @RequestBody PaymentRequest request,
             HttpServletRequest httpRequest) {
         PaymentResult result = reservationService.processPayment(
-                reservationId,userDetails.getMemberId(), request.paymentMethod(), request.amount());
+                reservationId, userDetails.getMemberId(), request.paymentId());
         return ResponseEntity.ok(
                 ApiResponse.success("결제 완료", result, traceIdProvider.resolve(httpRequest)));
     }
@@ -136,10 +137,8 @@ public class ReservationController {
 
     @Schema(description = "결제 요청 정보")
     public record PaymentRequest(
-            @Schema(description = "결제 수단", example = "CARD")
-            String paymentMethod,
-
-            @Schema(description = "결제 금액", example = "20000")
-            int amount
-    ) {}
+            @Schema(description = "PortOne 결제 고유 ID (프론트에서 결제 완료 후 전달)")
+            String paymentId
+    ) {
+    }
 }

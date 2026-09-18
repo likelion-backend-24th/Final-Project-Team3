@@ -3,6 +3,7 @@ package com.example.reservationservice.review;
 import com.example.reservationservice.auth.CustomUserDetails;
 import com.example.reservationservice.auth.MemberRole;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
+import com.example.reservationservice.payment.service.PortOnePaymentVerifier;
 import com.example.reservationservice.qrticket.entity.QrTicket;
 import com.example.reservationservice.qrticket.repository.QrTicketRepository;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
@@ -28,6 +29,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -42,6 +45,8 @@ class ReviewAcceptanceTest {
     private MockMvc mockMvc;
     @MockitoBean
     private ConferenceServiceClient conferenceServiceClient;
+    @MockitoBean
+    private PortOnePaymentVerifier portOnePaymentVerifier;
     @Autowired
     private ReservationRepository reservationRepository;
     @Autowired
@@ -60,6 +65,8 @@ class ReviewAcceptanceTest {
         waitingQueueRepository.deleteAll();
         reservationRepository.deleteAll();
         sessionCapacityLockRepository.deleteAll();
+        given(portOnePaymentVerifier.verify(anyString(), anyInt()))
+                .willReturn(new PortOnePaymentVerifier.VerifiedPayment("CARD"));
     }
 
     private RequestPostProcessor asUser(UUID memberId) {
@@ -187,7 +194,7 @@ class ReviewAcceptanceTest {
                 .with(asUser(memberId))  // ← 추가
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"paymentMethod": "CARD", "amount": 10000}
+                        {"paymentId": "test-payment-id"}
                         """));
 
         return reservationId;

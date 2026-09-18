@@ -27,7 +27,8 @@ public record ConferenceDetailResponse(
         List<String> tags,
         List<SessionResponse> sessions,
         int organizerPastConferenceCount,
-        String organizerRepresentativeSummary
+        String organizerRepresentativeSummary,
+        boolean proofFileAttached
 ){
     public static ConferenceDetailResponse from(Conference conference, List<Session> sessions, List<String> tags,
                                                 int organizerPastConferenceCount, String organizerRepresentativeSummary) {
@@ -49,7 +50,8 @@ public record ConferenceDetailResponse(
                 tags,
                 sessions.stream().map(SessionResponse::from).toList(),
                 organizerPastConferenceCount,
-                organizerRepresentativeSummary
+                organizerRepresentativeSummary,
+                conference.hasProofFile()
         );
     }
 }
