@@ -87,7 +87,13 @@ export default function SessionApply() {
       const res = await createHold({ sessionId, memberId: claims.memberId, headcount, attendees: attendeesPayload })
       if (res.data.status === 'QUEUED') {
         navigate(`/reservations/${res.data.reservationId}/queue`, {
-          state: { sessionTitle: session?.title, queuePosition: res.data.queuePosition },
+          state: {
+            sessionTitle: session?.title,
+            queuePosition: res.data.queuePosition,
+            conferenceTitle,
+            headcount,
+            price: session?.price ?? 0,
+          },
         })
       } else {
         navigate(`/reservations/${res.data.reservationId}/payment`, {

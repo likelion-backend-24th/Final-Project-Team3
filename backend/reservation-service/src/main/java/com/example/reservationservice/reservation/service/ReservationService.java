@@ -204,7 +204,14 @@ public class ReservationService {
         // 락을 잡기 전에 외부 API(PortOne) 검증부터 끝낸다 — 좌석 락을 쥔 채로 외부 호출을 기다리면 안 됨
         Integer price = conferenceServiceClient.getSessionPrice(reservation.getSessionId());
         int expectedAmount = (price == null ? 0 : price) * reservation.getHeadcount();
-        PortOnePaymentVerifier.VerifiedPayment verifiedPayment = portOnePaymentVerifier.verify(paymentId, expectedAmount);
+        // 무료 세션(price가 명시적으로 0)만 PortOne 조회를 건너뛴다. price가 null인 경우
+        // (마이그레이션 없이 컬럼만 추가돼 값이 비어있는 legacy row)는 무료로 간주하지 않고
+        // 그대로 verify()에 태워서 fail-closed로 막는다 — 그래야 위조된 paymentId로
+        // 아무 결제 검증 없이 확정되는 걸 막을 수 있다.
+        boolean isFree = price != null && price == 0;
+        String paymentMethod = isFree
+                ? "FREE"
+                : portOnePaymentVerifier.verify(paymentId, expectedAmount).paymentMethod();
 
         boolean wasQueued = reservation.getStatus() == ReservationStatus.QUEUED;
         Integer leftPosition = null;
@@ -235,7 +242,7 @@ public class ReservationService {
             throw new BusinessException(ReservationErrorCode.ALREADY_CONFIRMED);
         }
 
-        paymentService.recordPayment(reservationId, verifiedPayment.paymentMethod(), expectedAmount);
+        paymentService.recordPayment(reservationId, paymentMethod, expectedAmount);
 
         if (wasQueued && leftPosition != null) {
             waitingQueueRepository.deleteByReservationId(reservationId);
