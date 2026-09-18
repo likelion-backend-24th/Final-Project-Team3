@@ -228,6 +228,11 @@ public class ReservationService {
             int capacityUpdatedRows = sessionCapacityLockRepository.tryIncrease(
                     reservation.getSessionId(), reservation.getHeadcount(), capacity);
             if (capacityUpdatedRows == 0) {
+                // 이미 PortOne 결제 검증까지 끝난 뒤라 실제로 돈을 받은 상태다 — 좌석을
+                // 못 잡아주는데 돈만 받으면 안 되므로 여기서 바로 취소(환불) 처리한다.
+                if (!isFree) {
+                    portOnePaymentVerifier.cancel(paymentId, "정원 초과로 좌석 확정 실패 - 자동 환불");
+                }
                 throw new BusinessException(ReservationErrorCode.SESSION_CAPACITY_EXCEEDED);
             }
 

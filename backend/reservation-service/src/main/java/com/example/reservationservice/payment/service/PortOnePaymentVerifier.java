@@ -10,12 +10,14 @@ import io.portone.sdk.server.payment.PaidPayment;
 import io.portone.sdk.server.payment.Payment;
 import io.portone.sdk.server.payment.PaymentClient;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ExecutionException;
 
 // paymentId만 신뢰하고, 실제 결제 여부·금액은 항상 PortOne 서버에 재조회해서 검증한다
 // (PortOne 공식 권장 패턴: 클라이언트나 웹훅 본문 자체는 신뢰하지 않음)
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class PortOnePaymentVerifier {
@@ -51,6 +53,22 @@ public class PortOnePaymentVerifier {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new BusinessException(ReservationErrorCode.PORTONE_API_ERROR);
+        }
+    }
+
+    // 결제 검증은 통과했지만 그 이후 좌석 확정에 실패한 경우(정원 초과 등) 돈만 받고
+    // 예약이 안 잡히는 상황을 막기 위한 보상 트랜잭션. 실패해도 사용자에게 보여줄 원래
+    // 에러(정원 초과 등)를 가리면 안 되므로 예외를 던지지 않고 로그만 남긴다.
+    // ponytail: 여기서도 실패하면 로그만 남고 끝 — 재시도 큐나 운영 알림은 필요해지면 추가한다.
+    public void cancel(String paymentId, String reason) {
+        String apiSecret = decryptApiSecret();
+        try (PaymentClient client = new PaymentClient(apiSecret, "https://api.portone.io", null)) {
+            client.cancelPayment(paymentId, null, null, null, reason, null, null, null, null, null, null).get();
+        } catch (ExecutionException e) {
+            log.error("PortOne 결제 취소(자동 환불) 실패: paymentId={}, reason={}", paymentId, reason, e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("PortOne 결제 취소(자동 환불) 중단됨: paymentId={}, reason={}", paymentId, reason, e);
         }
     }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import * as PortOne from '@portone/browser-sdk/v2'
 import { Lock, ShieldCheck } from 'lucide-react'
@@ -21,6 +21,18 @@ export default function Payment() {
   const [error, setError] = useState('')
   const [queueBlocked, setQueueBlocked] = useState(false)
   const [loading, setLoading] = useState(false)
+  // PortOne 결제가 이미 성공했는데 뒤이은 submitPayment만 실패한 경우를 위해 기억해둔다.
+  // 같은 paymentId로는 PortOne이 재결제를 거부하므로, 재시도 시 결제창을 다시 띄우지 않고
+  // 이 값으로 확정만 다시 시도한다.
+  const [paidPaymentId, setPaidPaymentId] = useState(null)
+  // storeId/channelKey는 사실상 고정값이라 제출 시점에 기다리지 않도록 페이지 진입 시 미리 받아둔다.
+  const [pgConfig, setPgConfig] = useState(null)
+
+  useEffect(() => {
+    if (amount > 0) {
+      getPgConfig().then((res) => setPgConfig(res.data)).catch(() => {})
+    }
+  }, [amount])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -28,9 +40,9 @@ export default function Payment() {
     setQueueBlocked(false)
     setLoading(true)
     try {
-      let paymentId = id
-      if (amount > 0) {
-        const { storeId, channelKey } = (await getPgConfig()).data
+      let paymentId = paidPaymentId ?? id
+      if (amount > 0 && !paidPaymentId) {
+        const { storeId, channelKey } = pgConfig ?? (await getPgConfig()).data
         const response = await PortOne.requestPayment({
           storeId,
           channelKey,
@@ -40,12 +52,14 @@ export default function Payment() {
           currency: 'CURRENCY_KRW',
           payMethod: PAY_METHOD,
         })
-        if (response.code !== undefined) {
-          setError(response.message ?? '결제가 취소되었습니다.')
+        // response는 결제수단·PG에 따라 리다이렉트가 강제되면 undefined로 리졸브될 수 있다.
+        if (!response || response.code !== undefined) {
+          setError(response?.message ?? '결제가 취소되었거나 완료되지 않았습니다.')
           setLoading(false)
           return
         }
         paymentId = response.paymentId
+        setPaidPaymentId(paymentId)
       }
 
       await submitPayment(id, { paymentId })
@@ -57,6 +71,8 @@ export default function Payment() {
       const isQueueBlocked =
         err instanceof ApiError && (err.status === 403 || err.code === 'RESERVATION_SESSION_CAPACITY_EXCEEDED')
       if (isQueueBlocked) {
+        // 정원 초과로 확정이 막히면 서버가 이미 결제를 자동 환불했으므로 이 paymentId는 더 이상 못 쓴다.
+        setPaidPaymentId(null)
         setQueueBlocked(true)
       } else {
         setError(err instanceof ApiError ? err.message : '결제에 실패했습니다.')

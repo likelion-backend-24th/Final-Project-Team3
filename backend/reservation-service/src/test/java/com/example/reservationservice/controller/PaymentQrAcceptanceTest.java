@@ -217,6 +217,7 @@ public class PaymentQrAcceptanceTest {
         UUID member1 = UUID.randomUUID();
         UUID member2 = UUID.randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
+        given(conferenceServiceClient.getSessionPrice(sessionId)).willReturn(10000);
 
         mockMvc.perform(post("/api/reservations/hold")
                 .with(asUser(member1))
@@ -238,6 +239,9 @@ public class PaymentQrAcceptanceTest {
                     """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("RESERVATION_SESSION_CAPACITY_EXCEEDED"));
+
+        // 이미 PortOne 검증까지 통과한 뒤 정원 초과로 확정 실패했으므로 자동 환불이 호출돼야 한다
+        verify(portOnePaymentVerifier).cancel(eq("test-payment-id"), anyString());
     }
 
     @Test
