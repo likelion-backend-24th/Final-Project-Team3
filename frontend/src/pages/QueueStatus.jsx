@@ -8,7 +8,7 @@ const POLL_MS = 5000
 export default function QueueStatus() {
   const { id } = useParams()
   const location = useLocation()
-  const { sessionTitle, queuePosition: initialPosition } = location.state ?? {}
+  const { sessionTitle, queuePosition: initialPosition, conferenceTitle, headcount, price } = location.state ?? {}
   const [position, setPosition] = useState(initialPosition ?? null)
   const [error, setError] = useState('')
 
@@ -57,7 +57,7 @@ export default function QueueStatus() {
         <Link to="/conferences">
           <Button variant="secondary">목록으로</Button>
         </Link>
-        <Link to={`/reservations/${id}/payment`} state={{ sessionTitle }}>
+        <Link to={`/reservations/${id}/payment`} state={{ sessionTitle, conferenceTitle, headcount, price }}>
           <Button>결제하러 가기</Button>
         </Link>
       </div>

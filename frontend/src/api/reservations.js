@@ -12,12 +12,17 @@ export function getQueuePosition(reservationId) {
   return apiFetch(`/reservations/${reservationId}/queue-position`)
 }
 
-// 결제는 아직 Mock이라 PG 없이 즉시 CONFIRMED 처리된다. Session에 price 필드가 생겨서
-// amount는 이제 세션 가격 × 인원으로 실제 값을 보낼 수 있다.
-export function submitPayment(reservationId, { paymentMethod, amount }) {
+// PortOne 결제창(SDK) 초기화에 필요한 공개 설정. apiSecret/webhookSecret은 응답에 없다.
+export function getPgConfig() {
+  return apiFetch('/payments/pg-config')
+}
+
+// paymentId는 PortOne SDK로 결제창을 띄울 때 쓴 값(=reservationId 문자열)을 그대로 전달한다.
+// amount는 서버가 세션 가격×인원으로 직접 계산해서 PortOne에 재검증하므로 여기서 보내지 않는다.
+export function submitPayment(reservationId, { paymentId }) {
   return apiFetch(`/reservations/${reservationId}/payment`, {
     method: 'POST',
-    body: { paymentMethod, amount },
+    body: { paymentId },
   })
 }
 
