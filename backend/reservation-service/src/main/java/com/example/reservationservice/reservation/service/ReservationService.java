@@ -325,6 +325,13 @@ public class ReservationService {
 
             paymentService.recordRefund(reservationId, refundAmount);
 
+            // refundAmount > 0이면 원래 결제도 무료가 아니었다는 뜻이라(무료 세션은 amount=0으로
+            // 기록됨), 이 조건만으로 PortOne에 취소할 실제 결제 건이 있는지 충분히 판별된다.
+            if (refundAmount > 0) {
+                portOnePaymentVerifier.cancel(
+                        reservationId.toString(), refundAmount, "예약 취소 환불 (환불율 " + refundRate + "%)");
+            }
+
             sessionCapacityLockRepository.decrease(reservation.getSessionId(), reservation.getHeadcount());
 
         } else if (reservation.getStatus() == ReservationStatus.HOLD) {

@@ -56,19 +56,31 @@ public class PortOnePaymentVerifier {
         }
     }
 
-    // 결제 검증은 통과했지만 그 이후 좌석 확정에 실패한 경우(정원 초과 등) 돈만 받고
-    // 예약이 안 잡히는 상황을 막기 위한 보상 트랜잭션. 실패해도 사용자에게 보여줄 원래
-    // 에러(정원 초과 등)를 가리면 안 되므로 예외를 던지지 않고 로그만 남긴다.
-    // ponytail: 여기서도 실패하면 로그만 남고 끝 — 재시도 큐나 운영 알림은 필요해지면 추가한다.
+    // 전액 취소. amount를 안 넘기면 PortOne이 남은 금액 전체를 취소 처리한다.
     public void cancel(String paymentId, String reason) {
-        String apiSecret = decryptApiSecret();
-        try (PaymentClient client = new PaymentClient(apiSecret, "https://api.portone.io", null)) {
-            client.cancelPayment(paymentId, null, null, null, reason, null, null, null, null, null, null).get();
+        cancel(paymentId, null, reason);
+    }
+
+    // 결제 검증은 통과했지만 그 이후 좌석 확정에 실패한 경우(정원 초과 등)나, 참가자가 직접
+    // 취소해서 환불해야 하는 경우(취소 시점에 따른 부분 환불 포함)에 쓰는 보상 트랜잭션.
+    // 실패해도 호출부의 원래 처리(정원 초과 에러, 취소 자체는 완료 등)를 가리면 안 되므로
+    // 예외를 던지지 않고 로그만 남긴다.
+    // ponytail: 여기서도 실패하면 로그만 남고 끝 — 재시도 큐나 운영 알림은 필요해지면 추가한다.
+    public void cancel(String paymentId, Integer amount, String reason) {
+        try {
+            String apiSecret = decryptApiSecret();
+            Long amountAsLong = amount == null ? null : amount.longValue();
+            try (PaymentClient client = new PaymentClient(apiSecret, "https://api.portone.io", null)) {
+                client.cancelPayment(paymentId, amountAsLong, null, null, reason, null, null, null, null, null, null).get();
+            }
+        } catch (BusinessException e) {
+            // PG 미등록 등 — 이 경우도 호출부 처리를 막으면 안 되므로 로그만 남긴다.
+            log.error("PortOne 결제 취소(자동 환불) 실패 - {}: paymentId={}, amount={}, reason={}", e.getMessage(), paymentId, amount, reason);
         } catch (ExecutionException e) {
-            log.error("PortOne 결제 취소(자동 환불) 실패: paymentId={}, reason={}", paymentId, reason, e);
+            log.error("PortOne 결제 취소(자동 환불) 실패: paymentId={}, amount={}, reason={}", paymentId, amount, reason, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("PortOne 결제 취소(자동 환불) 중단됨: paymentId={}, reason={}", paymentId, reason, e);
+            log.error("PortOne 결제 취소(자동 환불) 중단됨: paymentId={}, amount={}, reason={}", paymentId, amount, reason, e);
         }
     }
 
