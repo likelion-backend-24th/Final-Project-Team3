@@ -79,7 +79,9 @@ public class PaymentSummaryAcceptanceTest {
         savePayment(confirmed.getId(), 10000);
 
         Reservation cancelled = createConfirmedReservation(sessionId);
-        savePayment(cancelled.getId(), 5000);
+        Payment cancelledPayment = savePayment(cancelled.getId(), 5000);
+        cancelledPayment.recordRefund(5000);
+        paymentRepository.saveAndFlush(cancelledPayment);
         ReflectionTestUtils.setField(cancelled, "status", ReservationStatus.CANCELLED);
         reservationRepository.saveAndFlush(cancelled);
 
@@ -117,12 +119,12 @@ public class PaymentSummaryAcceptanceTest {
         return reservation;
     }
 
-    private void savePayment(UUID reservationId, int amount) {
+    private Payment savePayment(UUID reservationId, int amount) {
         Payment payment = Payment.builder()
                 .reservationId(reservationId)
                 .amount(amount)
                 .paymentMethod("CARD")
                 .build();
-        paymentRepository.save(payment);
+        return paymentRepository.save(payment);
     }
 }

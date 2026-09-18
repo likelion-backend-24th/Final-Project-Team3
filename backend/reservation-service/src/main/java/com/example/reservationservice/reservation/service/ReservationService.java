@@ -311,6 +311,8 @@ public class ReservationService {
                     .orElse(0);
             refundAmount = originalAmount * refundRate / 100;
 
+            paymentService.recordRefund(reservationId, refundAmount);
+
             sessionCapacityLockRepository.decrease(reservation.getSessionId(), reservation.getHeadcount());
 
         } else if (reservation.getStatus() == ReservationStatus.HOLD) {

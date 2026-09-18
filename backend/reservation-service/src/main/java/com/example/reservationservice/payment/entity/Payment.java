@@ -32,6 +32,12 @@ public class Payment {
     @Column(name = "paid_at", nullable = false)
     private LocalDateTime paidAt;
 
+    @Column(name = "refunded_amount")
+    private Integer refundedAmount;
+
+    @Column(name = "refunded_at")
+    private LocalDateTime refundedAt;
+
     @Builder
     public Payment(UUID reservationId, Integer amount, String paymentMethod) {
         this.id = UuidCreator.getTimeOrderedEpoch();
@@ -39,5 +45,10 @@ public class Payment {
         this.amount = amount;
         this.paymentMethod = paymentMethod;
         this.paidAt = LocalDateTime.now();
+    }
+
+    public void recordRefund(Integer refundedAmount) {
+        this.refundedAmount = refundedAmount;
+        this.refundedAt = LocalDateTime.now();
     }
 }

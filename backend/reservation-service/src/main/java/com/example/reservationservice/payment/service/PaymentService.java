@@ -26,6 +26,13 @@ public class PaymentService {
         return paymentRepository.save(payment);
     }
 
+    @Transactional
+    public void recordRefund(UUID reservationId, Integer refundedAmount) {
+        Payment payment = paymentRepository.findByReservationId(reservationId)
+                .orElseThrow(() -> new IllegalStateException("결제 내역이 없는 예약입니다: " + reservationId));
+        payment.recordRefund(refundedAmount);
+    }
+
     public PaymentSummaryResponse getPaymentSummary(List<UUID> sessionIds) {
         int totalRevenue = paymentRepository.sumConfirmedAmount(sessionIds);
         int confirmedCount = paymentRepository.countConfirmed(sessionIds);
