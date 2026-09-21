@@ -82,6 +82,9 @@ public class QrTicket {
     }
 
     public void markAsUsed() {
+        if (this.used) {
+            throw new QrTicketException(QrTicketErrorCode.QR_TICKET_ALREADY_USED);
+        }
         this.used = true;
         this.usedAt = LocalDateTime.now();
     }

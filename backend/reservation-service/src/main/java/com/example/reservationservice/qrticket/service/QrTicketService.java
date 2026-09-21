@@ -71,7 +71,7 @@ public class QrTicketService {
 
     public List<QrTicket> getConfirmedTickets(UUID reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
 
         if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
             throw new BusinessException(ReservationErrorCode.PAYMENT_NOT_COMPLETED);

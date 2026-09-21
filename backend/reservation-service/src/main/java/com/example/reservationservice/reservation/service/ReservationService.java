@@ -40,6 +40,7 @@ public class ReservationService {
     private final QrTicketService qrTicketService;
     private final AttendeeRepository attendeeRepository;
     private final PaymentRepository paymentRepository;
+    private final ActiveReservationLockRepository activeReservationLockRepository;
 
     @Transactional
     public ReservationResult createHoldOrQueue(
@@ -88,6 +89,13 @@ public class ReservationService {
                     .build();
             reservationRepository.save(reservation);
 
+            try {
+                activeReservationLockRepository.save(
+                        new ActiveReservationLock(sessionId, memberId, reservation.getId()));
+            } catch (DataIntegrityViolationException e) {
+                throw new BusinessException(ReservationErrorCode.DUPLICATE_RESERVATION);
+            }
+
             saveAttendees(reservation.getId(), headcount, attendees, groupAttendee);
 
             return ReservationResult.hold(reservation.getId());
@@ -100,6 +108,13 @@ public class ReservationService {
                 .build();
         queuedReservation.markAsQueued();
         reservationRepository.save(queuedReservation);
+
+        try {
+            activeReservationLockRepository.save(
+                    new ActiveReservationLock(sessionId, memberId, queuedReservation.getId()));
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ReservationErrorCode.DUPLICATE_RESERVATION);
+        }
 
         saveAttendees(queuedReservation.getId(), headcount, attendees, groupAttendee);
 
@@ -180,7 +195,7 @@ public class ReservationService {
     @Transactional
     public PaymentResult processPayment(UUID reservationId, UUID requesterId, String paymentId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
 
         if (!reservation.getMemberId().equals(requesterId)) {
             throw new BusinessException(ReservationErrorCode.RESERVATION_ACCESS_DENIED);
@@ -254,6 +269,7 @@ public class ReservationService {
         if (updatedRows == 0) {
             throw new BusinessException(ReservationErrorCode.ALREADY_CONFIRMED);
         }
+        activeReservationLockRepository.deleteByReservationId(reservationId);
 
         paymentService.recordPayment(reservationId, paymentMethod, expectedAmount);
 
@@ -287,11 +303,15 @@ public class ReservationService {
     }
 
     public SessionStatusSummaryResponse getStatusSummary(UUID sessionId) {
-        // 예약 건수가 아니라 인원 수 기준으로 세야 checkedCount(QR 발급 수=1인당 1장)와 단위가 맞는다.
-        long holdCount = reservationRepository.sumHeadcountBySessionIdAndStatus(sessionId, ReservationStatus.HOLD);
-        long queuedCount = reservationRepository.sumHeadcountBySessionIdAndStatus(sessionId, ReservationStatus.QUEUED);
-        long confirmedCount = reservationRepository.sumHeadcountBySessionIdAndStatus(sessionId, ReservationStatus.CONFIRMED);
-        long cancelledCount = reservationRepository.sumHeadcountBySessionIdAndStatus(sessionId, ReservationStatus.CANCELLED);
+        Map<ReservationStatus, Long> counts = reservationRepository.sumHeadcountGroupByStatus(sessionId).stream()
+                .collect(Collectors.toMap(
+                        row -> (ReservationStatus) row[0],
+                        row -> (Long) row[1]
+                ));
+        long holdCount = counts.getOrDefault(ReservationStatus.HOLD, 0L);
+        long queuedCount = counts.getOrDefault(ReservationStatus.QUEUED, 0L);
+        long confirmedCount = counts.getOrDefault(ReservationStatus.CONFIRMED, 0L);
+        long cancelledCount = counts.getOrDefault(ReservationStatus.CANCELLED, 0L);
         long checkedCount = qrTicketService.countCheckedInBySessionId(sessionId);
 
         return new SessionStatusSummaryResponse(
@@ -301,7 +321,7 @@ public class ReservationService {
     @Transactional
     public CancelResult cancelReservation(UUID reservationId, UUID requesterId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
 
         if (!reservation.getMemberId().equals(requesterId)) {
             throw new BusinessException(ReservationErrorCode.RESERVATION_ACCESS_DENIED);
@@ -352,6 +372,7 @@ public class ReservationService {
             waitingQueueRepository.decrementPositionAfter(reservation.getSessionId(), leftPosition);
         }
 
+        activeReservationLockRepository.deleteByReservationId(reservationId);
         reservation.markAsCancelled();
 
         return CancelResult.cancelled(reservationId, refundRate, refundAmount);
