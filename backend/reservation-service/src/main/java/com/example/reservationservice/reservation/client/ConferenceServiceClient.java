@@ -70,6 +70,39 @@ public class ConferenceServiceClient {
         }
     }
 
+    public UUID getConferenceId(UUID sessionId) {
+        try {
+            ApiResponseEnvelope<SessionConferenceIdResponse> response = restClient.get()
+                    .uri("/api/sessions/{sessionId}/conference-id", sessionId)                    .retrieve()
+                    .body(new ParameterizedTypeReference<>() {});
+
+            if (response == null || response.data() == null) {
+                throw new ConferenceServiceUnavailableException(sessionId, null);
+            }
+            return response.data().conferenceId();
+        } catch (RestClientException e) {
+            throw new ConferenceServiceUnavailableException(sessionId, e);
+        }
+    }
+
+    public java.util.List<UUID> getSessionIdsByConference(UUID conferenceId) {
+        try {
+            ApiResponseEnvelope<java.util.List<UUID>> response = restClient.get()
+                    .uri("/api/conferences/{conferenceId}/session-ids", conferenceId)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<>() {});
+
+            if (response == null || response.data() == null) {
+                throw new ConferenceServiceUnavailableException(conferenceId, null);
+            }
+            return response.data();
+        } catch (RestClientException e) {
+            throw new ConferenceServiceUnavailableException(conferenceId, e);
+        }
+    }
+
+    public record SessionConferenceIdResponse(UUID sessionId, UUID conferenceId) {}
+
     // conference-service의 공통 ApiResponse<T> 래핑 규약에 맞춘 최소 파싱용 DTO
     public record ApiResponseEnvelope<T>(boolean success, T data, String message) {}
 
