@@ -30,7 +30,12 @@ public class PaymentWebhookService {
     private final ReservationService reservationService;
 
     public void handle(String rawBody, String webhookId, String webhookSignature, String webhookTimestamp) {
-        WebhookVerifier verifier = new WebhookVerifier(decryptWebhookSecret());
+        String webhookSecret = decryptWebhookSecret();
+        // 웹훅 시크릿 미발급 상태(env 등록 시 빈 값 허용)에서는 검증할 수 없으므로 503 — PortOne이 재시도한다
+        if (webhookSecret.isBlank()) {
+            throw new BusinessException(ReservationErrorCode.PG_NOT_CONFIGURED);
+        }
+        WebhookVerifier verifier = new WebhookVerifier(webhookSecret);
 
         Webhook webhook;
         try {
