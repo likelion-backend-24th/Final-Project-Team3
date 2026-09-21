@@ -55,6 +55,8 @@ public class SessionController {
         return ResponseEntity.ok(ApiResponse.success("세션 시작 일시 조회 성공", startAt, traceIdProvider.resolve(request)));
     }
 
+    // 서비스 간 내부 API: Reservation-Service가 결제 금액을 서버에서 계산할 때 호출한다.
+    // 응답 필드 설명은 SessionPriceResponse 참고. 세션이 없으면 404.
     @GetMapping("/{sessionId}/price")
     public ResponseEntity<ApiResponse<SessionPriceResponse>> getPrice(@PathVariable UUID sessionId, HttpServletRequest request) {
         SessionPriceResponse price = sessionService.getPrice(sessionId);

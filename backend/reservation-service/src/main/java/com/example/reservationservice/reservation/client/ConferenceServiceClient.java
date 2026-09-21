@@ -75,6 +75,10 @@ public class ConferenceServiceClient {
 
     public record SessionCapacityResponse(UUID sessionId, int capacity) {}
 
+    /**
+     * Conference-Service GET /api/sessions/{sessionId}/price 응답(내부 API).
+     * price는 1인당 가격(원)이며 0이면 무료, null이면 가격 미정(무료로 취급하지 않고 결제 검증을 거친다).
+     */
     public record SessionPriceResponse(UUID sessionId, Integer price) {}
 
     public record SessionStartAtResponse(UUID sessionId, LocalDateTime sessionStartAt) {}
