@@ -177,18 +177,18 @@ export default function MyPage() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
       <div className="bg-surface border border-border rounded-xl p-5 mb-8">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4 min-w-0">
             <div className="w-14 h-14 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xl font-semibold shrink-0">
               {displayName[0]?.toUpperCase()}
             </div>
-            <div>
-              <p className="text-lg font-semibold text-text">{displayName}</p>
-              <p className="text-sm text-text-muted">{claims?.email}</p>
+            <div className="min-w-0">
+              <p className="text-lg font-semibold text-text break-words">{displayName}</p>
+              <p className="text-sm text-text-muted break-all">{claims?.email}</p>
             </div>
           </div>
           {!editingProfile && (
-            <Button type="button" variant="secondary" onClick={startEditingProfile}>
+            <Button type="button" variant="secondary" className="self-start sm:self-auto" onClick={startEditingProfile}>
               프로필 수정
             </Button>
           )}
@@ -246,21 +246,21 @@ export default function MyPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-surface border border-border rounded-xl p-5">
-          <p className="flex items-center gap-1.5 text-sm text-text-muted mb-1.5">
+      <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-8">
+        <div className="bg-surface border border-border rounded-xl p-3.5 sm:p-5">
+          <p className="flex items-center gap-1.5 text-xs sm:text-sm text-text-muted mb-1.5 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-success" /> 예약 확정
           </p>
           <p className="text-2xl font-semibold text-success">{counts.CONFIRMED}</p>
         </div>
-        <div className="bg-surface border border-border rounded-xl p-5">
-          <p className="flex items-center gap-1.5 text-sm text-text-muted mb-1.5">
+        <div className="bg-surface border border-border rounded-xl p-3.5 sm:p-5">
+          <p className="flex items-center gap-1.5 text-xs sm:text-sm text-text-muted mb-1.5 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-warning" /> 대기 중
           </p>
           <p className="text-2xl font-semibold text-warning">{counts.WAITING}</p>
         </div>
-        <div className="bg-surface border border-border rounded-xl p-5">
-          <p className="flex items-center gap-1.5 text-sm text-text-muted mb-1.5">
+        <div className="bg-surface border border-border rounded-xl p-3.5 sm:p-5">
+          <p className="flex items-center gap-1.5 text-xs sm:text-sm text-text-muted mb-1.5 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-text-faint" /> 취소
           </p>
           <p className="text-2xl font-semibold text-text-muted">{counts.CANCELLED}</p>

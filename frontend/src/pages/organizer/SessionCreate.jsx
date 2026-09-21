@@ -165,7 +165,7 @@ export default function SessionCreate() {
               />
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TextField
                 label="정원"
                 type="number"
@@ -196,7 +196,7 @@ export default function SessionCreate() {
               required
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TextField
                 label="신청 시작 일시"
                 type="datetime-local"
@@ -213,7 +213,7 @@ export default function SessionCreate() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TextField
                 label="진행 시작 일시"
                 type="datetime-local"
@@ -230,7 +230,7 @@ export default function SessionCreate() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TextField
                 label="장소"
                 placeholder="예: 그랜드홀 A"

@@ -20,7 +20,7 @@ const labels = {
 
 export default function StatusBadge({ status }) {
   return (
-    <span className={`px-2.5 py-1 rounded-md text-xs font-medium ${styles[status] ?? 'text-text-muted bg-surface2'}`}>
+    <span className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap shrink-0 ${styles[status] ?? 'text-text-muted bg-surface2'}`}>
       {labels[status] ?? status}
     </span>
   )

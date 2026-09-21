@@ -16,7 +16,7 @@ export default function Button({
   return (
     <button
       disabled={disabled || loading}
-      className={`px-5 py-3 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${className}`}
+      className={`px-5 py-3 rounded-lg font-medium text-sm whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${className}`}
       {...props}
     >
       {loading ? '처리 중...' : children}

@@ -81,17 +81,17 @@ export default function Dashboard() {
         </p>
       )}
 
-      <div className="grid grid-cols-3 gap-4 mb-10">
-        <div className="bg-surface border border-border rounded-xl p-5">
-          <p className="text-sm text-text-muted mb-1">전체 컨퍼런스</p>
+      <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-10">
+        <div className="bg-surface border border-border rounded-xl p-3.5 sm:p-5">
+          <p className="text-xs sm:text-sm text-text-muted mb-1 whitespace-nowrap">전체 컨퍼런스</p>
           <p className="text-2xl font-semibold text-text">{conferences?.length ?? '-'}</p>
         </div>
-        <div className="bg-surface border border-border rounded-xl p-5">
-          <p className="text-sm text-text-muted mb-1">승인 대기</p>
+        <div className="bg-surface border border-border rounded-xl p-3.5 sm:p-5">
+          <p className="text-xs sm:text-sm text-text-muted mb-1 whitespace-nowrap">승인 대기</p>
           <p className="text-2xl font-semibold text-warning">{pending}</p>
         </div>
-        <div className="bg-surface border border-border rounded-xl p-5">
-          <p className="text-sm text-text-muted mb-1">승인됨</p>
+        <div className="bg-surface border border-border rounded-xl p-3.5 sm:p-5">
+          <p className="text-xs sm:text-sm text-text-muted mb-1 whitespace-nowrap">승인됨</p>
           <p className="text-2xl font-semibold text-success">{approved}</p>
         </div>
       </div>
@@ -140,12 +140,12 @@ export default function Dashboard() {
 function ConferenceCard({ conference: c, sessions, capacityBySession }) {
   return (
     <div className="bg-surface border border-border rounded-xl p-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
             <p className="text-text font-medium">{c.title}</p>
             {c.status === 'APPROVED' && isEnded(c) ? (
-              <span className="px-2.5 py-1 rounded-md text-xs font-medium text-text-muted bg-surface2">종료됨</span>
+              <span className="px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap text-text-muted bg-surface2">종료됨</span>
             ) : (
               <StatusBadge status={c.status} />
             )}
@@ -155,7 +155,7 @@ function ConferenceCard({ conference: c, sessions, capacityBySession }) {
           </p>
         </div>
         {c.status === 'APPROVED' && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link to={`/organizer/conferences/${c.id}/operations`}>
               <Button variant="secondary">운영 현황</Button>
             </Link>

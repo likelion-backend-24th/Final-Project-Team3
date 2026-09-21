@@ -54,7 +54,7 @@ export default function Home() {
   return (
     <div>
       <section className="max-w-6xl mx-auto px-6 pt-10">
-        <div className="relative overflow-hidden rounded-xl bg-bg px-10 py-14">
+        <div className="relative overflow-hidden rounded-xl bg-bg px-6 py-10 sm:px-10 sm:py-14">
           {/* 장식용 글로우 (이미지 아님) */}
           <div className="absolute -right-24 top-1/3 w-[40rem] h-[40rem] rounded-full bg-primary/20 blur-3xl" />
           <div className="absolute right-0 bottom-0 w-[28rem] h-[28rem] rounded-full bg-accent/10 blur-3xl" />
@@ -63,7 +63,7 @@ export default function Home() {
             <span className="inline-flex items-center gap-2 text-xs text-accent mb-4 tracking-wide">
               <span className="w-1.5 h-1.5 rounded-full bg-accent" /> TECH CONFERENCE PLATFORM
             </span>
-            <h1 className="text-4xl font-semibold text-text leading-tight mb-4">
+            <h1 className="text-3xl sm:text-4xl font-semibold text-text leading-tight mb-4 break-keep">
               관심 있는 컨퍼런스,
               <br />
               <span className="text-primary">지금 바로</span> 신청하세요
@@ -78,8 +78,8 @@ export default function Home() {
       </section>
 
       <div className="max-w-6xl mx-auto px-6 py-10">
-        <div className="flex flex-col sm:flex-row gap-3 mb-8">
-          <div className="relative flex-1">
+        <div className="flex flex-col gap-4 mb-8">
+          <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-faint" size={18} />
             <input
               value={query}
@@ -93,7 +93,7 @@ export default function Home() {
               <button
                 key={cat}
                 onClick={() => setCategory(cat)}
-                className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap border transition-colors ${
+                className={`px-3.5 py-1.5 rounded-lg text-sm whitespace-nowrap border transition-colors ${
                   category === cat
                     ? 'bg-primary border-primary text-white'
                     : 'bg-surface border-border text-text-muted hover:text-text'
