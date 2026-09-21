@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Ticket, CheckCircle2, User, Briefcase } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getMyReservations, getQueuePosition, getQrTickets } from '../api/reservations'
+import { getMyReservations, getQueuePosition, getQrTickets, cancelReservation } from '../api/reservations'
 import { listConferences, getConference } from '../api/conferences'
 import { getProfile, updateProfile } from '../api/auth'
 import { ApiError } from '../api/client'
@@ -47,6 +47,8 @@ export default function MyPage() {
   const [expandedId, setExpandedId] = useState(null)
   const [tab, setTab] = useState('ALL')
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [cancellingId, setCancellingId] = useState(null)
 
   // 프로필(연령대·직무) 수정 — ageGroup/job은 저장된 값(뱃지 표시용),
   // draftAgeGroup/draftJob은 "프로필 수정" 모드에서만 쓰는 편집 중 값
@@ -123,6 +125,31 @@ export default function MyPage() {
       } catch {
         // 조회 실패해도 패널은 열어두고 QR 자리만 비워둔다
       }
+    }
+  }
+
+  const handleCancel = async (r) => {
+    const message = r.status === 'CONFIRMED'
+      ? '예약을 취소할까요?\n세션 시작 7일 전까지 100%, 3~6일 전 50% 환불되고, 3일 미만이면 환불되지 않아요.'
+      : '신청을 취소할까요?'
+    if (!window.confirm(message)) return
+
+    setError('')
+    setNotice('')
+    setCancellingId(r.reservationId)
+    try {
+      const res = await cancelReservation(r.reservationId)
+      setReservations((list) => list.map((x) => (x.reservationId === r.reservationId ? { ...x, status: 'CANCELLED' } : x)))
+      const { refundRate, refundAmount } = res.data
+      setNotice(
+        refundAmount != null
+          ? `취소됐어요. 환불 ${refundAmount.toLocaleString()}원 (환불율 ${refundRate}%)`
+          : '취소됐어요.',
+      )
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '취소에 실패했습니다.')
+    } finally {
+      setCancellingId(null)
     }
   }
 
@@ -282,6 +309,7 @@ export default function MyPage() {
       </div>
 
       {error && <p className="text-sm text-danger mb-4">{error}</p>}
+      {notice && <p className="text-sm text-success mb-4">{notice}</p>}
       {!reservations && !error && <p className="text-text-muted text-sm">불러오는 중...</p>}
 
       <div className="space-y-4">
@@ -341,7 +369,7 @@ export default function MyPage() {
                     </Link>
                   )}
                   {r.status !== 'CANCELLED' && (
-                    <Button variant="ghost" disabled title="아직 지원하지 않는 기능이에요">
+                    <Button variant="ghost" loading={cancellingId === r.reservationId} onClick={() => handleCancel(r)}>
                       취소·환불
                     </Button>
                   )}
