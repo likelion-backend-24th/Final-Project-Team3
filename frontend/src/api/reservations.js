@@ -26,6 +26,11 @@ export function submitPayment(reservationId, { paymentId }) {
   })
 }
 
+// 응답은 {reservationId, status, refundRate, refundAmount} — HOLD/QUEUED 취소는 환불이 없어 두 값이 null이다.
+export function cancelReservation(reservationId) {
+  return apiFetch(`/reservations/${reservationId}/cancel`, { method: 'POST' })
+}
+
 export function getQrTickets(reservationId) {
   return apiFetch(`/qr-tickets/${reservationId}`)
 }
