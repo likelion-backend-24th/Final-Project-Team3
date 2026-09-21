@@ -160,10 +160,26 @@ public class ReservationService {
         }
     }
 
-    public int getQueuePosition(UUID reservationId) {
-        return waitingQueueRepository.findByReservationId(reservationId)
-                .map(WaitingQueue::getPosition)
+    public QueuePositionResponse getQueuePosition(UUID reservationId) {
+        WaitingQueue queueEntry = waitingQueueRepository.findByReservationId(reservationId)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+
+        int position = queueEntry.getPosition();
+        int estimatedWaitMinutes = calculateEstimatedWaitMinutes(queueEntry.getSessionId(), position);
+
+        return new QueuePositionResponse(position, estimatedWaitMinutes);
+    }
+
+    private int calculateEstimatedWaitMinutes(UUID sessionId, int position) {
+        try {
+            UUID conferenceId = conferenceServiceClient.getConferenceId(sessionId);
+            List<UUID> sessionIds = conferenceServiceClient.getSessionIdsByConference(conferenceId);
+            Double avgSeconds = paymentRepository.findAveragePaymentSecondsBySessionIds(sessionIds);
+            double avgMinutesPerPerson = (avgSeconds == null) ? 5.0 : avgSeconds / 60.0;
+            return (int) Math.ceil(position * avgMinutesPerPerson);
+        } catch (RuntimeException e) {
+            return (int) Math.ceil(position * 5.0);
+        }
     }
 
     private WaitingQueue registerToQueueWithRetry(UUID sessionId, UUID reservationId, UUID memberId) {

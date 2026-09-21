@@ -105,7 +105,7 @@ public class WaitingQueueTest {
         mockMvc.perform(get("/api/reservations/" + queuedReservationId + "/queue-position")
                         .with(asUser(queuedMemberId)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").value(1));
+                .andExpect(jsonPath("$.data.position").value(1));
     }
 
     private String createRequestJson(UUID sessionId) {
