@@ -56,10 +56,10 @@ export default function ConferenceDetail() {
     <div className="max-w-6xl mx-auto px-6 py-10">
       <button onClick={() => navigate(-1)} className="text-sm text-text-muted hover:text-text">‹ 뒤로</button>
 
-      {conference.imageUrl && (
+      {conference.detailImageUrl && (
         <div
           className="mt-4 h-48 rounded-xl bg-cover bg-center"
-          style={{ backgroundImage: `url(${conference.imageUrl})` }}
+          style={{ backgroundImage: `url(${conference.detailImageUrl})` }}
         />
       )}
 
