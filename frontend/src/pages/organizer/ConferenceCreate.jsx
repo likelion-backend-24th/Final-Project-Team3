@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Paperclip, X } from 'lucide-react'
 import TextField from '../../components/TextField'
 import Button from '../../components/Button'
 import { createConference } from '../../api/conferences'
@@ -9,6 +9,10 @@ import { CATEGORY_TAGS } from '../../utils/categoryTags'
 
 // organizerName은 더 이상 폼에서 안 받는다 — 서버가 로그인한 주최자의 JWT(조직명)로 직접 채운다
 // (전엔 아무 문자열이나 보낼 수 있던 갭이었음). imageUrl은 파일 업로드가 아니라 URL 입력 방식으로 지원된다.
+
+// 백엔드(FileStorageService)와 같은 제한: 확장자 pdf/png/jpg/jpeg, 파일당 10MB(multipart 한도).
+const PROOF_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg']
+const MAX_PROOF_BYTES = 10 * 1024 * 1024
 
 // datetime-local 인풋 값("2027-03-15T09:00")엔 초가 없어서 백엔드 LocalDateTime 파싱용으로 붙여준다.
 function toLocalDateTime(value) {
@@ -25,8 +29,26 @@ export default function ConferenceCreate() {
   const [description, setDescription] = useState('')
   const [imageUrl, setImageUrl] = useState('')
   const [tags, setTags] = useState([])
+  const [proofFile, setProofFile] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const onProofChange = (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const ext = file.name.split('.').pop().toLowerCase()
+    if (!PROOF_EXTENSIONS.includes(ext)) {
+      setError('증빙 파일은 PDF, PNG, JPG만 첨부할 수 있어요.')
+      return
+    }
+    if (file.size > MAX_PROOF_BYTES) {
+      setError('증빙 파일은 10MB 이하만 첨부할 수 있어요.')
+      return
+    }
+    setError('')
+    setProofFile(file)
+  }
 
   const toggleTag = (tag) => {
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
@@ -56,6 +78,7 @@ export default function ConferenceCreate() {
         description: description || null,
         imageUrl: imageUrl || null,
         tags,
+        proofFile,
       })
       navigate('/organizer', { state: { justCreated: true } })
     } catch (err) {
@@ -87,7 +110,7 @@ export default function ConferenceCreate() {
               required
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TextField
                 label="시작 일시"
                 type="datetime-local"
@@ -104,7 +127,7 @@ export default function ConferenceCreate() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TextField
                 label="개최 장소"
                 placeholder="예: COEX 그랜드볼룸, 서울"
@@ -140,6 +163,34 @@ export default function ConferenceCreate() {
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
             />
+
+            <div>
+              <span className="block mb-2 text-sm text-text">증빙 파일 (선택)</span>
+              {proofFile ? (
+                <div className="flex items-center justify-between gap-3 bg-bg border border-border rounded-lg px-4 py-3 text-sm">
+                  <span className="flex items-center gap-2 min-w-0 text-text">
+                    <Paperclip size={16} className="shrink-0 text-text-muted" />
+                    <span className="truncate">{proofFile.name}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setProofFile(null)}
+                    aria-label="첨부 제거"
+                    className="shrink-0 text-text-faint hover:text-text"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center justify-center gap-2 bg-bg border border-dashed border-border rounded-lg px-4 py-3 text-sm text-text-muted hover:text-text hover:border-primary cursor-pointer">
+                  <Paperclip size={16} /> 파일 선택
+                  <input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={onProofChange} className="hidden" />
+                </label>
+              )}
+              <p className="text-xs text-text-faint mt-1.5">
+                컨퍼런스 개최를 증빙할 자료예요 (PDF, PNG, JPG · 최대 10MB). 승인 심사용이라 관리자와 본인만 볼 수 있어요.
+              </p>
+            </div>
           </div>
 
           <div className="bg-surface border border-border rounded-xl p-6 mt-6">

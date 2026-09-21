@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Paperclip } from 'lucide-react'
 import {
   listPendingConferences,
   approveConference,
@@ -9,8 +9,10 @@ import {
   rejectSession,
   getConferenceDetail,
 } from '../../api/admin'
+import { downloadProofFile } from '../../api/conferences'
 import { ApiError } from '../../api/client'
 import { formatDateRange } from '../../utils/date'
+import { saveBlob } from '../../utils/download'
 import Button from '../../components/Button'
 import StatusBadge from '../../components/StatusBadge'
 
@@ -18,6 +20,21 @@ import StatusBadge from '../../components/StatusBadge'
 function ConferenceDetailModal({ conferenceId, onClose }) {
   const [detail, setDetail] = useState(null)
   const [error, setError] = useState('')
+  const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
+
+  const handleDownloadProof = async () => {
+    setDownloadError('')
+    setDownloading(true)
+    try {
+      const { blob, filename } = await downloadProofFile(conferenceId)
+      saveBlob(blob, filename)
+    } catch (err) {
+      setDownloadError(err instanceof ApiError ? err.message : '증빙 파일을 내려받지 못했습니다.')
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -88,6 +105,25 @@ function ConferenceDetailModal({ conferenceId, onClose }) {
               {detail.transportation && <p className="text-xs text-text-faint mt-0.5">교통편: {detail.transportation}</p>}
               {detail.parkingInfo && <p className="text-xs text-text-faint mt-0.5">주차: {detail.parkingInfo}</p>}
               {detail.amenities && <p className="text-xs text-text-faint mt-0.5">편의시설: {detail.amenities}</p>}
+            </div>
+
+            <div>
+              <h4 className="text-sm font-medium text-text mb-1">증빙 파일</h4>
+              {detail.proofFileAttached ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleDownloadProof}
+                    disabled={downloading}
+                    className="inline-flex items-center gap-1.5 text-sm text-accent hover:underline disabled:opacity-50"
+                  >
+                    <Paperclip size={14} /> {downloading ? '내려받는 중...' : '증빙 파일 다운로드'}
+                  </button>
+                  {downloadError && <p className="text-xs text-danger mt-1">{downloadError}</p>}
+                </>
+              ) : (
+                <p className="text-sm text-text-muted">첨부된 증빙 파일이 없어요.</p>
+              )}
             </div>
 
             <div>
@@ -181,7 +217,7 @@ function SessionDetailModal({ session, onClose }) {
 }
 
 // 반려 사유 입력 + 승인/반려 버튼을 공용으로 쓰는 한 줄 아이템.
-function ApprovalItem({ title, subtitle, meta, onApprove, onReject, onViewDetail, busy }) {
+function ApprovalItem({ title, subtitle, meta, proofAttached, onApprove, onReject, onViewDetail, busy }) {
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState('')
   const [error, setError] = useState('')
@@ -197,13 +233,18 @@ function ApprovalItem({ title, subtitle, meta, onApprove, onReject, onViewDetail
 
   return (
     <div className="bg-surface border border-border rounded-xl p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+        <div className="min-w-0">
           <p className="text-text font-medium">{title}</p>
           {subtitle && <p className="text-sm text-text-muted mt-0.5">{subtitle}</p>}
           {meta && <p className="text-xs text-text-faint mt-1">{meta}</p>}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {proofAttached && (
+            <span className="inline-flex items-center gap-1 text-xs text-text-muted whitespace-nowrap">
+              <Paperclip size={12} /> 증빙
+            </span>
+          )}
           {onViewDetail && (
             <button onClick={onViewDetail} className="text-xs text-accent hover:underline">
               상세보기
@@ -354,6 +395,7 @@ export default function Approvals() {
                 title={c.title}
                 subtitle={`${c.organizerName ?? '주최자 미상'} · ${formatDateRange(c.startAt, c.endAt) ?? '-'} · ${c.location ?? '-'}`}
                 meta={c.description}
+                proofAttached={c.proofFileAttached}
                 busy={busyId === c.id}
                 onApprove={() => approveConf(c.id)}
                 onReject={(reason) => rejectConf(c.id, reason)}

@@ -1,4 +1,4 @@
-import { apiFetch } from './client'
+import { apiFetch, apiDownload } from './client'
 
 // conference-service: organizerName은 이제 클라이언트가 안 보내도 서버가 JWT(주최자 조직명)로
 // 채운다. tags는 최소 1개 필수(@NotEmpty), imageUrl은 선택.
@@ -49,11 +49,24 @@ export function createConference({
   description,
   imageUrl,
   tags,
+  proofFile,
 }) {
-  return apiFetch('/conferences', {
-    method: 'POST',
-    body: { title, capacity, startAt, endAt, location, transportation, parkingInfo, amenities, description, imageUrl, tags },
-  })
+  // 백엔드는 multipart/form-data만 받는다: JSON 본문은 "request" 파트, 증빙 파일은 선택 "proofFile" 파트.
+  const form = new FormData()
+  form.append(
+    'request',
+    new Blob(
+      [JSON.stringify({ title, capacity, startAt, endAt, location, transportation, parkingInfo, amenities, description, imageUrl, tags })],
+      { type: 'application/json' },
+    ),
+  )
+  if (proofFile) form.append('proofFile', proofFile)
+  return apiFetch('/conferences', { method: 'POST', body: form })
+}
+
+// 승인 심사용 증빙 파일. 소유 주최자 본인과 관리자만 받을 수 있다(403). 첨부된 컨퍼런스에만 호출할 것.
+export function downloadProofFile(conferenceId) {
+  return apiDownload(`/conferences/${conferenceId}/proof-file`)
 }
 
 // 주최자 소유 스코프로 "내 컨퍼런스의 세션 전체"(승인대기·반려 포함)를 조회한다.

@@ -33,15 +33,17 @@ async function parseResponse(res) {
 // refreshToken은 HttpOnly 쿠키라 JS로 못 만지고, 매 요청에 credentials:'include'로 자동 첨부된다.
 // accessToken이 만료되어 401이 오면 /api/auth/refresh를 한 번 시도하고, 성공하면 원래 요청을 재시도한다.
 export async function apiFetch(path, { method = 'GET', body, skipAuthRetry = false } = {}) {
+  // FormData(파일 업로드)는 Content-Type을 직접 지정하면 multipart boundary가 빠지므로 브라우저가 채우게 둔다.
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData
   const headers = { }
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
   if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
 
   const res = await fetch(`/api${path}`, {
     method,
     headers,
     credentials: 'include',
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
   })
 
   const parsed = await parseResponse(res)
@@ -69,6 +71,32 @@ export async function apiFetch(path, { method = 'GET', body, skipAuthRetry = fal
   }
 
   return parsed
+}
+
+// <a href>로는 Authorization 헤더를 못 실으니, 인증이 필요한 파일은 blob으로 받아서 저장한다.
+export async function apiDownload(path, { skipAuthRetry = false } = {}) {
+  const headers = {}
+  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
+  const res = await fetch(`/api${path}`, { headers, credentials: 'include' })
+
+  if (res.status === 401 && !skipAuthRetry) {
+    if (await tryRefresh()) return apiDownload(path, { skipAuthRetry: true })
+    onUnauthorized?.()
+  }
+  if (!res.ok) {
+    let err
+    try {
+      err = (await parseResponse(res))?.error
+    } catch {
+      // 에러 바디가 JSON이 아니면 기본 메시지를 쓴다
+    }
+    throw new ApiError(err?.code ?? 'UNKNOWN', err?.message ?? '파일을 내려받지 못했습니다.', res.status)
+  }
+
+  const disposition = res.headers.get('Content-Disposition') ?? ''
+  const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+  const filename = encoded ? decodeURIComponent(encoded) : 'download'
+  return { blob: await res.blob(), filename }
 }
 
 async function tryRefresh() {
