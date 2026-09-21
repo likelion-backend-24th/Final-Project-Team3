@@ -5,10 +5,10 @@ import TextField from '../../components/TextField'
 import Button from '../../components/Button'
 import { createConference } from '../../api/conferences'
 import { ApiError } from '../../api/client'
+import { CATEGORY_TAGS } from '../../utils/categoryTags'
 
 // organizerName은 더 이상 폼에서 안 받는다 — 서버가 로그인한 주최자의 JWT(조직명)로 직접 채운다
 // (전엔 아무 문자열이나 보낼 수 있던 갭이었음). imageUrl은 파일 업로드가 아니라 URL 입력 방식으로 지원된다.
-const CATEGORY_TAGS = ['Software', 'AI', 'ML', 'Cloud', 'Security', 'Frontend', 'Backend', 'DevOps', 'Mobile', 'Data', 'Career', 'Startup']
 
 // datetime-local 인풋 값("2027-03-15T09:00")엔 초가 없어서 백엔드 LocalDateTime 파싱용으로 붙여준다.
 function toLocalDateTime(value) {

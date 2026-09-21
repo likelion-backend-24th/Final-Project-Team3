@@ -33,7 +33,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -98,6 +101,7 @@ public class PaymentQrAcceptanceTest {
         UUID sessionId = randomUUID();
         UUID memberId = randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+        given(conferenceServiceClient.getSessionPrice(sessionId)).willReturn(10000);
 
         MvcResult holdResult = mockMvc.perform(post("/api/reservations/hold")
                         .with(asUser(memberId))
@@ -213,6 +217,7 @@ public class PaymentQrAcceptanceTest {
         UUID member1 = UUID.randomUUID();
         UUID member2 = UUID.randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
+        given(conferenceServiceClient.getSessionPrice(sessionId)).willReturn(10000);
 
         mockMvc.perform(post("/api/reservations/hold")
                 .with(asUser(member1))
@@ -234,6 +239,9 @@ public class PaymentQrAcceptanceTest {
                     """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("RESERVATION_SESSION_CAPACITY_EXCEEDED"));
+
+        // 이미 PortOne 검증까지 통과한 뒤 정원 초과로 확정 실패했으므로 자동 환불이 호출돼야 한다
+        verify(portOnePaymentVerifier).cancel(eq("test-payment-id"), anyString());
     }
 
     @Test
@@ -386,6 +394,7 @@ public class PaymentQrAcceptanceTest {
         UUID sessionId = UUID.randomUUID();
         UUID memberId = UUID.randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+        given(conferenceServiceClient.getSessionPrice(sessionId)).willReturn(10000);
         given(portOnePaymentVerifier.verify(anyString(), anyInt()))
                 .willThrow(new BusinessException(ReservationErrorCode.PAYMENT_NOT_PAID));
 
@@ -415,6 +424,7 @@ public class PaymentQrAcceptanceTest {
         UUID sessionId = UUID.randomUUID();
         UUID memberId = UUID.randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+        given(conferenceServiceClient.getSessionPrice(sessionId)).willReturn(10000);
         given(portOnePaymentVerifier.verify(anyString(), anyInt()))
                 .willThrow(new BusinessException(ReservationErrorCode.PAYMENT_AMOUNT_MISMATCH));
 
@@ -433,6 +443,90 @@ public class PaymentQrAcceptanceTest {
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("RESERVATION_PAYMENT_AMOUNT_MISMATCH"));
+
+        Reservation reservation = reservationRepository.findById(UUID.fromString(reservationId)).orElseThrow();
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.HOLD);
+    }
+
+    @Test
+    @DisplayName("유료 세션은 세션 가격×인원으로 계산한 금액으로 PortOne 검증을 호출한다")
+    void paidSession_verifiesWithCalculatedAmount() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+        given(conferenceServiceClient.getSessionPrice(sessionId)).willReturn(10000);
+
+        MvcResult holdResult = mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(memberId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createHoldJson(sessionId, 2)))
+                .andReturn();
+        String reservationId = JsonPath.read(holdResult.getResponse().getContentAsString(), "$.data.reservationId");
+
+        mockMvc.perform(post("/api/reservations/{id}/payment", reservationId)
+                        .with(asUser(memberId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"paymentId": "test-payment-id"}
+                                """))
+                .andExpect(status().isOk());
+
+        verify(portOnePaymentVerifier).verify(eq("test-payment-id"), eq(20000));
+    }
+
+    @Test
+    @DisplayName("무료 세션(가격 0원)은 PortOne 검증 없이 바로 확정된다")
+    void freeSession_confirmsWithoutPortOneVerification() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+        given(conferenceServiceClient.getSessionPrice(sessionId)).willReturn(0);
+
+        MvcResult holdResult = mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(memberId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createHoldJson(sessionId, 1)))
+                .andReturn();
+        String reservationId = JsonPath.read(holdResult.getResponse().getContentAsString(), "$.data.reservationId");
+
+        mockMvc.perform(post("/api/reservations/{id}/payment", reservationId)
+                        .with(asUser(memberId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"paymentId": "test-payment-id"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
+
+        verify(portOnePaymentVerifier, never()).verify(anyString(), anyInt());
+    }
+
+    @Test
+    @DisplayName("세션 가격이 null(레거시 row)이면 무료로 간주하지 않고 PortOne 검증을 그대로 거친다")
+    void nullSessionPrice_doesNotBypassPortOneVerification() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+        given(conferenceServiceClient.getSessionPrice(sessionId)).willReturn(null);
+        given(portOnePaymentVerifier.verify(anyString(), anyInt()))
+                .willThrow(new BusinessException(ReservationErrorCode.PAYMENT_NOT_PAID));
+
+        MvcResult holdResult = mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(memberId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createHoldJson(sessionId, 1)))
+                .andReturn();
+        String reservationId = JsonPath.read(holdResult.getResponse().getContentAsString(), "$.data.reservationId");
+
+        mockMvc.perform(post("/api/reservations/{id}/payment", reservationId)
+                        .with(asUser(memberId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"paymentId": "test-payment-id"}
+                                """))
+                .andExpect(status().isPaymentRequired());
+
+        verify(portOnePaymentVerifier).verify(eq("test-payment-id"), eq(0));
 
         Reservation reservation = reservationRepository.findById(UUID.fromString(reservationId)).orElseThrow();
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.HOLD);

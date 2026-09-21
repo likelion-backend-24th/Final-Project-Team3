@@ -170,6 +170,22 @@ class PaymentWebhookAcceptanceTest {
     }
 
     @Test
+    @DisplayName("웹훅 시크릿이 비어 있으면 500이 아니라 503으로 응답한다")
+    void blankWebhookSecret_returnsServiceUnavailable() throws Exception {
+        PgCredential credential = pgCredentialRepository.findByProvider("PORTONE").orElseThrow();
+        credential.update("store-test", "channel-test", pgCredentialEncryptor.encrypt("api-secret-test"), pgCredentialEncryptor.encrypt(""));
+        pgCredentialRepository.save(credential);
+
+        mockMvc.perform(post("/api/payments/webhook")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(WebhookVerifier.HEADER_ID, "msg-1")
+                        .header(WebhookVerifier.HEADER_TIMESTAMP, String.valueOf(System.currentTimeMillis() / 1000))
+                        .header(WebhookVerifier.HEADER_SIGNATURE, "v1,any")
+                        .content(webhookPayload(UUID.randomUUID().toString())))
+                .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
     @DisplayName("서명 헤더가 없으면 400을 반환한다")
     void missingHeaders_returnsBadRequest() throws Exception {
         mockMvc.perform(post("/api/payments/webhook")

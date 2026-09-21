@@ -1,10 +1,13 @@
 package com.example.reservationservice.pgcredential.service;
 
+import com.example.reservationservice.common.exception.BusinessException;
 import com.example.reservationservice.pgcredential.PgCredentialEncryptor;
+import com.example.reservationservice.pgcredential.dto.PgConfigResponse;
 import com.example.reservationservice.pgcredential.dto.PgCredentialRequest;
 import com.example.reservationservice.pgcredential.dto.PgCredentialResponse;
 import com.example.reservationservice.pgcredential.entity.PgCredential;
 import com.example.reservationservice.pgcredential.repository.PgCredentialRepository;
+import com.example.reservationservice.reservation.exception.ReservationErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +42,13 @@ public class PgCredentialService {
                 ));
 
         return PgCredentialResponse.of(credential, mask(request.apiSecret()), mask(request.webhookSecret()));
+    }
+
+    @Transactional(readOnly = true)
+    public PgConfigResponse getPublicConfig(String provider) {
+        PgCredential credential = pgCredentialRepository.findByProvider(provider)
+                .orElseThrow(() -> new BusinessException(ReservationErrorCode.PG_CONFIG_NOT_FOUND));
+        return PgConfigResponse.from(credential);
     }
 
     private String mask(String plainSecret) {

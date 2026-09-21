@@ -4,6 +4,7 @@ import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record ConferenceResponse(
@@ -21,16 +22,21 @@ public record ConferenceResponse(
         String amenities,
         String description,
         String imageUrl,
+        List<String> tags,
         long sessionCount,
         String rejectionReason,
         boolean proofFileAttached
 )
 {
     public static ConferenceResponse from(Conference conference) {
-        return from(conference, 0);
+        return from(conference, 0, List.of());
     }
 
     public static ConferenceResponse from(Conference conference, long sessionCount) {
+        return from(conference, sessionCount, List.of());
+    }
+
+    public static ConferenceResponse from(Conference conference, long sessionCount, List<String> tags) {
         return new ConferenceResponse(
                 conference.getId(),
                 conference.getOrganizerId(),
@@ -46,6 +52,7 @@ public record ConferenceResponse(
                 conference.getAmenities(),
                 conference.getDescription(),
                 conference.getImageUrl(),
+                tags,
                 sessionCount,
                 conference.getRejectionReason(),
                 conference.hasProofFile()

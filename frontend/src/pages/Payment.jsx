@@ -1,22 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { Lock, CreditCard, Wallet, Landmark, Smartphone, ShieldCheck } from 'lucide-react'
+import * as PortOne from '@portone/browser-sdk/v2'
+import { Lock, ShieldCheck } from 'lucide-react'
 import Button from '../components/Button'
-import { submitPayment } from '../api/reservations'
+import { getPgConfig, submitPayment } from '../api/reservations'
 import { ApiError } from '../api/client'
 
-// 포트원(PortOne) 실제 연동 전까지의 자리 표시 UI다 — 실제 붙이면 이 목록이 아니라 포트원
-// SDK가 띄우는 결제창으로 대체되고, 카드번호 같은 민감정보는 우리 페이지에 절대 두면 안 된다.
-const METHODS = [
-  { id: 'CARD', label: '카드결제', icon: CreditCard },
-  { id: 'KAKAOPAY', label: '카카오페이', icon: Wallet },
-  { id: 'NAVERPAY', label: '네이버페이', icon: Wallet },
-  { id: 'TRANSFER', label: '계좌이체', icon: Landmark },
-  { id: 'PHONE', label: '휴대폰 소액결제', icon: Smartphone },
-]
+// PortOne 결제창 안에서 결제수단을 고른다. payMethod는 결제창을 열 때 먼저 지정해야 해서
+// ponytail: 카드결제로 고정한다. 카카오페이 등 간편결제는 PortOne의 EASY_PAY
+// 서브필드 구조가 따로 있어서, 필요해지면 그때 선택 UI와 함께 추가한다.
+const PAY_METHOD = 'CARD'
 
-// Session에 price 필드가 생겨서 실제 금액(가격 × 인원)을 계산해 보낸다. 결제 자체는 여전히
-// PG 없는 Mock이라 amount를 서버가 검증하진 않지만, 화면 표시와 요청 값은 실제 값으로 맞춘다.
 export default function Payment() {
   const { id } = useParams()
   const location = useLocation()
@@ -24,10 +18,21 @@ export default function Payment() {
   const { sessionTitle, conferenceTitle, headcount = 1, price = 0 } = location.state ?? {}
   const amount = price * headcount
 
-  const [method, setMethod] = useState('CARD')
   const [error, setError] = useState('')
   const [queueBlocked, setQueueBlocked] = useState(false)
   const [loading, setLoading] = useState(false)
+  // PortOne 결제가 이미 성공했는데 뒤이은 submitPayment만 실패한 경우를 위해 기억해둔다.
+  // 같은 paymentId로는 PortOne이 재결제를 거부하므로, 재시도 시 결제창을 다시 띄우지 않고
+  // 이 값으로 확정만 다시 시도한다.
+  const [paidPaymentId, setPaidPaymentId] = useState(null)
+  // storeId/channelKey는 사실상 고정값이라 제출 시점에 기다리지 않도록 페이지 진입 시 미리 받아둔다.
+  const [pgConfig, setPgConfig] = useState(null)
+
+  useEffect(() => {
+    if (amount > 0) {
+      getPgConfig().then((res) => setPgConfig(res.data)).catch(() => {})
+    }
+  }, [amount])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -35,7 +40,29 @@ export default function Payment() {
     setQueueBlocked(false)
     setLoading(true)
     try {
-      await submitPayment(id, { paymentMethod: method, amount })
+      let paymentId = paidPaymentId ?? id
+      if (amount > 0 && !paidPaymentId) {
+        const { storeId, channelKey } = pgConfig ?? (await getPgConfig()).data
+        const response = await PortOne.requestPayment({
+          storeId,
+          channelKey,
+          paymentId: id,
+          orderName: sessionTitle ?? '세션 신청',
+          totalAmount: amount,
+          currency: 'CURRENCY_KRW',
+          payMethod: PAY_METHOD,
+        })
+        // response는 결제수단·PG에 따라 리다이렉트가 강제되면 undefined로 리졸브될 수 있다.
+        if (!response || response.code !== undefined) {
+          setError(response?.message ?? '결제가 취소되었거나 완료되지 않았습니다.')
+          setLoading(false)
+          return
+        }
+        paymentId = response.paymentId
+        setPaidPaymentId(paymentId)
+      }
+
+      await submitPayment(id, { paymentId })
       navigate(`/reservations/${id}/complete`, { state: { sessionTitle, conferenceTitle } })
     } catch (err) {
       // 403(아직 내 순번 아님)과 409 RESERVATION_SESSION_CAPACITY_EXCEEDED(순번은 됐지만 그 사이
@@ -44,6 +71,8 @@ export default function Payment() {
       const isQueueBlocked =
         err instanceof ApiError && (err.status === 403 || err.code === 'RESERVATION_SESSION_CAPACITY_EXCEEDED')
       if (isQueueBlocked) {
+        // 정원 초과로 확정이 막히면 서버가 이미 결제를 자동 환불했으므로 이 paymentId는 더 이상 못 쓴다.
+        setPaidPaymentId(null)
         setQueueBlocked(true)
       } else {
         setError(err instanceof ApiError ? err.message : '결제에 실패했습니다.')
@@ -100,42 +129,16 @@ export default function Payment() {
         </div>
 
         <form onSubmit={submit} className="bg-surface border border-border rounded-xl p-5">
-          <p className="text-sm font-medium text-text mb-3">결제 수단</p>
-          <div className="space-y-2 mb-4">
-            {METHODS.map((m) => {
-              const Icon = m.icon
-              const active = method === m.id
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setMethod(m.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
-                    active
-                      ? 'bg-surface2 border-primary text-text'
-                      : 'bg-transparent border-border text-text-muted hover:text-text'
-                  }`}
-                >
-                  <Icon size={18} className={active ? 'text-primary' : 'text-text-faint'} />
-                  {m.label}
-                  <span
-                    className={`ml-auto w-4 h-4 rounded-full border-2 ${
-                      active ? 'border-primary bg-primary' : 'border-border'
-                    }`}
-                  />
-                </button>
-              )
-            })}
-          </div>
+          {error && <p className="text-sm text-danger mb-2">{error}</p>}
 
-          {error && <p className="text-sm text-danger mt-2">{error}</p>}
-
-          <Button type="submit" loading={loading} className="w-full mt-2">
-            {amount > 0 ? `${amount.toLocaleString()}원 결제하기` : '0원 결제하기'}
+          <Button type="submit" loading={loading} className="w-full">
+            {amount > 0 ? `${amount.toLocaleString()}원 결제하기` : '무료 신청 완료하기'}
           </Button>
-          <p className="flex items-center justify-center gap-1.5 text-xs text-text-faint mt-3">
-            <ShieldCheck size={13} /> 포트원(PortOne)으로 안전하게 결제돼요 · 결제 완료 즉시 QR 티켓이 발급됩니다
-          </p>
+          {amount > 0 && (
+            <p className="flex items-center justify-center gap-1.5 text-xs text-text-faint mt-3">
+              <ShieldCheck size={13} /> 포트원(PortOne) 결제창에서 안전하게 결제돼요 · 결제 완료 즉시 QR 티켓이 발급됩니다
+            </p>
+          )}
         </form>
       </div>
     </div>

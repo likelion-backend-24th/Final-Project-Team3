@@ -38,7 +38,7 @@ public class AdminConferenceController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<ConferenceResponse>>> listPendingConferences(
             @PageableDefault Pageable pageable, HttpServletRequest request) {
-        Page<ConferenceResponse> page = conferenceService.getPendingConferences(pageable).map(ConferenceResponse::from);
+        Page<ConferenceResponse> page = conferenceService.getPendingConferenceResponses(pageable);
         Meta meta = Meta.builder().pagination(PageMeta.from(page)).build();
         return ResponseEntity.ok(ApiResponse.success("승인 대기 컨퍼런스 목록 조회 성공", page.getContent(), meta, traceIdProvider.resolve(request)));
     }

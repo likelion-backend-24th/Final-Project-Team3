@@ -32,7 +32,7 @@ public class ReservationRouteTest {
     private static HttpServer createStubServer() {
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
-            server.createContext("/api/reservations", exchange -> {
+            server.createContext("/api", exchange -> {
                 RECEIVED_TRACE_IDS.set(exchange.getRequestHeaders().get("X-Trace-Id"));
                 RECEIVED_AUTH_HEADERS.set(exchange.getRequestHeaders().get("Authorization"));
                 byte[] body = "[]".getBytes();
@@ -70,6 +70,12 @@ public class ReservationRouteTest {
         assertThat(RECEIVED_TRACE_IDS.get().get(0)).isNotBlank();
 
         assertThat(RECEIVED_AUTH_HEADERS.get()).containsExactly("Bearer test-token");
+    }
+
+    @Test
+    void 결제_웹훅과_PG설정_경로도_reservationService로_전달한다() {
+        restTestClient.post().uri("/api/payments/webhook").exchange().expectStatus().is2xxSuccessful();
+        restTestClient.get().uri("/api/payments/pg-config").exchange().expectStatus().is2xxSuccessful();
     }
 
     @Test

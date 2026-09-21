@@ -25,7 +25,8 @@ public enum ReservationErrorCode implements ErrorCode {
     PG_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "RESERVATION_PG_NOT_CONFIGURED", "PG 연동 정보가 등록되어 있지 않습니다."),
     RESERVATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "RESERVATION_ACCESS_DENIED", "본인의 예약만 취소할 수 있습니다."),
     WEBHOOK_SIGNATURE_INVALID(HttpStatus.UNAUTHORIZED, "RESERVATION_WEBHOOK_SIGNATURE_INVALID", "웹훅 서명 검증에 실패했습니다."),
-    RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "RESERVATION_NOT_FOUND", "존재하지 않는 예약입니다.");
+    RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "RESERVATION_NOT_FOUND", "존재하지 않는 예약입니다."),
+    PG_CONFIG_NOT_FOUND(HttpStatus.NOT_FOUND, "RESERVATION_PG_CONFIG_NOT_FOUND", "등록된 PG 연동 정보가 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

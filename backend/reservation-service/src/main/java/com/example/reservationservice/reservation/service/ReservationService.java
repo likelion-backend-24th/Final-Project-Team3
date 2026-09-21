@@ -152,6 +152,14 @@ public class ReservationService {
         }
     }
 
+    private Integer getSessionPrice(UUID sessionId) {
+        try {
+            return conferenceServiceClient.getSessionPrice(sessionId);
+        } catch (ConferenceServiceUnavailableException e) {
+            throw new BusinessException(ReservationErrorCode.CONFERENCE_SERVICE_UNAVAILABLE);
+        }
+    }
+
     public int getQueuePosition(UUID reservationId) {
         return waitingQueueRepository.findByReservationId(reservationId)
                 .map(WaitingQueue::getPosition)
@@ -217,9 +225,16 @@ public class ReservationService {
         UUID reservationId = reservation.getId();
 
         // 락을 잡기 전에 외부 API(PortOne) 검증부터 끝낸다 — 좌석 락을 쥔 채로 외부 호출을 기다리면 안 됨
-        Integer price = conferenceServiceClient.getSessionPrice(reservation.getSessionId());
+        Integer price = getSessionPrice(reservation.getSessionId());
         int expectedAmount = (price == null ? 0 : price) * reservation.getHeadcount();
-        PortOnePaymentVerifier.VerifiedPayment verifiedPayment = portOnePaymentVerifier.verify(paymentId, expectedAmount);
+        // 무료 세션(price가 명시적으로 0)만 PortOne 조회를 건너뛴다. price가 null인 경우
+        // (마이그레이션 없이 컬럼만 추가돼 값이 비어있는 legacy row)는 무료로 간주하지 않고
+        // 그대로 verify()에 태워서 fail-closed로 막는다 — 그래야 위조된 paymentId로
+        // 아무 결제 검증 없이 확정되는 걸 막을 수 있다.
+        boolean isFree = price != null && price == 0;
+        String paymentMethod = isFree
+                ? "FREE"
+                : portOnePaymentVerifier.verify(paymentId, expectedAmount).paymentMethod();
 
         boolean wasQueued = reservation.getStatus() == ReservationStatus.QUEUED;
         Integer leftPosition = null;
@@ -236,6 +251,11 @@ public class ReservationService {
             int capacityUpdatedRows = sessionCapacityLockRepository.tryIncrease(
                     reservation.getSessionId(), reservation.getHeadcount(), capacity);
             if (capacityUpdatedRows == 0) {
+                // 이미 PortOne 결제 검증까지 끝난 뒤라 실제로 돈을 받은 상태다 — 좌석을
+                // 못 잡아주는데 돈만 받으면 안 되므로 여기서 바로 취소(환불) 처리한다.
+                if (!isFree) {
+                    portOnePaymentVerifier.cancel(paymentId, "정원 초과로 좌석 확정 실패 - 자동 환불");
+                }
                 throw new BusinessException(ReservationErrorCode.SESSION_CAPACITY_EXCEEDED);
             }
 
@@ -251,7 +271,7 @@ public class ReservationService {
         }
         activeReservationLockRepository.deleteByReservationId(reservationId);
 
-        paymentService.recordPayment(reservationId, verifiedPayment.paymentMethod(), expectedAmount);
+        paymentService.recordPayment(reservationId, paymentMethod, expectedAmount);
 
         if (wasQueued && leftPosition != null) {
             waitingQueueRepository.deleteByReservationId(reservationId);
@@ -332,6 +352,13 @@ public class ReservationService {
             refundAmount = originalAmount * refundRate / 100;
 
             paymentService.recordRefund(reservationId, refundAmount);
+
+            // refundAmount > 0이면 원래 결제도 무료가 아니었다는 뜻이라(무료 세션은 amount=0으로
+            // 기록됨), 이 조건만으로 PortOne에 취소할 실제 결제 건이 있는지 충분히 판별된다.
+            if (refundAmount > 0) {
+                portOnePaymentVerifier.cancel(
+                        reservationId.toString(), refundAmount, "예약 취소 환불 (환불율 " + refundRate + "%)");
+            }
 
             sessionCapacityLockRepository.decrease(reservation.getSessionId(), reservation.getHeadcount());
 
