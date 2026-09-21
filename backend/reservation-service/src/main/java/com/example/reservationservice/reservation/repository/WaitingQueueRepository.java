@@ -21,17 +21,12 @@ public interface WaitingQueueRepository extends JpaRepository<WaitingQueue, UUID
     // 세션의 대기열 맨 앞(가장 낮은 순번) 조회 (좌석 반납 시 승격 대상 판단용)
     Optional<WaitingQueue> findFirstBySessionIdOrderByPositionAsc(UUID sessionId);
 
-    @Query(value = "SELECT COALESCE(MAX(position), 0) + 1 FROM waiting_queue " +
-            "WHERE session_id = :sessionId FOR UPDATE",
-            nativeQuery = true)
-    int getNextPositionForUpdate(@Param("sessionId") UUID sessionId);
-
     // 대기열에서 이탈(결제 완료 등)한 예약의 항목 삭제
     @Modifying
     void deleteByReservationId(UUID reservationId0);
 
     @Modifying
     @Query("UPDATE WaitingQueue w SET w.position = w.position - 1 " +
-           "WHERE w.sessionId = :sessionId AND w.position > :leftPosition")
+            "WHERE w.sessionId = :sessionId AND w.position > :leftPosition")
     void decrementPositionAfter(@Param("sessionId") UUID sessionId, @Param("leftPosition") int leftPosition);
 }
