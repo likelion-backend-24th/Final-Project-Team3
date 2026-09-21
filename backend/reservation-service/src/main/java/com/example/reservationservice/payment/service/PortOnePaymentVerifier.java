@@ -28,9 +28,7 @@ public class PortOnePaymentVerifier {
     private final PgCredentialEncryptor encryptor;
 
     public VerifiedPayment verify(String paymentId, int expectedAmount) {
-        String apiSecret = decryptApiSecret();
-
-        try (PaymentClient client = new PaymentClient(apiSecret, "https://api.portone.io", null)) {
+        try (PaymentClient client = newClient()) {
             Payment payment = client.getPayment(paymentId).get();
 
             if (!(payment instanceof PaidPayment paid)) {
@@ -68,9 +66,8 @@ public class PortOnePaymentVerifier {
     // ponytail: 여기서도 실패하면 로그만 남고 끝 — 재시도 큐나 운영 알림은 필요해지면 추가한다.
     public void cancel(String paymentId, Integer amount, String reason) {
         try {
-            String apiSecret = decryptApiSecret();
             Long amountAsLong = amount == null ? null : amount.longValue();
-            try (PaymentClient client = new PaymentClient(apiSecret, "https://api.portone.io", null)) {
+            try (PaymentClient client = newClient()) {
                 client.cancelPayment(paymentId, amountAsLong, null, null, reason, null, null, null, null, null, null).get();
             }
         } catch (BusinessException e) {
@@ -84,10 +81,12 @@ public class PortOnePaymentVerifier {
         }
     }
 
-    private String decryptApiSecret() {
+    // storeId를 넘겨야 한다: API Secret이 고객사(merchant) 단위 키면 storeId 없이는 결제 조회·취소가
+    // 어느 상점 대상인지 몰라 PAYMENT_NOT_FOUND가 난다(부캠 공용 키가 이 경우). 상점 단위 키면 넘겨도 무해하다.
+    private PaymentClient newClient() {
         PgCredential credential = pgCredentialRepository.findByProvider(PROVIDER)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.PG_NOT_CONFIGURED));
-        return encryptor.decrypt(credential.getApiSecret());
+        return new PaymentClient(encryptor.decrypt(credential.getApiSecret()), "https://api.portone.io", credential.getStoreId());
     }
 
     public record VerifiedPayment(String paymentMethod) {}
