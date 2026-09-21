@@ -38,6 +38,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
+      NTS_SERVICE_KEY: ${NTS_SERVICE_KEY}
     depends_on:
       mysql:
         condition: service_healthy
