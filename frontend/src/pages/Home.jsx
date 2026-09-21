@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom'
 import { Search, Calendar, MapPin, ChevronRight, Layers } from 'lucide-react'
 import { listConferences } from '../api/conferences'
 import { formatDateRange } from '../utils/date'
+import { CATEGORY_TAGS } from '../utils/categoryTags'
 
-const CATEGORIES = ['전체', '소프트웨어', 'AI', 'ML', '클라우드', '보안', '프런트엔드']
+const CATEGORIES = ['전체', ...CATEGORY_TAGS]
 
 // imageUrl이 생겨서(백엔드) 있으면 실제 이미지를 쓰고, 없는 컨퍼런스는 예전처럼
 // 결정론적 그라디언트로 대체한다. to-surface로 끝나야 카드 하단 내용 영역(bg-surface)이랑
@@ -23,12 +24,6 @@ function hashId(id) {
 
 function gradientFor(id) {
   return GRADIENTS[hashId(id) % GRADIENTS.length]
-}
-
-// 태그 배지는 더 이상 더미가 아니라, 제목에 실제로 카테고리 키워드가 들어있는지 봐서 만든다
-// (카테고리 필터가 하는 것과 같은 방식 — 지어낸 값이 아니라 실제 title에서 뽑아낸 값).
-function tagsFor(title) {
-  return CATEGORIES.filter((cat) => cat !== '전체' && title.includes(cat))
 }
 
 export default function Home() {
@@ -51,7 +46,7 @@ export default function Home() {
         (c) =>
           !(c.endAt && new Date(c.endAt).getTime() < Date.now()) &&
           c.title.toLowerCase().includes(query.toLowerCase()) &&
-          (category === '전체' || c.title.includes(category)),
+          (category === '전체' || (c.tags ?? []).includes(category)),
       ),
     [conferences, query, category],
   )
@@ -115,7 +110,7 @@ export default function Home() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((c) => {
-            const tags = tagsFor(c.title)
+            const tags = c.tags ?? []
             const dateLabel = formatDateRange(c.startAt, c.endAt)
             return (
               <Link

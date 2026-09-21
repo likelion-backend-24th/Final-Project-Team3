@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Users, Calendar, MapPin, Mic } from 'lucide-react'
+import { Users, Calendar, Clock, MapPin, Mic } from 'lucide-react'
 import { getConference, listNotices, listFaqs } from '../api/conferences'
 import { getCapacityStatus } from '../api/reservations'
 import { formatDateRange } from '../utils/date'
@@ -141,6 +141,11 @@ export default function ConferenceDetail() {
                       {s.sessionStartAt && (
                         <span className="inline-flex items-center gap-1">
                           <Calendar size={13} /> {formatDateRange(s.sessionStartAt, s.sessionEndAt)}
+                        </span>
+                      )}
+                      {s.startAt && (
+                        <span className="inline-flex items-center gap-1">
+                          <Clock size={13} /> 신청 {formatDateRange(s.startAt, s.endAt)}
                         </span>
                       )}
                       {s.location && (
