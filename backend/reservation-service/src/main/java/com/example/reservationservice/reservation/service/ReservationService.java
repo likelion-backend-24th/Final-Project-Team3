@@ -33,6 +33,7 @@ public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final WaitingQueueRepository waitingQueueRepository;
+    private final QueuePositionCounterRepository queuePositionCounterRepository;
     private final SessionCapacityLockRepository sessionCapacityLockRepository;
     private final ConferenceServiceClient conferenceServiceClient;
     private final PaymentService paymentService;
@@ -118,7 +119,7 @@ public class ReservationService {
 
         saveAttendees(queuedReservation.getId(), headcount, attendees, groupAttendee);
 
-        WaitingQueue waitingQueue = registerToQueueWithRetry(sessionId, queuedReservation.getId(), memberId);
+        WaitingQueue waitingQueue = registerToQueue(sessionId, queuedReservation.getId(), memberId);
 
         return ReservationResult.queued(queuedReservation.getId(), waitingQueue.getPosition());
     }
@@ -186,23 +187,20 @@ public class ReservationService {
         }
     }
 
-    private WaitingQueue registerToQueueWithRetry(UUID sessionId, UUID reservationId, UUID memberId) {
-        int maxRetries = 5;
-        for (int i = 0; i < maxRetries; i++) {
-            try {
-                int nextPosition = waitingQueueRepository.findMaxPositionBySessionId(sessionId) + 1;
-                WaitingQueue waitingQueue = WaitingQueue.builder()
-                        .reservationId(reservationId)
-                        .sessionId(sessionId)
-                        .memberId(memberId)
-                        .position(nextPosition)
-                        .build();
-                return waitingQueueRepository.saveAndFlush(waitingQueue);
-            } catch (DataIntegrityViolationException e) {
-                // 순번 충돌 -> 다음 순번으로 재시도
-            }
-        }
-        throw new IllegalStateException("대기열 등록 재시도 초과");
+    // session_capacity_lock.tryIncrease와 같은 패턴: 카운터 행에 원자적 UPDATE로 순번을 배정하므로
+    // findMax+1 방식과 달리 경쟁 상태·재시도가 필요 없다(대량 동시 등록 시 재시도 소진으로 인한 실패도 없다).
+    private WaitingQueue registerToQueue(UUID sessionId, UUID reservationId, UUID memberId) {
+        queuePositionCounterRepository.ensureExists(sessionId);
+        queuePositionCounterRepository.increment(sessionId);
+        int position = queuePositionCounterRepository.getLastAssignedPosition(sessionId);
+
+        WaitingQueue waitingQueue = WaitingQueue.builder()
+                .reservationId(reservationId)
+                .sessionId(sessionId)
+                .memberId(memberId)
+                .position(position)
+                .build();
+        return waitingQueueRepository.save(waitingQueue);
     }
 
     public boolean isQueuePositionReached(UUID reservationId) {
