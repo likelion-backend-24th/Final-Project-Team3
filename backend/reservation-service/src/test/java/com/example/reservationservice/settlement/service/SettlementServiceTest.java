@@ -1,6 +1,8 @@
 package com.example.reservationservice.settlement.service;
 
 import com.example.reservationservice.payment.repository.PaymentRepository;
+import com.example.reservationservice.qrticket.repository.QrTicketRepository;
+import com.example.reservationservice.reservation.repository.ReservationRepository;
 import com.example.reservationservice.settlement.dto.SettlementResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,11 +25,17 @@ class SettlementServiceTest {
     @Mock
     private PaymentRepository paymentRepository;
 
+    @Mock
+    private ReservationRepository reservationRepository;
+
+    @Mock
+    private QrTicketRepository qrTicketRepository;
+
     private SettlementService settlementService;
 
     @BeforeEach
     void setUp() {
-        settlementService = new SettlementService(paymentRepository);
+        settlementService = new SettlementService(paymentRepository, reservationRepository, qrTicketRepository);
     }
 
     @Test
