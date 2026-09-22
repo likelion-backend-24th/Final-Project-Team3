@@ -36,3 +36,8 @@ email:
   verification-code-validity-ms: 600000     # 10분
   max-attempts: 5                           # 검증 실패 허용 횟수
   resend-cooldown-ms: 60000                 # 재발송 최소 간격 1분
+nts:
+  verify:
+    mode: ${NTS_VERIFY_MODE:real}           # real: 국세청 진위확인 API 호출 / mock: 항상 일치(로컬 전용, 키 없이 실행할 때 NTS_VERIFY_MODE=mock)
+    base-url: https://api.odcloud.kr
+    service-key: ${NTS_SERVICE_KEY:}        # 공공데이터포털 일반 인증키(Encoding) 그대로. real 모드에서 비어 있으면 기동 실패

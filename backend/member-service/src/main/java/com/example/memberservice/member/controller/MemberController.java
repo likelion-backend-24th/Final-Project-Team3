@@ -5,6 +5,7 @@ import com.example.memberservice.common.TraceIdProvider;
 import com.example.memberservice.common.dto.ApiResponse;
 import com.example.memberservice.member.dto.*;
 import com.example.memberservice.member.service.MemberService;
+import com.example.memberservice.member.service.OrganizerSignupFacade;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 public class MemberController {
 
     private final MemberService memberService;
+    private final OrganizerSignupFacade organizerSignupFacade;
     private final TraceIdProvider traceIdProvider;
 
     @Operation(summary = "참가자 회원가입", description = "이메일 인증을 완료한 이메일로 참가자(MEMBER) 계정을 생성한다.")
@@ -36,13 +38,13 @@ public class MemberController {
                 .body(ApiResponse.success("회원가입이 완료되었습니다.", response, traceId));
     }
 
-    @Operation(summary = "주최자 회원가입", description = "사업자등록번호 검증을 통과하면 즉시 주최자(ORGANIZER) 계정을 생성한다.")
+    @Operation(summary = "주최자 회원가입", description = "사업자등록번호가 국세청에 등록된 계속사업자로 조회되면(상태조회) 즉시 주최자(ORGANIZER) 계정을 생성한다. 미등록·휴업·폐업 번호는 400, 국세청 조회 장애는 503으로 거절한다.")
     @PostMapping("/organizers/signup")
     public ResponseEntity<ApiResponse<OrganizerSignupResponse>> signupOrganizer(
             @Valid @RequestBody OrganizerSignupRequest request,
             HttpServletRequest httpRequest
     ) {
-        OrganizerSignupResponse response = memberService.signupOrganizer(request);
+        OrganizerSignupResponse response = organizerSignupFacade.signup(request);
         String traceId = traceIdProvider.resolve(httpRequest);
         return ResponseEntity
                 .status(HttpStatus.CREATED)

@@ -161,10 +161,30 @@ public class ReservationService {
         }
     }
 
-    public int getQueuePosition(UUID reservationId) {
-        return waitingQueueRepository.findByReservationId(reservationId)
-                .map(WaitingQueue::getPosition)
+    public QueuePositionResponse getQueuePosition(UUID reservationId, UUID requesterId) {
+        WaitingQueue queueEntry = waitingQueueRepository.findByReservationId(reservationId)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+
+        if (!queueEntry.getMemberId().equals(requesterId)) {
+            throw new BusinessException(ReservationErrorCode.RESERVATION_ACCESS_DENIED);
+        }
+
+        int position = queueEntry.getPosition();
+        int estimatedWaitMinutes = calculateEstimatedWaitMinutes(queueEntry.getSessionId(), position);
+
+        return new QueuePositionResponse(position, estimatedWaitMinutes);
+    }
+
+    private int calculateEstimatedWaitMinutes(UUID sessionId, int position) {
+        try {
+            UUID conferenceId = conferenceServiceClient.getConferenceId(sessionId);
+            List<UUID> sessionIds = conferenceServiceClient.getSessionIdsByConference(conferenceId);
+            Double avgSeconds = paymentRepository.findAveragePaymentSecondsBySessionIds(sessionIds);
+            double avgMinutesPerPerson = (avgSeconds == null) ? 5.0 : avgSeconds / 60.0;
+            return (int) Math.ceil(position * avgMinutesPerPerson);
+        } catch (ConferenceServiceUnavailableException e) {
+            return (int) Math.ceil(position * 5.0);
+        }
     }
 
     // session_capacity_lock.tryIncrease와 같은 패턴: 카운터 행에 원자적 UPDATE로 순번을 배정하므로
