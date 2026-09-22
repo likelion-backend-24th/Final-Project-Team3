@@ -17,14 +17,21 @@ jobs:
         include:
           - service: gateway
             context: backend/gateway
+            build-args: ""
           - service: member-service
             context: backend/member-service
+            build-args: ""
           - service: conference-service
             context: backend/conference-service
+            build-args: ""
           - service: reservation-service
             context: backend/reservation-service
+            build-args: ""
           - service: frontend
             context: frontend
+            build-args: |
+              VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+              VITE_KAKAO_JS_KEY=${{ secrets.VITE_KAKAO_JS_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,6 +51,7 @@ jobs:
         with:
           context: ${{ matrix.context }}
           push: true
+          build-args: ${{ matrix.build-args }}
           tags: |
             ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
             ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.sha }}
