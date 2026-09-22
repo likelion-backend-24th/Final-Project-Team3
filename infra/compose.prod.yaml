@@ -19,3 +19,18 @@ services:
 
   frontend:
     image: ghcr.io/likelion-backend-24th/final-project-team3-frontend:latest
+    ports:
+      - "443:443"
+    volumes:
+      # 이미지에 baked-in된 80-only 설정 대신 HTTPS(443) + acme-challenge 설정으로 덮어씀
+      - ./nginx/frontend-prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+
+  # 인증서 발급/갱신 전용. 평소엔 떠 있을 필요 없고 필요할 때만
+  # `docker compose -f compose.yaml -f compose.prod.yaml run --rm certbot ...` 로 실행한다.
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
