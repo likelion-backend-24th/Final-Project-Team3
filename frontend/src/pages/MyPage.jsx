@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { Ticket, CheckCircle2, User, Briefcase } from 'lucide-react'
+import { Ticket, CheckCircle2, User, Briefcase, Link2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getMyReservations, getQueuePosition, getQrTickets, cancelReservation } from '../api/reservations'
 import { listConferences, getConference } from '../api/conferences'
-import { getProfile, updateProfile } from '../api/auth'
+import { getProfile, updateProfile, linkSocialAccount } from '../api/auth'
 import { ApiError } from '../api/client'
 import Button from '../components/Button'
 import SelectField from '../components/SelectField'
 import { AGE_GROUPS, JOBS } from '../utils/profileOptions'
+import { isGoogleConfigured, isKakaoConfigured, renderGoogleButton, kakaoLogin } from '../utils/socialAuth'
 
 const TABS = [
   { key: 'ALL', label: '전체' },
@@ -60,6 +61,14 @@ export default function MyPage() {
   const [profileError, setProfileError] = useState('')
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
+
+  // 소셜 계정 연동 — 백엔드에 연동 여부 조회 API가 아직 없어서, 성공/실패는 이번 세션에서만
+  // 화면에 반영된다(새로고침하면 버튼이 다시 보임. 연동 자체는 서버에 정상 저장됨).
+  const [googleLinkStatus, setGoogleLinkStatus] = useState('idle') // idle | linking | linked | error
+  const [kakaoLinkStatus, setKakaoLinkStatus] = useState('idle')
+  const [linkError, setLinkError] = useState('')
+  const [mockLinkName, setMockLinkName] = useState('')
+  const googleLinkButtonRef = useRef(null)
 
   useEffect(() => {
     if (!claims?.memberId) return
@@ -152,6 +161,38 @@ export default function MyPage() {
       setCancellingId(null)
     }
   }
+
+  const handleLinkSocial = async (provider, token) => {
+    if (!token) return
+    setLinkError('')
+    const setStatus = provider === 'google' ? setGoogleLinkStatus : setKakaoLinkStatus
+    setStatus('linking')
+    try {
+      await linkSocialAccount(provider, token)
+      setStatus('linked')
+    } catch (err) {
+      setStatus('error')
+      setLinkError(err instanceof ApiError ? err.message : '계정 연동에 실패했습니다.')
+    }
+  }
+
+  const handleKakaoLinkClick = () => {
+    setLinkError('')
+    kakaoLogin(
+      (accessToken) => handleLinkSocial('kakao', accessToken),
+      () => {
+        setKakaoLinkStatus('error')
+        setLinkError('카카오 인증에 실패했습니다.')
+      },
+    )
+  }
+
+  useEffect(() => {
+    if (isGoogleConfigured && googleLinkButtonRef.current) {
+      renderGoogleButton(googleLinkButtonRef.current, (idToken) => handleLinkSocial('google', idToken))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const startEditingProfile = () => {
     setDraftAgeGroup(ageGroup)
@@ -269,6 +310,86 @@ export default function MyPage() {
                 <CheckCircle2 size={16} /> 저장됐어요
               </span>
             )}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-surface border border-border rounded-xl p-5 mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <Link2 size={16} className="text-text-muted" />
+          <h2 className="text-sm font-semibold text-text">계정 연동</h2>
+        </div>
+        <p className="text-xs text-text-muted mb-4">
+          비밀번호 계정에 소셜 계정을 연동하면, 다음부터는 소셜 로그인 버튼만으로 같은 계정에 들어올 수 있어요.
+          연동하려는 소셜 계정의 이메일은 지금 로그인된 이메일({claims?.email})과 같아야 해요.
+        </p>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-text">Google</span>
+            {googleLinkStatus === 'linked' ? (
+              <span className="inline-flex items-center gap-1 text-sm text-success">
+                <CheckCircle2 size={16} /> 연동 완료
+              </span>
+            ) : isGoogleConfigured ? (
+              <div ref={googleLinkButtonRef} />
+            ) : (
+              <Button variant="secondary" disabled title=".env에 VITE_GOOGLE_CLIENT_ID를 설정하면 활성화됩니다">
+                설정 필요
+              </Button>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-text">Kakao</span>
+            {kakaoLinkStatus === 'linked' ? (
+              <span className="inline-flex items-center gap-1 text-sm text-success">
+                <CheckCircle2 size={16} /> 연동 완료
+              </span>
+            ) : isKakaoConfigured ? (
+              <Button variant="secondary" loading={kakaoLinkStatus === 'linking'} onClick={handleKakaoLinkClick}>
+                연동하기
+              </Button>
+            ) : (
+              <Button variant="secondary" disabled title=".env에 VITE_KAKAO_JS_KEY를 설정하면 활성화됩니다">
+                설정 필요
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {linkError && <p className="text-sm text-danger mt-3">{linkError}</p>}
+
+        {/* 개발용 — 실제 Google/Kakao 앱을 아직 등록 안 했을 때 mock 연동으로 흐름만 테스트 */}
+        {import.meta.env.DEV && !isGoogleConfigured && !isKakaoConfigured && (
+          <div className="mt-4 p-3 rounded-lg border border-dashed border-border">
+            <p className="text-xs text-text-muted mb-2">
+              개발용 mock 연동 (백엔드 SOCIAL_MODE=mock 전용, 배포 전 제거) — 이메일은 자동으로 본인 이메일이 들어가요.
+            </p>
+            <input
+              className="w-full text-sm border border-border rounded-md px-2 py-1 bg-surface mb-2"
+              placeholder="mock 이름"
+              value={mockLinkName}
+              onChange={(e) => setMockLinkName(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                loading={googleLinkStatus === 'linking'}
+                onClick={() => handleLinkSocial('google', `${claims?.email}:${mockLinkName}`)}
+              >
+                Google mock 연동
+              </Button>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                loading={kakaoLinkStatus === 'linking'}
+                onClick={() => handleLinkSocial('kakao', `${claims?.email}:${mockLinkName}`)}
+              >
+                Kakao mock 연동
+              </Button>
+            </div>
           </div>
         )}
       </div>
