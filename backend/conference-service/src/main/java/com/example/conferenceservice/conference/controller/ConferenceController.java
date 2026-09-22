@@ -48,7 +48,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 @RestController
@@ -93,32 +92,12 @@ public class ConferenceController {
     public ResponseEntity<ApiResponse<ConferenceResponse>> createConference(
             @Valid @RequestPart("request") ConferenceRequest request,
             @RequestPart(value = "proofFile", required = false) MultipartFile proofFile,
-            @RequestPart(value = "image", required = false) MultipartFile image,
             @AuthenticationPrincipal CustomUserDetails currentUser,
             HttpServletRequest httpRequest
     ) {
-        ConferenceResponse response = conferenceService.applyConference(currentUser, request, proofFile, image);
+        ConferenceResponse response = conferenceService.applyConference(currentUser, request, proofFile);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("컨퍼런스 등록 신청 성공", response, traceIdProvider.resolve(httpRequest)));
-    }
-
-    // 썸네일·상세 이미지는 목록/상세 조회와 마찬가지로 비공개 정보가 아니라 인증 없이 공개한다.
-    // 파일명에 UUID가 섞여 있어 값이 바뀌면 URL도 바뀌므로 장기 캐시가 안전하다.
-    @GetMapping("/images/{filename}")
-    public ResponseEntity<Resource> getImage(@PathVariable String filename) {
-        Resource resource = fileStorageService.loadImageAsResource(filename);
-        return ResponseEntity.ok()
-                .contentType(resolveImageMediaType(filename))
-                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=31536000, immutable")
-                .body(resource);
-    }
-
-    private MediaType resolveImageMediaType(String filename) {
-        String lower = filename.toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".png")) {
-            return MediaType.IMAGE_PNG;
-        }
-        return MediaType.IMAGE_JPEG;
     }
 
     // 증명 파일은 승인 심사용 자료라 공개하지 않고, 소유 주최자 본인과 관리자만 내려받을 수 있다.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft, Paperclip, X } from 'lucide-react'
 import TextField from '../../components/TextField'
@@ -8,14 +8,11 @@ import { ApiError } from '../../api/client'
 import { CATEGORY_TAGS } from '../../utils/categoryTags'
 
 // organizerName은 더 이상 폼에서 안 받는다 — 서버가 로그인한 주최자의 JWT(조직명)로 직접 채운다
-// (전엔 아무 문자열이나 보낼 수 있던 갭이었음). 대표 이미지는 URL 입력이 아니라 파일 업로드로 받고,
-// 서버(FileStorageService)가 업로드 시점에 목록용 썸네일/상세용 이미지를 각각 리사이징해서 저장한다.
+// (전엔 아무 문자열이나 보낼 수 있던 갭이었음). imageUrl은 파일 업로드가 아니라 URL 입력 방식으로 지원된다.
 
 // 백엔드(FileStorageService)와 같은 제한: 확장자 pdf/png/jpg/jpeg, 파일당 10MB(multipart 한도).
 const PROOF_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg']
 const MAX_PROOF_BYTES = 10 * 1024 * 1024
-const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg']
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 // datetime-local 인풋 값("2027-03-15T09:00")엔 초가 없어서 백엔드 LocalDateTime 파싱용으로 붙여준다.
 function toLocalDateTime(value) {
@@ -30,8 +27,7 @@ export default function ConferenceCreate() {
   const [endAt, setEndAt] = useState('')
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
-  const [image, setImage] = useState(null)
-  const [imagePreviewUrl, setImagePreviewUrl] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
   const [tags, setTags] = useState([])
   const [proofFile, setProofFile] = useState(null)
   const [error, setError] = useState('')
@@ -53,37 +49,6 @@ export default function ConferenceCreate() {
     setError('')
     setProofFile(file)
   }
-
-  const onImageChange = (e) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    const ext = file.name.split('.').pop().toLowerCase()
-    if (!IMAGE_EXTENSIONS.includes(ext)) {
-      setError('대표 이미지는 PNG, JPG만 첨부할 수 있어요.')
-      return
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError('대표 이미지는 10MB 이하만 첨부할 수 있어요.')
-      return
-    }
-    setError('')
-    setImage(file)
-    setImagePreviewUrl(URL.createObjectURL(file))
-  }
-
-  const removeImage = () => {
-    setImage(null)
-    setImagePreviewUrl('')
-  }
-
-  // objectURL은 브라우저가 자동으로 회수하지 않아서, 이미지를 바꾸거나(직전 URL) 폼 제출 후
-  // 페이지를 벗어나는 경우(언마운트)까지 포함해 URL이 바뀔 때마다 이전 값을 해제한다.
-  useEffect(() => {
-    return () => {
-      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl)
-    }
-  }, [imagePreviewUrl])
 
   const toggleTag = (tag) => {
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
@@ -111,9 +76,9 @@ export default function ConferenceCreate() {
         endAt: toLocalDateTime(endAt),
         location,
         description: description || null,
+        imageUrl: imageUrl || null,
         tags,
         proofFile,
-        image,
       })
       navigate('/organizer', { state: { justCreated: true } })
     } catch (err) {
@@ -192,30 +157,12 @@ export default function ConferenceCreate() {
               />
             </label>
 
-            <div>
-              <span className="block mb-2 text-sm text-text">대표 이미지 (선택)</span>
-              {imagePreviewUrl ? (
-                <div className="relative">
-                  <img src={imagePreviewUrl} alt="대표 이미지 미리보기" className="w-full h-40 object-cover rounded-lg border border-border" />
-                  <button
-                    type="button"
-                    onClick={removeImage}
-                    aria-label="이미지 제거"
-                    className="absolute top-2 right-2 bg-bg/80 text-text-faint hover:text-text rounded-full p-1"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex items-center justify-center gap-2 bg-bg border border-dashed border-border rounded-lg px-4 py-3 text-sm text-text-muted hover:text-text hover:border-primary cursor-pointer">
-                  <Paperclip size={16} /> 이미지 선택
-                  <input type="file" accept=".png,.jpg,.jpeg" onChange={onImageChange} className="hidden" />
-                </label>
-              )}
-              <p className="text-xs text-text-faint mt-1.5">
-                목록·상세 페이지에 쓰일 이미지예요 (PNG, JPG · 최대 10MB). 등록 시 목록용 썸네일과 상세용 이미지로 자동 변환돼요.
-              </p>
-            </div>
+            <TextField
+              label="이미지 URL (선택)"
+              placeholder="https://..."
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+            />
 
             <div>
               <span className="block mb-2 text-sm text-text">증빙 파일 (선택)</span>

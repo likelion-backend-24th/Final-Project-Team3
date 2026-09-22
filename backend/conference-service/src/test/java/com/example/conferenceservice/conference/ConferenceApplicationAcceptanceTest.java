@@ -20,8 +20,6 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import javax.crypto.SecretKey;
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -64,20 +62,16 @@ class ConferenceApplicationAcceptanceTest {
     @Value("${app.upload.conference-proof-dir}")
     private String uploadDir;
 
-    @Value("${app.upload.conference-image-dir}")
-    private String imageUploadDir;
-
     @AfterEach
     void tearDown() throws IOException {
         conferenceTagRepository.deleteAll();
         conferenceRepository.deleteAll();
-        deleteUploadedTestFiles(uploadDir);
-        deleteUploadedTestFiles(imageUploadDir);
+        deleteUploadedTestFiles();
     }
 
-    // 증명 파일·이미지 테스트가 build/test-uploads 아래에 남긴 파일이 테스트 실행마다 누적되지 않도록 정리한다.
-    private void deleteUploadedTestFiles(String dirPath) throws IOException {
-        Path dir = Path.of(dirPath);
+    // 증명 파일 테스트가 build/test-uploads 아래에 남긴 파일이 테스트 실행마다 누적되지 않도록 정리한다.
+    private void deleteUploadedTestFiles() throws IOException {
+        Path dir = Path.of(uploadDir);
         if (!Files.isDirectory(dir)) {
             return;
         }
@@ -273,74 +267,6 @@ class ConferenceApplicationAcceptanceTest {
                 .andExpect(jsonPath("$.error.code").value("PROOF_FILE_INVALID_TYPE"));
 
         assertThat(conferenceRepository.findAll()).isEmpty();
-    }
-
-    @Test
-    void applyConference_withImage_storesResizedThumbnailAndDetailImagesAndServesThemPublicly() throws Exception {
-        MockMultipartFile image = new MockMultipartFile(
-                "image", "poster.png", MediaType.IMAGE_PNG_VALUE, pngImageBytes(800, 800));
-
-        String response = mockMvc.perform(multipart("/api/conferences")
-                        .file(requestPart("""
-                                {
-                                  "title": "이미지 첨부 컨퍼런스",
-                                  "capacity": 30,
-                                  "startAt": "2026-12-01T10:00:00",
-                                  "endAt": "2026-12-01T18:00:00",
-                                  "location": "대전",
-                                  "tags": ["개발"]
-                                }
-                                """))
-                        .file(image)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken()))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-
-        String thumbnailImageUrl = JsonPath.read(response, "$.data.thumbnailImageUrl");
-        assertThat(thumbnailImageUrl).startsWith("/api/conferences/images/thumb_");
-
-        mockMvc.perform(get(thumbnailImageUrl))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.IMAGE_PNG));
-
-        UUID conferenceId = UUID.fromString(JsonPath.read(response, "$.data.id"));
-        Conference saved = conferenceRepository.findById(conferenceId).orElseThrow();
-        assertThat(saved.getThumbnailImageName()).startsWith("thumb_");
-        assertThat(saved.getDetailImageName()).startsWith("detail_");
-        assertThat(Path.of(imageUploadDir, saved.getThumbnailImageName())).exists();
-        assertThat(Path.of(imageUploadDir, saved.getDetailImageName())).exists();
-    }
-
-    @Test
-    void applyConference_withDisallowedImageExtension_isRejectedWith400() throws Exception {
-        MockMultipartFile image = new MockMultipartFile(
-                "image", "poster.gif", "image/gif", "dummy-content".getBytes(StandardCharsets.UTF_8));
-
-        mockMvc.perform(multipart("/api/conferences")
-                        .file(requestPart("""
-                                {
-                                  "title": "잘못된 이미지 형식 컨퍼런스",
-                                  "capacity": 30,
-                                  "startAt": "2026-12-01T10:00:00",
-                                  "endAt": "2026-12-01T18:00:00",
-                                  "location": "대전",
-                                  "tags": ["개발"]
-                                }
-                                """))
-                        .file(image)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizerToken()))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("IMAGE_INVALID_TYPE"));
-
-        assertThat(conferenceRepository.findAll()).isEmpty();
-    }
-
-    private byte[] pngImageBytes(int width, int height) throws IOException {
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        try (var out = new java.io.ByteArrayOutputStream()) {
-            ImageIO.write(image, "png", out);
-            return out.toByteArray();
-        }
     }
 
     private String organizerToken() {

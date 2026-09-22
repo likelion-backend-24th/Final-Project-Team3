@@ -34,6 +34,8 @@ public record ConferenceRequest(
 
     String description,
 
+    String imageUrl,
+
     @NotEmpty(message = "카테고리는 최소 1개 선택해야 합니다.")
     List<@NotBlank(message = "태그는 빈 값일 수 없습니다.") String> tags
     ){

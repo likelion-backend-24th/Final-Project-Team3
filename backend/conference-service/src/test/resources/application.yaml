@@ -18,7 +18,6 @@ spring:
 app:
   upload:
     conference-proof-dir: build/test-uploads/conference-proof
-    conference-image-dir: build/test-uploads/conference-image
 
 services:
   reservation-service:

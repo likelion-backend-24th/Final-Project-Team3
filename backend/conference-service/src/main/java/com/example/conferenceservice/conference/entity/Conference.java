@@ -67,12 +67,8 @@ public class Conference {
     @Column(name = "rejection_reason")
     private String rejectionReason;
 
-    // 목록 카드용 썸네일과 상세 페이지용 이미지를 각각 리사이징해서 저장한 파일명(FileStorageService.storeImage 결과)
-    @Column(name = "thumbnail_image_name")
-    private String thumbnailImageName;
-
-    @Column(name = "detail_image_name")
-    private String detailImageName;
+    @Column(name = "image_url")
+    private String imageUrl;
 
     // 등록 신청 시 첨부한 컨퍼런스 증명 파일의 저장 파일명({UUID}_{원본파일명}). 관리자 승인 심사용.
     @Column(name = "proof_file_name")
@@ -84,11 +80,6 @@ public class Conference {
 
     public void attachProofFile(String proofFileName) {
         this.proofFileName = proofFileName;
-    }
-
-    public void attachImages(String thumbnailImageName, String detailImageName) {
-        this.thumbnailImageName = thumbnailImageName;
-        this.detailImageName = detailImageName;
     }
 
     public boolean isPending() {

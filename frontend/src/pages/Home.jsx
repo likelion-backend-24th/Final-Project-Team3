@@ -7,7 +7,7 @@ import { CATEGORY_TAGS } from '../utils/categoryTags'
 
 const CATEGORIES = ['전체', ...CATEGORY_TAGS]
 
-// thumbnailImageUrl이 생겨서(백엔드) 있으면 실제 이미지를 쓰고, 없는 컨퍼런스는 예전처럼
+// imageUrl이 생겨서(백엔드) 있으면 실제 이미지를 쓰고, 없는 컨퍼런스는 예전처럼
 // 결정론적 그라디언트로 대체한다. to-surface로 끝나야 카드 하단 내용 영역(bg-surface)이랑
 // 색이 정확히 이어져서 경계가 안 보인다.
 const GRADIENTS = [
@@ -118,10 +118,10 @@ export default function Home() {
                 to={`/conferences/${c.id}`}
                 className="bg-surface border border-border rounded-xl overflow-hidden hover:border-primary transition-colors flex flex-col"
               >
-                {c.thumbnailImageUrl ? (
+                {c.imageUrl ? (
                   <div
                     className="relative h-32 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${c.thumbnailImageUrl})` }}
+                    style={{ backgroundImage: `url(${c.imageUrl})` }}
                   />
                 ) : (
                   <div className={`relative h-32 bg-gradient-to-br ${gradientFor(c.id)}`} />

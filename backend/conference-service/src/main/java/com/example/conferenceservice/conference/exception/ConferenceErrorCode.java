@@ -17,11 +17,7 @@ public enum ConferenceErrorCode implements ErrorCode {
     CONFERENCE_LOCATION_ADDRESS_LOCKED(HttpStatus.CONFLICT, "CONFERENCE_LOCATION_ADDRESS_LOCKED", "승인된 컨퍼런스는 주소를 변경할 수 없습니다. 교통편·주차·편의시설 정보만 수정할 수 있습니다."),
     PROOF_FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "PROOF_FILE_UPLOAD_FAILED", "증명 파일 업로드에 실패했습니다."),
     PROOF_FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "PROOF_FILE_NOT_FOUND", "첨부된 증명 파일이 없습니다."),
-    PROOF_FILE_INVALID_TYPE(HttpStatus.BAD_REQUEST, "PROOF_FILE_INVALID_TYPE", "증명 파일은 pdf, png, jpg, jpeg 형식만 첨부할 수 있습니다."),
-    IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE_UPLOAD_FAILED", "이미지 업로드에 실패했습니다."),
-    IMAGE_INVALID_TYPE(HttpStatus.BAD_REQUEST, "IMAGE_INVALID_TYPE", "이미지는 png, jpg, jpeg 형식만 첨부할 수 있습니다."),
-    IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "IMAGE_NOT_FOUND", "존재하지 않는 이미지입니다."),
-    IMAGE_DIMENSIONS_TOO_LARGE(HttpStatus.BAD_REQUEST, "IMAGE_DIMENSIONS_TOO_LARGE", "이미지의 가로*세로 픽셀 수가 너무 큽니다.");
+    PROOF_FILE_INVALID_TYPE(HttpStatus.BAD_REQUEST, "PROOF_FILE_INVALID_TYPE", "증명 파일은 pdf, png, jpg, jpeg 형식만 첨부할 수 있습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
