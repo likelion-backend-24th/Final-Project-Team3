@@ -44,6 +44,7 @@ public class SecurityConfig {
                                 "/api/members/signup",
                                 "/api/members/organizers/signup",
                                 "/api/auth/login",
+                                "/api/auth/social/*",
                                 "/api/auth/refresh",
                                 "/api/auth/logout",
                                 "/api/auth/email/send-code",

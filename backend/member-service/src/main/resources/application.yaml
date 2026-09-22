@@ -41,3 +41,7 @@ nts:
     mode: ${NTS_VERIFY_MODE:real}           # real: 국세청 진위확인 API 호출 / mock: 항상 일치(로컬 전용, 키 없이 실행할 때 NTS_VERIFY_MODE=mock)
     base-url: https://api.odcloud.kr
     service-key: ${NTS_SERVICE_KEY:}        # 공공데이터포털 일반 인증키(Encoding) 그대로. real 모드에서 비어 있으면 기동 실패
+social:
+  mode: ${SOCIAL_MODE:mock}                # real: 실제 Google/Kakao 서버 검증 / mock: 검증 스킵(로컬 전용, 키 없이 실행할 때 SOCIAL_MODE=mock)
+  google:
+    client-id: ${GOOGLE_OAUTH_CLIENT_ID:}  # Google Cloud Console에서 발급받은 OAuth Client ID. real 모드에서 비어있으면 기동 실패
