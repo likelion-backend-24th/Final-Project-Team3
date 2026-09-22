@@ -160,9 +160,13 @@ public class ReservationService {
         }
     }
 
-    public QueuePositionResponse getQueuePosition(UUID reservationId) {
+    public QueuePositionResponse getQueuePosition(UUID reservationId, UUID requesterId) {
         WaitingQueue queueEntry = waitingQueueRepository.findByReservationId(reservationId)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+
+        if (!queueEntry.getMemberId().equals(requesterId)) {
+            throw new BusinessException(ReservationErrorCode.RESERVATION_ACCESS_DENIED);
+        }
 
         int position = queueEntry.getPosition();
         int estimatedWaitMinutes = calculateEstimatedWaitMinutes(queueEntry.getSessionId(), position);
@@ -177,7 +181,7 @@ public class ReservationService {
             Double avgSeconds = paymentRepository.findAveragePaymentSecondsBySessionIds(sessionIds);
             double avgMinutesPerPerson = (avgSeconds == null) ? 5.0 : avgSeconds / 60.0;
             return (int) Math.ceil(position * avgMinutesPerPerson);
-        } catch (RuntimeException e) {
+        } catch (ConferenceServiceUnavailableException e) {
             return (int) Math.ceil(position * 5.0);
         }
     }
