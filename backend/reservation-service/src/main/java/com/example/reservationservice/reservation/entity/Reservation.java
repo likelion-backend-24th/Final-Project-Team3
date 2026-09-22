@@ -38,6 +38,9 @@ public class Reservation {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
+    @Column(name = "hold_started_at")
+    private LocalDateTime holdStartedAt;
+
     @Builder
     public Reservation(UUID sessionId, UUID memberId, Integer headcount) {
         this.id = UuidCreator.getTimeOrderedEpoch();
@@ -47,6 +50,7 @@ public class Reservation {
         this.status = ReservationStatus.HOLD;
         this.createdAt = LocalDateTime.now();
         this.expiresAt = LocalDateTime.now().plusMinutes(10);
+        this.holdStartedAt = LocalDateTime.now();
     }
 
     public void markAsQueued() {
@@ -56,6 +60,7 @@ public class Reservation {
     public void markAsHold() {
         this.status = ReservationStatus.HOLD;
         this.expiresAt = LocalDateTime.now().plusMinutes(10);
+        this.holdStartedAt = LocalDateTime.now();
     }
 
     public void markAsConfirmed() {
