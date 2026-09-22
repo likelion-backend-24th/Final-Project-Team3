@@ -45,7 +45,7 @@ public class ConferenceService {
     private final FileStorageService fileStorageService;
 
     @Transactional
-    public ConferenceResponse applyConference(CustomUserDetails currentUser, ConferenceRequest request, MultipartFile proofFile) {
+    public ConferenceResponse applyConference(CustomUserDetails currentUser, ConferenceRequest request, MultipartFile proofFile, MultipartFile image) {
         if (currentUser.getOrganizationName() == null || currentUser.getOrganizationName().isBlank()) {
             throw new BusinessException(ConferenceErrorCode.ORGANIZATION_NAME_NOT_FOUND);
         }
@@ -65,7 +65,6 @@ public class ConferenceService {
                 .parkingInfo(request.parkingInfo())
                 .amenities(request.amenities())
                 .description(request.description())
-                .imageUrl(request.imageUrl())
                 .status(ConferenceStatus.PENDING)
                 .build();
         Conference savedConference = conferenceRepository.save(conference);
@@ -82,6 +81,22 @@ public class ConferenceService {
         if (proofFile != null && !proofFile.isEmpty()) {
             conferenceRepository.flush();
             savedConference.attachProofFile(fileStorageService.store(proofFile));
+        }
+        if (image != null && !image.isEmpty()) {
+            try {
+                // flush()도 try 안에서 해야 한다 - 여기서 던지는 예외(예: 직전 attachProofFile()이
+                // 남긴 UPDATE의 제약조건 위반)도 아래 orphan 정리 로직을 반드시 거치게 하기 위함.
+                conferenceRepository.flush();
+                FileStorageService.StoredImage storedImage = fileStorageService.storeImage(image);
+                savedConference.attachImages(storedImage.thumbnailFilename(), storedImage.detailFilename());
+            } catch (RuntimeException e) {
+                // 이미지 저장 실패로 트랜잭션이 롤백되면 방금 저장한 증빙 파일은 참조할 DB row가 없어지므로,
+                // 디스크에 orphan으로 남지 않도록 같이 지운다.
+                if (savedConference.hasProofFile()) {
+                    fileStorageService.deleteProofFile(savedConference.getProofFileName());
+                }
+                throw e;
+            }
         }
 
         return ConferenceResponse.from(savedConference, 0, tagNames);
