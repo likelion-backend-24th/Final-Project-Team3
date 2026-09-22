@@ -40,6 +40,20 @@ export function updateProfile({ ageGroup, job }) {
   return apiFetch('/members/me', { method: 'PATCH', body: { ageGroup, job } })
 }
 
+// 소셜 로그인/가입. 최초 가입일 때만 서버가 AUTH_SOCIAL_PROFILE_REQUIRED(400)로 ageGroup·job을 요구한다 —
+// 그때만 두 값을 채워서 같은 함수를 한 번 더 호출하면 된다(재로그인 시엔 안 넘겨도 무시됨).
+export function socialLogin(provider, token, { ageGroup, job } = {}) {
+  return apiFetch(`/auth/social/${provider}`, {
+    method: 'POST',
+    body: { token, ageGroup, job },
+  })
+}
+
+// 마이페이지에서 이미 로그인된 계정에 소셜 계정을 연동할 때(이메일 충돌 케이스 해소용)
+export function linkSocialAccount(provider, token) {
+  return apiFetch(`/auth/social/${provider}/link`, { method: 'POST', body: { token } })
+}
+
 // JWT는 서명 검증 없이 payload만 디코드한다 — 화면 분기용이며 실제 인가는 서버가 매 요청마다 검증한다.
 export function decodeJwt(token) {
   try {
