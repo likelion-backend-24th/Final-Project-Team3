@@ -57,13 +57,15 @@ public class ReservationController {
                 .body(ApiResponse.success("예약 처리 완료", result, traceId));
     }
 
-    @Operation(summary = "대기열 순번 조회", description = "본인 예약의 현재 대기열 순번을 조회한다")
+    @Operation(summary = "대기열 순번 조회", description = "본인 예약의 현재 대기열 순번과 예상 대기 시간을 조회한다")
     @GetMapping("/{reservationId}/queue-position")
-    public ResponseEntity<ApiResponse<Integer>> getQueuePosition(
-            @PathVariable UUID reservationId, HttpServletRequest httpRequest) {
-        int position = reservationService.getQueuePosition(reservationId);
+    public ResponseEntity<ApiResponse<QueuePositionResponse>> getQueuePosition(
+            @PathVariable UUID reservationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            HttpServletRequest httpRequest) {
+        QueuePositionResponse result = reservationService.getQueuePosition(reservationId, userDetails.getMemberId());
         return ResponseEntity.ok(
-                ApiResponse.success("순번 조회 완료", position, traceIdProvider.resolve(httpRequest)));
+                ApiResponse.success("순번 조회 완료", result, traceIdProvider.resolve(httpRequest)));
     }
 
     public record CreateHoldRequest(

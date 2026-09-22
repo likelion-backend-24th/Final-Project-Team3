@@ -6,8 +6,10 @@ import com.example.reservationservice.reservation.entity.AgeGroup;
 import com.example.reservationservice.reservation.entity.Job;
 import com.example.reservationservice.reservation.entity.ReservationStatus;
 import com.example.reservationservice.reservation.entity.SessionCapacityLock;
+import com.example.reservationservice.reservation.entity.WaitingQueue;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
 import com.example.reservationservice.reservation.repository.SessionCapacityLockRepository;
+import com.example.reservationservice.reservation.repository.WaitingQueueRepository;
 import com.example.reservationservice.reservation.service.ReservationService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -38,11 +40,15 @@ class HoldConcurrencyTest {
     @Autowired
     private SessionCapacityLockRepository sessionCapacityLockRepository;
 
+    @Autowired
+    private WaitingQueueRepository waitingQueueRepository;
+
     @MockitoBean
     private ConferenceServiceClient conferenceServiceClient;
 
     @AfterEach
     void tearDown() {
+        waitingQueueRepository.deleteAll();
         reservationRepository.deleteAll();
         sessionCapacityLockRepository.deleteAll();
     }
@@ -93,5 +99,14 @@ class HoldConcurrencyTest {
         assertThat(holdCount).isEqualTo(Math.min(threadCount, capacity)); // min(100, 10) = 10
         assertThat(queuedCount).isEqualTo(threadCount - holdCount);       // 나머지는 대기열
         assertThat(holdCount + queuedCount).isEqualTo(threadCount);       // 전체 합 = 100
+
+        // then: 대기열 순번은 중복·누락 없이 1..queuedCount여야 함
+        List<Integer> positions = waitingQueueRepository.findAll().stream()
+                .filter(w -> w.getSessionId().equals(sessionId))
+                .map(WaitingQueue::getPosition)
+                .sorted()
+                .toList();
+        assertThat(positions).containsExactlyElementsOf(
+                java.util.stream.IntStream.rangeClosed(1, (int) queuedCount).boxed().toList());
     }
 }

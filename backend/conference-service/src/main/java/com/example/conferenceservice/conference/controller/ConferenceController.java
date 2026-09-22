@@ -212,4 +212,12 @@ public class ConferenceController {
                 conferenceSettlementService.getSettlement(conferenceId, currentUser.getMemberId());
         return ResponseEntity.ok(ApiResponse.success("정산 조회 성공", response, traceIdProvider.resolve(request)));
     }
+
+    // 서비스 간 내부 API: Reservation-Service가 컨퍼런스별 통계(예: 평균 대기시간)를 계산할 때 호출한다.
+    @GetMapping("/{conferenceId}/session-ids")
+    public ResponseEntity<ApiResponse<List<UUID>>> getSessionIds(
+            @PathVariable UUID conferenceId, HttpServletRequest request) {
+        List<UUID> sessionIds = sessionService.getSessionIdsByConference(conferenceId);
+        return ResponseEntity.ok(ApiResponse.success("컨퍼런스 소속 세션ID 목록 조회 성공", sessionIds, traceIdProvider.resolve(request)));
+    }
 }

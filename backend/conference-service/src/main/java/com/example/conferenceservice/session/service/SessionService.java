@@ -8,13 +8,7 @@ import com.example.conferenceservice.conference.exception.ConferenceErrorCode;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
 import com.example.conferenceservice.operationstatus.client.ReservationServiceClient;
 import com.example.conferenceservice.operationstatus.client.ReservationServiceUnavailableException;
-import com.example.conferenceservice.session.dto.RejectSessionRequest;
-import com.example.conferenceservice.session.dto.SessionCapacityResponse;
-import com.example.conferenceservice.session.dto.SessionCreateRequest;
-import com.example.conferenceservice.session.dto.SessionPriceResponse;
-import com.example.conferenceservice.session.dto.SessionResponse;
-import com.example.conferenceservice.session.dto.SessionStartAtResponse;
-import com.example.conferenceservice.session.dto.SessionUpdateRequest;
+import com.example.conferenceservice.session.dto.*;
 import com.example.conferenceservice.session.entity.Session;
 import com.example.conferenceservice.session.entity.SessionStatus;
 import com.example.conferenceservice.session.exception.SessionErrorCode;
@@ -208,6 +202,20 @@ public class SessionService {
         }
         session.reject(request.reason());
         return SessionResponse.from(session);
+    }
+
+    @Transactional(readOnly = true)
+    public SessionConferenceIdResponse getConferenceId(UUID sessionId) {
+        Session session = sessionRepository.findByIdAndConference_Status(sessionId, ConferenceStatus.APPROVED)
+                .orElseThrow(() -> new BusinessException(SessionErrorCode.SESSION_NOT_FOUND));
+        return SessionConferenceIdResponse.from(session);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getSessionIdsByConference(UUID conferenceId) {
+        return sessionRepository.findByConferenceId(conferenceId).stream()
+                .map(Session::getId)
+                .toList();
     }
 
     private Session findSession(UUID id) {

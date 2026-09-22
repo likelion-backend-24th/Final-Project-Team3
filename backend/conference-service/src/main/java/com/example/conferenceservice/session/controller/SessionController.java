@@ -3,11 +3,7 @@ package com.example.conferenceservice.session.controller;
 import com.example.conferenceservice.auth.CustomUserDetails;
 import com.example.conferenceservice.common.TraceIdProvider;
 import com.example.conferenceservice.common.dto.ApiResponse;
-import com.example.conferenceservice.session.dto.SessionCapacityResponse;
-import com.example.conferenceservice.session.dto.SessionPriceResponse;
-import com.example.conferenceservice.session.dto.SessionResponse;
-import com.example.conferenceservice.session.dto.SessionStartAtResponse;
-import com.example.conferenceservice.session.dto.SessionUpdateRequest;
+import com.example.conferenceservice.session.dto.*;
 import com.example.conferenceservice.session.service.SessionService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -55,9 +51,19 @@ public class SessionController {
         return ResponseEntity.ok(ApiResponse.success("세션 시작 일시 조회 성공", startAt, traceIdProvider.resolve(request)));
     }
 
+    // 서비스 간 내부 API: Reservation-Service가 결제 금액을 서버에서 계산할 때 호출한다.
+    // 응답 필드 설명은 SessionPriceResponse 참고. 세션이 없으면 404.
     @GetMapping("/{sessionId}/price")
     public ResponseEntity<ApiResponse<SessionPriceResponse>> getPrice(@PathVariable UUID sessionId, HttpServletRequest request) {
         SessionPriceResponse price = sessionService.getPrice(sessionId);
         return ResponseEntity.ok(ApiResponse.success("세션 가격 조회 성공", price, traceIdProvider.resolve(request)));
+    }
+
+    // 서비스 간 내부 API: Reservation-Service가 세션이 속한 컨퍼런스를 알아야 할 때 호출한다.
+    @GetMapping("/{sessionId}/conference-id")
+    public ResponseEntity<ApiResponse<SessionConferenceIdResponse>> getConferenceId(
+            @PathVariable UUID sessionId, HttpServletRequest request) {
+        SessionConferenceIdResponse response = sessionService.getConferenceId(sessionId);
+        return ResponseEntity.ok(ApiResponse.success("세션 소속 컨퍼런스 조회 성공", response, traceIdProvider.resolve(request)));
     }
 }
