@@ -1,6 +1,8 @@
 package com.example.reservationservice.controller;
 
 import com.example.reservationservice.common.exception.BusinessException;
+import com.example.reservationservice.payment.entity.Payment;
+import com.example.reservationservice.payment.repository.PaymentRepository;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
 import com.example.reservationservice.payment.service.PortOnePaymentVerifier;
 import com.example.reservationservice.reservation.entity.Reservation;
@@ -26,6 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static java.util.UUID.randomUUID;
@@ -77,6 +80,9 @@ public class PaymentQrAcceptanceTest {
 
     @Autowired
     private HoldExpirationScheduler holdExpirationScheduler;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
 
     @BeforeEach
     void setUp() {
@@ -290,7 +296,7 @@ public class PaymentQrAcceptanceTest {
         mockMvc.perform(get("/api/reservations/{id}/queue-position", thirdReservationId)
                         .with(asUser(member3)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").value(1));
+                .andExpect(jsonPath("$.data.position").value(1));
 
         mockMvc.perform(post("/api/reservations/{id}/payment", secondReservationId)
                         .with(asUser(member2))
@@ -530,6 +536,63 @@ public class PaymentQrAcceptanceTest {
 
         Reservation reservation = reservationRepository.findById(UUID.fromString(reservationId)).orElseThrow();
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.HOLD);
+    }
+
+    @Test
+    @DisplayName("과거 결제 데이터가 있으면 평균 결제 시간을 기반으로 예상 대기 시간을 계산한다")
+    void 예상_대기_시간이_평균_결제_시간_기반으로_계산된다() throws Exception {
+        UUID pastSessionId = UUID.randomUUID();
+        UUID pastMemberId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(pastSessionId)).willReturn(10);
+        given(conferenceServiceClient.getSessionPrice(pastSessionId)).willReturn(0);
+
+        // 과거에 결제 완료된 예약 하나 생성 (createdAt을 10분 전으로 조작)
+        Reservation pastReservation = Reservation.builder()
+                .sessionId(pastSessionId)
+                .memberId(pastMemberId)
+                .headcount(1)
+                .build();
+        reservationRepository.save(pastReservation);
+        ReflectionTestUtils.setField(pastReservation, "createdAt", LocalDateTime.now().minusMinutes(10));
+        ReflectionTestUtils.setField(pastReservation, "status", ReservationStatus.CONFIRMED);
+        reservationRepository.saveAndFlush(pastReservation);
+
+        Payment payment = Payment.builder()
+                .reservationId(pastReservation.getId())
+                .amount(0)
+                .paymentMethod("FREE")
+                .build();
+        paymentRepository.save(payment);
+        ReflectionTestUtils.setField(payment, "paidAt", LocalDateTime.now());
+        paymentRepository.saveAndFlush(payment);
+
+        // 이제 새로운 세션에서 대기열 2번째로 등록
+        UUID sessionId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
+
+        // 같은 컨퍼런스에 pastSessionId와 sessionId가 함께 속해 있다고 가정하고 Mock 설정
+        UUID conferenceId = UUID.randomUUID();
+        given(conferenceServiceClient.getConferenceId(sessionId)).willReturn(conferenceId);
+        given(conferenceServiceClient.getSessionIdsByConference(conferenceId))
+                .willReturn(List.of(sessionId, pastSessionId));
+
+        mockMvc.perform(post("/api/reservations/hold")
+                .with(asUser(UUID.randomUUID()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createHoldJson(sessionId, 1)));
+
+        MvcResult queuedResult = mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(UUID.randomUUID()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createHoldJson(sessionId, 1)))
+                .andReturn();
+        String reservationId = JsonPath.read(queuedResult.getResponse().getContentAsString(), "$.data.reservationId");
+
+        mockMvc.perform(get("/api/reservations/{id}/queue-position", reservationId)
+                        .with(asUser(UUID.randomUUID())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.position").value(1))
+                .andExpect(jsonPath("$.data.estimatedWaitMinutes").value(10));
     }
 
     private String createHoldJson(UUID sessionId, int headCount) {
