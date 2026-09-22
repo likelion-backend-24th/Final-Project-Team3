@@ -60,8 +60,10 @@ public class ReservationController {
     @Operation(summary = "대기열 순번 조회", description = "본인 예약의 현재 대기열 순번과 예상 대기 시간을 조회한다")
     @GetMapping("/{reservationId}/queue-position")
     public ResponseEntity<ApiResponse<QueuePositionResponse>> getQueuePosition(
-            @PathVariable UUID reservationId, HttpServletRequest httpRequest) {
-        QueuePositionResponse result = reservationService.getQueuePosition(reservationId);
+            @PathVariable UUID reservationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            HttpServletRequest httpRequest) {
+        QueuePositionResponse result = reservationService.getQueuePosition(reservationId, userDetails.getMemberId());
         return ResponseEntity.ok(
                 ApiResponse.success("순번 조회 완료", result, traceIdProvider.resolve(httpRequest)));
     }

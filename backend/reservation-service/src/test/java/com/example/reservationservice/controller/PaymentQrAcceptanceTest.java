@@ -554,6 +554,7 @@ public class PaymentQrAcceptanceTest {
                 .build();
         reservationRepository.save(pastReservation);
         ReflectionTestUtils.setField(pastReservation, "createdAt", LocalDateTime.now().minusMinutes(10));
+        ReflectionTestUtils.setField(pastReservation, "holdStartedAt", LocalDateTime.now().minusMinutes(10));
         ReflectionTestUtils.setField(pastReservation, "status", ReservationStatus.CONFIRMED);
         reservationRepository.saveAndFlush(pastReservation);
 
@@ -568,6 +569,8 @@ public class PaymentQrAcceptanceTest {
 
         // 이제 새로운 세션에서 대기열 2번째로 등록
         UUID sessionId = UUID.randomUUID();
+        UUID member1 = UUID.randomUUID();
+        UUID member2 = UUID.randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
 
         // 같은 컨퍼런스에 pastSessionId와 sessionId가 함께 속해 있다고 가정하고 Mock 설정
@@ -577,23 +580,23 @@ public class PaymentQrAcceptanceTest {
                 .willReturn(List.of(sessionId, pastSessionId));
 
         mockMvc.perform(post("/api/reservations/hold")
-                .with(asUser(UUID.randomUUID()))
+                .with(asUser(member1))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createHoldJson(sessionId, 1)));
 
         MvcResult queuedResult = mockMvc.perform(post("/api/reservations/hold")
-                        .with(asUser(UUID.randomUUID()))
+                        .with(asUser(member2))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createHoldJson(sessionId, 1)))
                 .andReturn();
         String reservationId = JsonPath.read(queuedResult.getResponse().getContentAsString(), "$.data.reservationId");
 
         mockMvc.perform(get("/api/reservations/{id}/queue-position", reservationId)
-                        .with(asUser(UUID.randomUUID())))
+                        .with(asUser(member2)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.position").value(1))
                 .andExpect(jsonPath("$.data.estimatedWaitMinutes").value(10));
-    }
+        }
 
     private String createHoldJson(UUID sessionId, int headCount) {
         StringBuilder attendees = new StringBuilder();

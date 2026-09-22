@@ -41,12 +41,7 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             "WHERE r.sessionId IN :sessionIds AND r.status = 'CANCELLED'")
     int countCancelled(@Param("sessionIds") List<UUID> sessionIds);
 
-    @Query(value = "SELECT AVG(TIMESTAMPDIFF(SECOND, r.created_at, p.paid_at)) " +
-            "FROM payment p JOIN reservation r ON p.reservation_id = r.id " +
-            "WHERE r.status = 'CONFIRMED'", nativeQuery = true)
-    Double findAveragePaymentSeconds();
-
-    @Query(value = "SELECT AVG(TIMESTAMPDIFF(SECOND, r.created_at, p.paid_at)) " +
+    @Query(value = "SELECT AVG(TIMESTAMPDIFF(SECOND, r.hold_started_at, p.paid_at)) " +
             "FROM payment p JOIN reservation r ON p.reservation_id = r.id " +
             "WHERE r.status = 'CONFIRMED' AND r.session_id IN :sessionIds", nativeQuery = true)
     Double findAveragePaymentSecondsBySessionIds(@Param("sessionIds") List<UUID> sessionIds);
