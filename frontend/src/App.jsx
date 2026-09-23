@@ -34,12 +34,28 @@ import Settlements from './pages/organizer/Settlements'
 import AdminApprovals from './pages/admin/Approvals'
 import AdminPgSettings from './pages/admin/PgSettings'
 import AdminSettlementDashboard from './pages/admin/SettlementDashboard'
+import AdminUsers from './pages/admin/Users'
+import AdminSidebar from './components/AdminSidebar'
 
 function Layout() {
   return (
     <div className="min-h-screen bg-bg">
       <Header />
       <Outlet />
+    </div>
+  )
+}
+
+function AdminLayout() {
+  return (
+    <div className="min-h-screen bg-bg">
+      <Header />
+      <div className="flex">
+        <AdminSidebar />
+        <main className="flex-1 min-w-0">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }
@@ -216,6 +232,9 @@ export default function App() {
               }
             />
 
+          </Route>
+
+          <Route element={<AdminLayout />}>
             <Route
               path="/admin"
               element={
@@ -240,9 +259,17 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute role="ADMIN">
+                  <AdminUsers />
+                </ProtectedRoute>
+              }
+            />
           </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

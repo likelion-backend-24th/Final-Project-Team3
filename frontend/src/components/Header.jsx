@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Sun, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { adminNav } from './AdminSidebar'
 
 // 로그인 전엔 '마이페이지'가 없다 (본인 예약 내역이라 방문자에겐 의미 없음).
 function participantNav(isAuthenticated) {
@@ -17,12 +18,6 @@ const organizerNav = [
   { to: '/organizer/checkin', label: 'QR 체크인' },
   { to: '/organizer/settlements', label: '정산 내역' },
   { to: '/organizer/settings', label: '계정' },
-]
-
-const adminNav = [
-  { to: '/admin', label: '컨퍼런스 승인', end: true },
-  { to: '/admin/settlements', label: '정산 대시보드' },
-  { to: '/admin/settings', label: '시스템 설정' },
 ]
 
 const roleLabel = { MEMBER: '참가자', ORGANIZER: '주최자', ADMIN: '관리자' }
@@ -41,7 +36,10 @@ export default function Header() {
   const isOrganizer = claims?.role === 'ORGANIZER'
   const isAdmin = claims?.role === 'ADMIN'
   const isAuthenticated = status === 'authenticated'
-  const nav = isOrganizer ? organizerNav : isAdmin ? adminNav : participantNav(isAuthenticated)
+  // 주최자는 Header가 그대로 메뉴를 맡고, 관리자는 데스크톱에서 AdminSidebar가 메뉴를 맡는다.
+  // AdminSidebar는 모바일에서 숨겨지므로, 모바일 전용 줄에는 관리자 메뉴를 그대로 채운다.
+  const desktopNav = isOrganizer ? organizerNav : isAdmin ? [] : participantNav(isAuthenticated)
+  const mobileNav = isOrganizer ? organizerNav : isAdmin ? adminNav : participantNav(isAuthenticated)
 
   const handleLogout = async () => {
     await logout()
@@ -55,20 +53,24 @@ export default function Header() {
     })
   }, [location.pathname, isOrganizer, isAdmin, isAuthenticated])
 
-  const navLinks = nav.map((item) => (
-    <Link
-      key={item.to}
-      to={item.to}
-      data-nav-active={isNavActive(item, location.pathname)}
-      className={`px-3 py-2 rounded-md text-sm border whitespace-nowrap transition-colors ${
-        isNavActive(item, location.pathname)
-          ? 'bg-surface2 border-border text-text'
-          : 'border-transparent text-text-muted hover:text-text'
-      }`}
-    >
-      {item.label}
-    </Link>
-  ))
+  const renderNavLinks = (items) =>
+    items.map((item) => (
+      <Link
+        key={item.to}
+        to={item.to}
+        data-nav-active={isNavActive(item, location.pathname)}
+        className={`px-3 py-2 rounded-md text-sm border whitespace-nowrap transition-colors ${
+          isNavActive(item, location.pathname)
+            ? 'bg-surface2 border-border text-text'
+            : 'border-transparent text-text-muted hover:text-text'
+        }`}
+      >
+        {item.label}
+      </Link>
+    ))
+
+  const desktopNavLinks = renderNavLinks(desktopNav)
+  const mobileNavLinks = renderNavLinks(mobileNav)
 
   // 모바일(md 미만)에서는 메뉴를 로고 줄 아래의 가로 스크롤 줄로 내리고, 부가 요소(테마 토글·역할 뱃지)는 숨긴다.
   return (
@@ -79,7 +81,7 @@ export default function Header() {
           <Link to={isOrganizer ? '/organizer' : '/'} className="text-lg font-semibold text-text shrink-0">
             Tech<span className="text-accent">Conf</span>
           </Link>
-          <nav className="hidden md:flex items-center gap-1">{navLinks}</nav>
+          <nav className="hidden md:flex items-center gap-1">{desktopNavLinks}</nav>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -123,7 +125,7 @@ export default function Header() {
       </div>
 
       <nav className="md:hidden border-t border-border overflow-x-auto">
-        <div className="flex items-center gap-1 px-4 py-2 w-max">{navLinks}</div>
+        <div className="flex items-center gap-1 px-4 py-2 w-max">{mobileNavLinks}</div>
       </nav>
     </header>
   )
