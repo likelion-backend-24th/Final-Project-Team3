@@ -156,6 +156,12 @@ export default function Login() {
             </p>
           )}
 
+          {location.state?.passwordResetDone && (
+            <p className="mb-4 text-sm text-success bg-success/10 rounded-lg px-3 py-2">
+              비밀번호가 재설정됐어요. 새 비밀번호로 로그인해주세요.
+            </p>
+          )}
+
           <form onSubmit={submit} className="space-y-4">
             <TextField
               label="이메일"
@@ -173,6 +179,11 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            <div className="text-right -mt-1">
+              <Link to="/forgot-password" className="text-xs text-text-muted hover:text-accent">
+                비밀번호를 잊으셨나요?
+              </Link>
+            </div>
             {error && <p className="text-sm text-danger">{error}</p>}
             <Button type="submit" loading={loading} className="w-full">
               로그인

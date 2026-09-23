@@ -59,6 +59,16 @@ export function getLinkedSocialAccounts() {
   return apiFetch('/members/me/social-accounts')
 }
 
+// 비밀번호 찾기: 이메일로 6자리 코드를 받고, 코드+새 비밀번호로 확인 요청.
+// 둘 다 비로그인 상태에서 호출되는 엔드포인트(permitAll)라 accessToken이 안 실려도 된다.
+export function requestPasswordReset(email) {
+  return apiFetch('/auth/password/reset-request', { method: 'POST', body: { email } })
+}
+
+export function confirmPasswordReset(email, code, newPassword) {
+  return apiFetch('/auth/password/reset-confirm', { method: 'POST', body: { email, code, newPassword } })
+}
+
 // JWT는 서명 검증 없이 payload만 디코드한다 — 화면 분기용이며 실제 인가는 서버가 매 요청마다 검증한다.
 export function decodeJwt(token) {
   try {
