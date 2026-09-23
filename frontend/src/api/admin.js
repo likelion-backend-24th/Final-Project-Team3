@@ -59,3 +59,21 @@ export function registerPgCredential({ provider, storeId, channelKey, apiSecret,
     body: { provider, storeId, channelKey, apiSecret, webhookSecret },
   })
 }
+
+// Member-Service 직접 구현. 이메일·이름 키워드 검색 + 페이징되는 전체 유저 목록.
+export function listMembers({ keyword, page, size } = {}) {
+  const params = new URLSearchParams()
+  if (keyword) params.set('keyword', keyword)
+  if (page != null) params.set('page', page)
+  if (size != null) params.set('size', size)
+  const query = params.toString()
+  return apiFetch(`/admin/members${query ? `?${query}` : ''}`)
+}
+
+export function getMemberDetail(memberId) {
+  return apiFetch(`/admin/members/${memberId}`)
+}
+
+export function changeMemberRole(memberId, role) {
+  return apiFetch(`/admin/members/${memberId}/role`, { method: 'PATCH', body: { role } })
+}
