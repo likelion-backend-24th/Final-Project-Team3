@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import TextField from '../components/TextField'
 import SelectField from '../components/SelectField'
 import Button from '../components/Button'
+import GoogleIcon from '../components/GoogleIcon'
+import KakaoIcon from '../components/KakaoIcon'
 import { useAuth } from '../context/AuthContext'
 import { ApiError } from '../api/client'
 import { AGE_GROUPS, JOBS } from '../utils/profileOptions'
-import { isGoogleConfigured, isKakaoConfigured, renderGoogleButton, kakaoLogin } from '../utils/socialAuth'
+import { isGoogleConfigured, isKakaoConfigured, googleLogin, kakaoAuthorize } from '../utils/socialAuth'
 
 export default function Login() {
   const { login, socialLogin } = useAuth()
@@ -30,19 +32,10 @@ export default function Login() {
   const [mockEmail, setMockEmail] = useState('')
   const [mockName, setMockName] = useState('')
 
-  const googleButtonRef = useRef(null)
-
   const routeAfterLogin = (claims) => {
     const dest = claims?.role === 'ORGANIZER' ? '/organizer' : claims?.role === 'ADMIN' ? '/admin' : '/conferences'
     navigate(dest)
   }
-
-  useEffect(() => {
-    if (isGoogleConfigured && googleButtonRef.current) {
-      renderGoogleButton(googleButtonRef.current, (idToken) => handleSocialLogin('google', idToken))
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -77,12 +70,14 @@ export default function Login() {
     }
   }
 
-  const handleKakaoClick = () => {
+  const handleGoogleClick = () => {
     setSocialError('')
-    kakaoLogin(
-      (accessToken) => handleSocialLogin('kakao', accessToken),
-      () => setSocialError('카카오 로그인에 실패했습니다.'),
-    )
+    googleLogin((idToken) => handleSocialLogin('google', idToken))
+  }
+
+  // Kakao는 페이지 전체가 리다이렉트되므로, 결과는 이 화면이 아니라 KakaoCallback에서 처리한다.
+  const handleKakaoClick = () => {
+    kakaoAuthorize({ intent: 'login' })
   }
 
   const submitSocialProfile = async (e) => {
@@ -190,35 +185,33 @@ export default function Login() {
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          {/* 참석자 전용 — 주최자 로그인 화면에는 이 블록을 넣지 않는다 */}
+          {/* 참석자 전용 — 주최자 로그인 화면에는 이 블록을 넣지 않는다.
+              구글도 공식 렌더 버튼 대신 커스텀 버튼을 써서 카카오와 폰트·둥글기·너비를 통일한다.
+              두 버튼 다 일반 로그인 버튼(w-full)과 같은 너비, 아이콘은 왼쪽 고정·텍스트는 중앙 정렬. */}
           <div className="space-y-2">
-            {isGoogleConfigured ? (
-              <div ref={googleButtonRef} className="flex justify-center" />
-            ) : (
-              <Button
-                variant="secondary"
-                className="w-full"
-                disabled
-                title=".env에 VITE_GOOGLE_CLIENT_ID를 설정하면 활성화됩니다"
-              >
-                Google로 로그인 (미설정)
-              </Button>
-            )}
+            <Button
+              variant="google"
+              className="w-full relative flex items-center justify-center"
+              disabled={!isGoogleConfigured}
+              loading={socialLoading}
+              onClick={handleGoogleClick}
+              title={!isGoogleConfigured ? '.env에 VITE_GOOGLE_CLIENT_ID를 설정하면 활성화됩니다' : undefined}
+            >
+              <GoogleIcon size={18} className="absolute left-4" />
+              <span>Google로 계속하기{!isGoogleConfigured && ' (미설정)'}</span>
+            </Button>
 
-            {isKakaoConfigured ? (
-              <Button variant="secondary" className="w-full" loading={socialLoading} onClick={handleKakaoClick}>
-                Kakao로 로그인
-              </Button>
-            ) : (
-              <Button
-                variant="secondary"
-                className="w-full"
-                disabled
-                title=".env에 VITE_KAKAO_JS_KEY를 설정하면 활성화됩니다"
-              >
-                Kakao로 로그인 (미설정)
-              </Button>
-            )}
+            <Button
+              variant="kakao"
+              className="w-full relative flex items-center justify-center"
+              disabled={!isKakaoConfigured}
+              loading={socialLoading}
+              onClick={handleKakaoClick}
+              title={!isKakaoConfigured ? '.env에 VITE_KAKAO_JS_KEY를 설정하면 활성화됩니다' : undefined}
+            >
+              <KakaoIcon size={18} className="absolute left-4" />
+              <span>Kakao로 계속하기{!isKakaoConfigured && ' (미설정)'}</span>
+            </Button>
 
             {socialError && <p className="text-sm text-danger">{socialError}</p>}
           </div>

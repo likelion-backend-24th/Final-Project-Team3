@@ -7,6 +7,7 @@ import SignupChoice from './pages/SignupChoice'
 import SignupParticipant from './pages/SignupParticipant'
 import SignupOrganizer from './pages/SignupOrganizer'
 import Login from './pages/Login'
+import KakaoCallback from './pages/KakaoCallback'
 import Home from './pages/Home'
 import ConferenceDetail from './pages/ConferenceDetail'
 import OrganizerProfile from './pages/OrganizerProfile'
@@ -64,6 +65,7 @@ export default function App() {
             <Route path="/signup/participant" element={<SignupParticipant />} />
             <Route path="/signup/organizer" element={<SignupOrganizer />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
 
             <Route
               path="/conferences/:id/sessions/:sessionId/apply"

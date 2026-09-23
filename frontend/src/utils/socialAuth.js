@@ -20,31 +20,57 @@ function loadScript(src) {
   })
 }
 
-// container(div)에 Google 공식 버튼을 그려 넣는다. Google 가이드라인상 커스텀 버튼에 클릭 이벤트를
-// 붙이는 방식은 권장되지 않아서, 렌더된 버튼을 그대로 쓰고 완료되면 idToken을 onToken으로 넘긴다.
-export async function renderGoogleButton(container, onToken) {
-  if (!isGoogleConfigured || !container) return
+// 공식 렌더 버튼 대신 커스텀 버튼(Button variant="google")을 써서 카카오 버튼과 폰트·둥글기·너비를
+// 맞춘다. One Tap(google.accounts.id.prompt())은 "이미 구글에 로그인된 세션"이 있어야만 뜨고
+// 없으면(시크릿창 등) 버튼을 눌러도 아무 반응이 없어서, 카카오처럼 클릭하면 항상 로그인 팝업이
+// 뜨는 OAuth2 방식(initTokenClient)으로 바꿨다. 토큰 클라이언트는 한 번만 만들어서 재사용한다.
+let googleTokenClient = null
+
+export async function googleLogin(onToken) {
+  if (!isGoogleConfigured) return
   await loadScript('https://accounts.google.com/gsi/client')
-  window.google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: (response) => onToken(response.credential),
-  })
-  window.google.accounts.id.renderButton(container, {
-    theme: 'outline',
-    size: 'large',
-    width: 320,
-    text: 'continue_with',
-  })
+  if (!googleTokenClient) {
+    googleTokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'openid email profile',
+      callback: (response) => {
+        if (response?.access_token) onToken(response.access_token)
+      },
+    })
+  }
+  googleTokenClient.requestAccessToken()
 }
 
-export async function kakaoLogin(onToken, onError) {
+// Kakao JS SDK는 v2부터 팝업 로그인(Auth.login)을 지원하지 않는다 — 반드시 Auth.authorize()로
+// 인가 코드를 받아 페이지 전체를 리다이렉트해야 한다(SDK URL도 v1 시절과 다름: t1.kakaocdn.net).
+const KAKAO_SDK_URL = 'https://t1.kakaocdn.net/kakao_js_sdk/2.8.3/kakao.min.js'
+
+export function kakaoRedirectUri() {
+  return `${window.location.origin}/auth/kakao/callback`
+}
+
+// 인가 코드는 1회용이라, authorize() 왕복 사이에 로그인 의도(로그인/연동)와 최초가입 시
+// 필요한 연령대·직무를 state에 실어 보낸다 — "추가 정보 필요" 재시도는 새 코드로 다시 authorize()를 호출해야 한다.
+export function encodeKakaoState(data) {
+  return btoa(encodeURIComponent(JSON.stringify(data)))
+}
+
+export function decodeKakaoState(state) {
+  try {
+    return JSON.parse(decodeURIComponent(atob(state)))
+  } catch {
+    return null
+  }
+}
+
+export async function kakaoAuthorize(state) {
   if (!isKakaoConfigured) return
-  await loadScript('https://developers.kakao.com/sdk/js/kakao.js')
+  await loadScript(KAKAO_SDK_URL)
   if (!window.Kakao.isInitialized()) {
     window.Kakao.init(KAKAO_JS_KEY)
   }
-  window.Kakao.Auth.login({
-    success: (authObj) => onToken(authObj.access_token),
-    fail: (err) => onError?.(err),
+  window.Kakao.Auth.authorize({
+    redirectUri: kakaoRedirectUri(),
+    state: encodeKakaoState(state),
   })
 }

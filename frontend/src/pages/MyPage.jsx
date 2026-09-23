@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Ticket, CheckCircle2, User, Briefcase, Link2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getMyReservations, getQueuePosition, getQrTickets, cancelReservation } from '../api/reservations'
 import { listConferences, getConference } from '../api/conferences'
-import { getProfile, updateProfile, linkSocialAccount } from '../api/auth'
+import { getProfile, updateProfile, linkSocialAccount, getLinkedSocialAccounts } from '../api/auth'
 import { ApiError } from '../api/client'
 import Button from '../components/Button'
+import GoogleIcon from '../components/GoogleIcon'
+import KakaoIcon from '../components/KakaoIcon'
 import SelectField from '../components/SelectField'
 import { AGE_GROUPS, JOBS } from '../utils/profileOptions'
-import { isGoogleConfigured, isKakaoConfigured, renderGoogleButton, kakaoLogin } from '../utils/socialAuth'
+import { isGoogleConfigured, isKakaoConfigured, googleLogin, kakaoAuthorize } from '../utils/socialAuth'
 
 const TABS = [
   { key: 'ALL', label: '전체' },
@@ -62,13 +64,25 @@ export default function MyPage() {
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
 
-  // 소셜 계정 연동 — 백엔드에 연동 여부 조회 API가 아직 없어서, 성공/실패는 이번 세션에서만
-  // 화면에 반영된다(새로고침하면 버튼이 다시 보임. 연동 자체는 서버에 정상 저장됨).
+  // 소셜 계정 연동 — 마운트 시 서버에서 이미 연동된 Provider 목록을 조회해 상태를 채우고,
+  // 화면에서 새로 연동하면 handleLinkSocial이 직접 상태를 갱신한다.
   const [googleLinkStatus, setGoogleLinkStatus] = useState('idle') // idle | linking | linked | error
   const [kakaoLinkStatus, setKakaoLinkStatus] = useState('idle')
   const [linkError, setLinkError] = useState('')
   const [mockLinkName, setMockLinkName] = useState('')
-  const googleLinkButtonRef = useRef(null)
+
+  useEffect(() => {
+    if (!claims?.memberId) return
+    getLinkedSocialAccounts()
+      .then((res) => {
+        const providers = new Set(res.data.map((a) => a.provider))
+        if (providers.has('GOOGLE')) setGoogleLinkStatus('linked')
+        if (providers.has('KAKAO')) setKakaoLinkStatus('linked')
+      })
+      .catch(() => {
+        // 조회 실패해도 연동 버튼은 그대로 눌러서 재시도할 수 있으니 화면을 막지 않는다
+      })
+  }, [claims?.memberId])
 
   useEffect(() => {
     if (!claims?.memberId) return
@@ -176,23 +190,16 @@ export default function MyPage() {
     }
   }
 
+  // Kakao는 페이지 전체가 리다이렉트되므로, 결과는 이 화면이 아니라 KakaoCallback에서 처리하고
+  // 성공하면 /mypage로 돌아온다(location.state.kakaoLinked로 확인 가능).
   const handleKakaoLinkClick = () => {
-    setLinkError('')
-    kakaoLogin(
-      (accessToken) => handleLinkSocial('kakao', accessToken),
-      () => {
-        setKakaoLinkStatus('error')
-        setLinkError('카카오 인증에 실패했습니다.')
-      },
-    )
+    kakaoAuthorize({ intent: 'link' })
   }
 
-  useEffect(() => {
-    if (isGoogleConfigured && googleLinkButtonRef.current) {
-      renderGoogleButton(googleLinkButtonRef.current, (idToken) => handleLinkSocial('google', idToken))
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const handleGoogleLinkClick = () => {
+    setLinkError('')
+    googleLogin((idToken) => handleLinkSocial('google', idToken))
+  }
 
   const startEditingProfile = () => {
     setDraftAgeGroup(ageGroup)
@@ -324,38 +331,44 @@ export default function MyPage() {
           연동하려는 소셜 계정의 이메일은 지금 로그인된 이메일({claims?.email})과 같아야 해요.
         </p>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-text">Google</span>
-            {googleLinkStatus === 'linked' ? (
-              <span className="inline-flex items-center gap-1 text-sm text-success">
-                <CheckCircle2 size={16} /> 연동 완료
-              </span>
-            ) : isGoogleConfigured ? (
-              <div ref={googleLinkButtonRef} />
-            ) : (
-              <Button variant="secondary" disabled title=".env에 VITE_GOOGLE_CLIENT_ID를 설정하면 활성화됩니다">
-                설정 필요
-              </Button>
-            )}
-          </div>
+        <div className="flex items-center gap-2">
+          {googleLinkStatus === 'linked' ? (
+            <span className="inline-flex items-center gap-1 text-sm text-success px-2">
+              <CheckCircle2 size={16} /> Google 연동됨
+            </span>
+          ) : isGoogleConfigured ? (
+            <Button
+              variant="google"
+              className="inline-flex items-center gap-1.5"
+              loading={googleLinkStatus === 'linking'}
+              onClick={handleGoogleLinkClick}
+            >
+              <GoogleIcon size={18} /> Google
+            </Button>
+          ) : (
+            <Button variant="secondary" className="inline-flex items-center gap-1.5" disabled title=".env에 VITE_GOOGLE_CLIENT_ID를 설정하면 활성화됩니다">
+              <GoogleIcon size={18} /> Google
+            </Button>
+          )}
 
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-text">Kakao</span>
-            {kakaoLinkStatus === 'linked' ? (
-              <span className="inline-flex items-center gap-1 text-sm text-success">
-                <CheckCircle2 size={16} /> 연동 완료
-              </span>
-            ) : isKakaoConfigured ? (
-              <Button variant="secondary" loading={kakaoLinkStatus === 'linking'} onClick={handleKakaoLinkClick}>
-                연동하기
-              </Button>
-            ) : (
-              <Button variant="secondary" disabled title=".env에 VITE_KAKAO_JS_KEY를 설정하면 활성화됩니다">
-                설정 필요
-              </Button>
-            )}
-          </div>
+          {kakaoLinkStatus === 'linked' ? (
+            <span className="inline-flex items-center gap-1 text-sm text-success px-2">
+              <CheckCircle2 size={16} /> Kakao 연동됨
+            </span>
+          ) : isKakaoConfigured ? (
+            <Button
+              variant="kakao"
+              className="inline-flex items-center gap-1.5"
+              loading={kakaoLinkStatus === 'linking'}
+              onClick={handleKakaoLinkClick}
+            >
+              <KakaoIcon size={18} /> Kakao
+            </Button>
+          ) : (
+            <Button variant="secondary" className="inline-flex items-center gap-1.5" disabled title=".env에 VITE_KAKAO_JS_KEY를 설정하면 활성화됩니다">
+              <KakaoIcon size={18} /> Kakao
+            </Button>
+          )}
         </div>
 
         {linkError && <p className="text-sm text-danger mt-3">{linkError}</p>}
