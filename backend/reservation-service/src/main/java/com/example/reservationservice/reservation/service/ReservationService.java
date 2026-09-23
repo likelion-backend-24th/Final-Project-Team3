@@ -9,6 +9,9 @@ import com.example.reservationservice.payment.dto.PaymentResult;
 import com.example.reservationservice.payment.service.PaymentService;
 import com.example.reservationservice.payment.service.PortOnePaymentVerifier;
 import com.example.reservationservice.qrticket.entity.QrTicket;
+import com.example.reservationservice.qrticket.exception.QrTicketErrorCode;
+import com.example.reservationservice.qrticket.exception.QrTicketException;
+import com.example.reservationservice.qrticket.repository.QrTicketRepository;
 import com.example.reservationservice.qrticket.service.QrTicketService;
 import com.example.reservationservice.reservation.scheduler.QueuePromotionService;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +47,7 @@ public class ReservationService {
     private final PaymentRepository paymentRepository;
     private final ActiveReservationLockRepository activeReservationLockRepository;
     private final QueuePromotionService queuePromotionService;
+    private final QrTicketRepository qrTicketRepository;
 
     @Transactional
     public ReservationResult createHoldOrQueue(
@@ -398,6 +402,58 @@ public class ReservationService {
         reservation.markAsCancelled();
 
         return CancelResult.cancelled(reservationId, refundRate, refundAmount);
+    }
+
+    // Task 12-5: 여러 명이 한 예약(headcount>1)으로 묶여 있을 때, QR 티켓 1장(=1명) 단위로 취소·부분
+    // 환불한다. Attendee와 QrTicket은 서로 FK로 연결돼 있지 않아 사람 단위 식별은 QrTicket.id로 한다.
+    @Transactional
+    public TicketCancelResult cancelTicket(UUID reservationId, UUID ticketId, UUID requesterId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+
+        if (!reservation.getMemberId().equals(requesterId)) {
+            throw new BusinessException(ReservationErrorCode.RESERVATION_ACCESS_DENIED);
+        }
+
+        if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
+            throw new BusinessException(ReservationErrorCode.RESERVATION_NOT_CONFIRMED);
+        }
+
+        QrTicket ticket = qrTicketRepository.findById(ticketId)
+                .filter(t -> t.getReservationId().equals(reservationId))
+                .orElseThrow(() -> new QrTicketException(QrTicketErrorCode.QR_TICKET_NOT_FOUND));
+
+        if (ticket.isUsed()) {
+            throw new QrTicketException(QrTicketErrorCode.QR_TICKET_ALREADY_USED);
+        }
+
+        List<QrTicket> tickets = qrTicketRepository.findByReservationId(reservationId);
+        if (tickets.size() <= 1) {
+            throw new BusinessException(ReservationErrorCode.LAST_TICKET_CANNOT_BE_CANCELLED_INDIVIDUALLY);
+        }
+
+        LocalDateTime sessionStartAt = getSessionStartAt(reservation.getSessionId());
+        long daysUntilStart = ChronoUnit.DAYS.between(LocalDateTime.now(), sessionStartAt);
+        int refundRate = daysUntilStart >= 7 ? 100 : daysUntilStart >= 3 ? 50 : 0;
+
+        // 1인당 가격은 결제 확정 때 쓰는 것과 같은 값(세션 가격)을 그대로 쓴다 — Payment.amount를
+        // headcount로 나누면 정수 나눗셈 때문에 금액이 샐 수 있어서 쓰지 않는다.
+        Integer price = getSessionPrice(reservation.getSessionId());
+        int pricePerPerson = price == null ? 0 : price;
+        int refundAmount = pricePerPerson * refundRate / 100;
+
+        if (refundAmount > 0) {
+            paymentService.recordRefund(reservationId, refundAmount);
+            portOnePaymentVerifier.cancel(
+                    reservationId.toString(), refundAmount, "예약 인원 개별 취소 환불 (환불율 " + refundRate + "%)");
+        }
+
+        qrTicketRepository.delete(ticket);
+        reservation.decreaseHeadcount(1);
+        sessionCapacityLockRepository.decrease(reservation.getSessionId(), 1);
+        queuePromotionService.promoteQueueIfCapacityAvailable(reservation.getSessionId());
+
+        return new TicketCancelResult(ticketId, refundRate, refundAmount, tickets.size() - 1);
     }
 
     private LocalDateTime getSessionStartAt(UUID sessionId) {

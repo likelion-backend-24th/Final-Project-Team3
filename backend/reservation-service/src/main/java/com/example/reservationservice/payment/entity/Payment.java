@@ -47,8 +47,10 @@ public class Payment {
         this.paidAt = LocalDateTime.now();
     }
 
-    public void recordRefund(Integer refundedAmount) {
-        this.refundedAmount = refundedAmount;
+    // 누적: 한 예약을 여러 번에 걸쳐 부분 환불(개별 인원 취소)할 수 있으므로 덮어쓰지 않고 더한다.
+    // 전체 취소는 이 메서드를 한 번만 부르므로 기존 동작과 동일하다(null이던 값에 전액이 더해짐).
+    public void recordRefund(Integer additionalRefundedAmount) {
+        this.refundedAmount = (this.refundedAmount == null ? 0 : this.refundedAmount) + additionalRefundedAmount;
         this.refundedAt = LocalDateTime.now();
     }
 }
