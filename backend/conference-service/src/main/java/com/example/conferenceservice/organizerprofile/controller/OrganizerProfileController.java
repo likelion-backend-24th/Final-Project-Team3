@@ -3,6 +3,7 @@ package com.example.conferenceservice.organizerprofile.controller;
 import com.example.conferenceservice.common.TraceIdProvider;
 import com.example.conferenceservice.common.dto.ApiResponse;
 import com.example.conferenceservice.organizerprofile.dto.OrganizerProfileResponse;
+import com.example.conferenceservice.organizerprofile.dto.OrganizerWithdrawalEligibilityResponse;
 import com.example.conferenceservice.organizerprofile.service.OrganizerProfileService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -29,5 +30,14 @@ public class OrganizerProfileController {
             ){
         OrganizerProfileResponse response = organizerProfileService.getOrganizerProfile(organizerId);
         return ResponseEntity.ok(ApiResponse.success("주최자 프로필 조회 성공", response, traceIdProvider.resolve(request)));
+    }
+
+    @GetMapping("/{organizerId}/withdrawal-eligibility")
+    public ResponseEntity<ApiResponse<OrganizerWithdrawalEligibilityResponse>> getWithdrawalEligibility(
+            @PathVariable UUID organizerId,
+            HttpServletRequest request
+    ) {
+        OrganizerWithdrawalEligibilityResponse response = organizerProfileService.getWithdrawalEligibility(organizerId);
+        return ResponseEntity.ok(ApiResponse.success("주최자 탈퇴 가능 여부 조회 성공", response, traceIdProvider.resolve(request)));
     }
 }
