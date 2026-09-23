@@ -3,6 +3,7 @@ package com.example.reservationservice.controller;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
 import com.example.reservationservice.reservation.entity.Reservation;
 import com.example.reservationservice.reservation.entity.ReservationStatus;
+import com.example.reservationservice.reservation.entity.SessionCapacityLock;
 import com.example.reservationservice.reservation.entity.WaitingQueue;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
 import com.example.reservationservice.reservation.repository.SessionCapacityLockRepository;
@@ -31,6 +32,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -155,6 +157,45 @@ public class CancelReservationAcceptanceTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("CANCELLED"))
                 .andExpect(jsonPath("$.data.refundRate").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("정원이 꽉 찬 세션에서 예약을 취소하면 대기열 1번이 즉시 HOLD로 승격된다")
+    void 취소시_대기열_1번이_즉시_승격된다() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionStartAt(sessionId))
+                .willReturn(LocalDateTime.now().plusDays(10));
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
+
+        // 정원 1인 세션이 이미 1명으로 꽉 찬 상태를 만든다(current_active=1)
+        SessionCapacityLock lock = new SessionCapacityLock(sessionId);
+        lock.increase(1);
+        sessionCapacityLockRepository.save(lock);
+
+        Reservation confirmed = createConfirmedReservation(sessionId);
+        createPayment(confirmed.getId(), 10000);
+
+        Reservation queued = Reservation.builder()
+                .sessionId(sessionId)
+                .memberId(UUID.randomUUID())
+                .headcount(1)
+                .build();
+        queued.markAsQueued();
+        reservationRepository.save(queued);
+        waitingQueueRepository.save(WaitingQueue.builder()
+                .reservationId(queued.getId())
+                .sessionId(sessionId)
+                .memberId(queued.getMemberId())
+                .position(1)
+                .build());
+
+        mockMvc.perform(post("/api/reservations/{id}/cancel", confirmed.getId())
+                        .with(asUser(confirmed.getMemberId())))
+                .andExpect(status().isOk());
+
+        Reservation promoted = reservationRepository.findById(queued.getId()).orElseThrow();
+        assertThat(promoted.getStatus()).isEqualTo(ReservationStatus.HOLD);
+        assertThat(waitingQueueRepository.findByReservationId(queued.getId())).isEmpty();
     }
 
     @Test
