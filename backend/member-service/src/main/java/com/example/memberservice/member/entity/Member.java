@@ -116,6 +116,10 @@ public class Member extends BaseEntity {
         return this.role == Role.ORGANIZER;
     }
 
+    public void changeRole(Role role) {
+        this.role = role;
+    }
+
     public void changePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
