@@ -10,6 +10,7 @@ import com.example.reservationservice.payment.service.PaymentService;
 import com.example.reservationservice.payment.service.PortOnePaymentVerifier;
 import com.example.reservationservice.qrticket.entity.QrTicket;
 import com.example.reservationservice.qrticket.service.QrTicketService;
+import com.example.reservationservice.reservation.scheduler.QueuePromotionService;
 import lombok.RequiredArgsConstructor;
 import com.example.reservationservice.common.exception.BusinessException;
 import com.example.reservationservice.reservation.client.ConferenceServiceClient;
@@ -42,6 +43,7 @@ public class ReservationService {
     private final AttendeeRepository attendeeRepository;
     private final PaymentRepository paymentRepository;
     private final ActiveReservationLockRepository activeReservationLockRepository;
+    private final QueuePromotionService queuePromotionService;
 
     @Transactional
     public ReservationResult createHoldOrQueue(
@@ -379,9 +381,11 @@ public class ReservationService {
             }
 
             sessionCapacityLockRepository.decrease(reservation.getSessionId(), reservation.getHeadcount());
+            queuePromotionService.promoteQueueIfCapacityAvailable(reservation.getSessionId());
 
         } else if (reservation.getStatus() == ReservationStatus.HOLD) {
             sessionCapacityLockRepository.decrease(reservation.getSessionId(), reservation.getHeadcount());
+            queuePromotionService.promoteQueueIfCapacityAvailable(reservation.getSessionId());
         } else if (reservation.getStatus() == ReservationStatus.QUEUED) {
             int leftPosition = waitingQueueRepository.findByReservationId(reservationId)
                     .map(WaitingQueue::getPosition)
