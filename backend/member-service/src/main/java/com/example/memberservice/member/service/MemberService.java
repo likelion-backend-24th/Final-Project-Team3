@@ -99,7 +99,7 @@ public class MemberService {
     public MemberProfileResponse getProfile(UUID memberId) {
         // 클래스 레벨 @Transactional(readOnly = true)를 그대로 씀 — 조회 전용이라 별도 트랜잭션 지정 불필요
         Member member = memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
-        return new MemberProfileResponse(member.getId(), member.getEmail(), member.getName(), member.getAgeGroup(), member.getJob());
+        return toProfileResponse(member);
     }
 
     @Transactional
@@ -108,7 +108,14 @@ public class MemberService {
         Member member = memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         member.updateProfile(request.ageGroup(), request.job());
-        return new MemberProfileResponse(member.getId(), member.getEmail(), member.getName(), member.getAgeGroup(), member.getJob());
+        return toProfileResponse(member);
+    }
+
+    private MemberProfileResponse toProfileResponse(Member member) {
+        return new MemberProfileResponse(
+                member.getId(), member.getEmail(), member.getName(), member.getAgeGroup(), member.getJob(),
+                member.getPassword() != null, member.getOrganizationName(), member.getBusinessNo()
+        );
     }
 
     private String normalize(String email) {
