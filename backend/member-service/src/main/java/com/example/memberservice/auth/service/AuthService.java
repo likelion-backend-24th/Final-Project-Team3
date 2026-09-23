@@ -1,5 +1,6 @@
 package com.example.memberservice.auth.service;
 
+import com.example.memberservice.auth.dto.LinkedSocialAccountResponse;
 import com.example.memberservice.auth.dto.LoginRequest;
 import com.example.memberservice.auth.dto.LoginResponse;
 import com.example.memberservice.auth.dto.SocialLoginRequest;
@@ -13,6 +14,7 @@ import com.example.memberservice.common.exception.BusinessException;
 import com.example.memberservice.member.entity.AgeGroup;
 import com.example.memberservice.member.entity.Job;
 import com.example.memberservice.member.entity.Member;
+import com.example.memberservice.member.entity.Role;
 import com.example.memberservice.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -47,13 +49,13 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthTokens socialLogin(SocialProvider provider, String token, AgeGroup ageGroup, Job job) {
+    public AuthTokens socialLogin(SocialProvider provider, String token, String redirectUri, AgeGroup ageGroup, Job job) {
         SocialTokenVerifier verifier = socialTokenVerifiers.stream()
                 .filter(v -> v.provider() == provider)
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.SOCIAL_PROVIDER_UNSUPPORTED));
 
-        SocialTokenVerifier.VerifiedIdentity identity = verifier.verify(token);
+        SocialTokenVerifier.VerifiedIdentity identity = verifier.verify(token, redirectUri);
 
         Member member = socialAccountRepository.findByProviderAndProviderUserId(provider, identity.providerUserId())
                 .map(SocialAccount::getMember)
@@ -64,9 +66,14 @@ public class AuthService {
 
     private Member registerSocialMember(SocialProvider provider, SocialTokenVerifier.VerifiedIdentity identity, AgeGroup ageGroup, Job job) {
         String email = normalize(identity.email());
-        if (memberRepository.existsByEmail(email)) {
+        memberRepository.findByEmail(email).ifPresent(existing -> {
+            // 주최자·관리자는 애초에 소셜 로그인 대상이 아니라서 "로그인 후 연동" 안내 자체가 성립 안 함
+            // (주최자는 참석자 전용인 /mypage 계정 연동 화면에 접근할 수 없음)
+            if (existing.getRole() != Role.MEMBER) {
+                throw new BusinessException(AuthErrorCode.SOCIAL_EMAIL_NOT_LINKABLE);
+            }
             throw new BusinessException(AuthErrorCode.SOCIAL_EMAIL_ALREADY_REGISTERED);
-        }
+        });
         // 최초 가입일 때만 필요 — 재로그인 경로(위 findByProviderAndProviderUserId 매칭)는 여기 안 탐
         if (ageGroup == null || job == null) {
             throw new BusinessException(AuthErrorCode.SOCIAL_PROFILE_REQUIRED);
@@ -79,13 +86,13 @@ public class AuthService {
     }
 
     @Transactional
-    public void linkSocialAccount(UUID memberId, SocialProvider provider, String token) {
+    public void linkSocialAccount(UUID memberId, SocialProvider provider, String token, String redirectUri) {
         SocialTokenVerifier verifier = socialTokenVerifiers.stream()
                 .filter(v -> v.provider() == provider)
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.SOCIAL_PROVIDER_UNSUPPORTED));
 
-        SocialTokenVerifier.VerifiedIdentity identity = verifier.verify(token);
+        SocialTokenVerifier.VerifiedIdentity identity = verifier.verify(token, redirectUri);
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_CREDENTIALS));
@@ -101,6 +108,12 @@ public class AuthService {
         }
 
         socialAccountRepository.save(SocialAccount.of(member, provider, identity.providerUserId()));
+    }
+
+    public List<LinkedSocialAccountResponse> getLinkedAccounts(UUID memberId) {
+        return socialAccountRepository.findAllByMember_Id(memberId).stream()
+                .map(sa -> new LinkedSocialAccountResponse(sa.getProvider(), sa.getCreatedAt()))
+                .toList();
     }
 
     @Transactional

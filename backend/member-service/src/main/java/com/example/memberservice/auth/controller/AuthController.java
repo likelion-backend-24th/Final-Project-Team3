@@ -59,7 +59,7 @@ public class AuthController {
             HttpServletRequest httpRequest
     ) {
         AuthService.AuthTokens tokens = authService.socialLogin(
-                parseProvider(provider), request.token(), request.ageGroup(), request.job()
+                parseProvider(provider), request.token(), request.redirectUri(), request.ageGroup(), request.job()
         );
         String traceId = traceIdProvider.resolve(httpRequest);
 
@@ -77,7 +77,7 @@ public class AuthController {
             @AuthenticationPrincipal CustomUserDetails currentUser,
             HttpServletRequest httpRequest
     ) {
-        authService.linkSocialAccount(currentUser.getMemberId(), parseProvider(provider), request.token());
+        authService.linkSocialAccount(currentUser.getMemberId(), parseProvider(provider), request.token(), request.redirectUri());
         String traceId = traceIdProvider.resolve(httpRequest);
 
         return ResponseEntity.ok(ApiResponse.success("소셜 계정이 연동되었습니다.", null, traceId));

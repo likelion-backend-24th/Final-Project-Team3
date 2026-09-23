@@ -1,6 +1,8 @@
 package com.example.memberservice.member.controller;
 
+import com.example.memberservice.auth.dto.LinkedSocialAccountResponse;
 import com.example.memberservice.auth.security.CustomUserDetails;
+import com.example.memberservice.auth.service.AuthService;
 import com.example.memberservice.common.TraceIdProvider;
 import com.example.memberservice.common.dto.ApiResponse;
 import com.example.memberservice.member.dto.*;
@@ -16,6 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/members")
 @RequiredArgsConstructor
@@ -23,6 +27,7 @@ public class MemberController {
 
     private final MemberService memberService;
     private final OrganizerSignupFacade organizerSignupFacade;
+    private final AuthService authService;
     private final TraceIdProvider traceIdProvider;
 
     @Operation(summary = "참가자 회원가입", description = "이메일 인증을 완료한 이메일로 참가자(MEMBER) 계정을 생성한다.")
@@ -74,5 +79,17 @@ public class MemberController {
         MemberProfileResponse response = memberService.updateProfile(currentUser.getMemberId(), request);
         String traceId = traceIdProvider.resolve(httpRequest);
         return ResponseEntity.ok(ApiResponse.success("프로필이 수정되었습니다.", response, traceId));
+    }
+
+    @Operation(summary = "연동된 소셜 계정 목록 조회", description = "본인 계정에 연동된 소셜 Provider 목록을 조회한다.")
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/me/social-accounts")
+    public ResponseEntity<ApiResponse<List<LinkedSocialAccountResponse>>> getLinkedSocialAccounts(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            HttpServletRequest httpRequest
+    ) {
+        List<LinkedSocialAccountResponse> response = authService.getLinkedAccounts(currentUser.getMemberId());
+        String traceId = traceIdProvider.resolve(httpRequest);
+        return ResponseEntity.ok(ApiResponse.success("연동된 소셜 계정 목록 조회 성공", response, traceId));
     }
 }

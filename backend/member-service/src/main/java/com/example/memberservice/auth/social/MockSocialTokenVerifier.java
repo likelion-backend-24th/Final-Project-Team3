@@ -18,7 +18,7 @@ public class MockSocialTokenVerifier implements SocialTokenVerifier {
     }
 
     @Override
-    public VerifiedIdentity verify(String token) {
+    public VerifiedIdentity verify(String token, String redirectUri) {
         log.warn("[MOCK] {} 소셜 로그인 검증을 건너뜁니다: {}", provider, token);
         String[] parts = token.split(":", 2);
         String email = parts[0];

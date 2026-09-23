@@ -14,5 +14,8 @@ public record SocialLoginRequest(
         AgeGroup ageGroup,
 
         @Schema(description = "직무 (최초 가입 시 필수, 재로그인 시 무시됨)")
-        Job job
+        Job job,
+
+        @Schema(description = "Kakao Auth.authorize() 호출 시 쓴 redirectUri (Kakao 전용, Google은 무시됨)")
+        String redirectUri
 ) {}
