@@ -40,3 +40,6 @@ email:
 nts:
   verify:
     mode: mock
+
+social:
+  mode: mock

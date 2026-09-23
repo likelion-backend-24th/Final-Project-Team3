@@ -16,7 +16,7 @@ public class Member extends BaseEntity {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String password;
 
     @Column(nullable = false, length = 100)
@@ -71,6 +71,17 @@ public class Member extends BaseEntity {
                 .role(Role.ORGANIZER)
                 .organizationName(organizationName)
                 .businessNo(businessNo)
+                .build();
+    }
+
+    public static Member newSocialMember(String email, String name, AgeGroup ageGroup, Job job) {
+        return Member.builder()
+                .email(email)
+                .password(null)
+                .name(name)
+                .role(Role.MEMBER)
+                .ageGroup(ageGroup)
+                .job(job)
                 .build();
     }
 

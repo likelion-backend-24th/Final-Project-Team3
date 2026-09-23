@@ -40,6 +40,25 @@ export function updateProfile({ ageGroup, job }) {
   return apiFetch('/members/me', { method: 'PATCH', body: { ageGroup, job } })
 }
 
+// 소셜 로그인/가입. 최초 가입일 때만 서버가 AUTH_SOCIAL_PROFILE_REQUIRED(400)로 ageGroup·job을 요구한다.
+// redirectUri는 Kakao(authorize 인가 코드 교환)에서만 필요하고 Google은 무시된다.
+export function socialLogin(provider, token, { ageGroup, job, redirectUri } = {}) {
+  return apiFetch(`/auth/social/${provider}`, {
+    method: 'POST',
+    body: { token, ageGroup, job, redirectUri },
+  })
+}
+
+// 마이페이지에서 이미 로그인된 계정에 소셜 계정을 연동할 때(이메일 충돌 케이스 해소용)
+export function linkSocialAccount(provider, token, redirectUri) {
+  return apiFetch(`/auth/social/${provider}/link`, { method: 'POST', body: { token, redirectUri } })
+}
+
+// 본인 계정에 연동된 소셜 Provider 목록 조회
+export function getLinkedSocialAccounts() {
+  return apiFetch('/members/me/social-accounts')
+}
+
 // JWT는 서명 검증 없이 payload만 디코드한다 — 화면 분기용이며 실제 인가는 서버가 매 요청마다 검증한다.
 export function decodeJwt(token) {
   try {
