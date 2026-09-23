@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Ticket, CheckCircle2, User, Briefcase, Link2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getMyReservations, getQueuePosition, getQrTickets, cancelReservation } from '../api/reservations'
+import { getMyReservations, getQueuePosition, getQrTickets, cancelReservation, cancelTicket } from '../api/reservations'
 import { listConferences, getConference } from '../api/conferences'
 import { getProfile, updateProfile, linkSocialAccount, getLinkedSocialAccounts } from '../api/auth'
 import { ApiError } from '../api/client'
@@ -52,6 +52,7 @@ export default function MyPage() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [cancellingId, setCancellingId] = useState(null)
+  const [cancellingTicketId, setCancellingTicketId] = useState(null)
 
   // 프로필(연령대·직무) 수정 — ageGroup/job은 저장된 값(뱃지 표시용),
   // draftAgeGroup/draftJob은 "프로필 수정" 모드에서만 쓰는 편집 중 값
@@ -144,10 +145,41 @@ export default function MyPage() {
     if (!tickets[reservationId]) {
       try {
         const res = await getQrTickets(reservationId)
-        setTickets((t) => ({ ...t, [reservationId]: res.data?.[0] ?? null }))
+        setTickets((t) => ({ ...t, [reservationId]: res.data ?? [] }))
       } catch {
         // 조회 실패해도 패널은 열어두고 QR 자리만 비워둔다
       }
+    }
+  }
+
+  // Task 12-5: 예약 인원 중 한 명(QR 티켓 1장)만 취소·부분 환불한다.
+  // 남은 티켓이 1장뿐이거나 체크인된 티켓이면 서버가 거부하므로, 버튼은 그 조건일 때 아예 안 보여준다.
+  const handleCancelTicket = async (r, ticket) => {
+    const message = '이 사람만 취소할까요?\n세션 시작 7일 전까지 100%, 3~6일 전 50% 환불되고, 3일 미만이면 환불되지 않아요.'
+    if (!window.confirm(message)) return
+
+    setError('')
+    setNotice('')
+    setCancellingTicketId(ticket.id)
+    try {
+      const res = await cancelTicket(r.reservationId, ticket.id)
+      setTickets((t) => ({
+        ...t,
+        [r.reservationId]: (t[r.reservationId] ?? []).filter((x) => x.id !== ticket.id),
+      }))
+      setReservations((list) =>
+        list.map((x) => (x.reservationId === r.reservationId ? { ...x, headcount: res.data.remainingHeadcount } : x)),
+      )
+      const { refundRate, refundAmount } = res.data
+      setNotice(
+        refundAmount > 0
+          ? `1명 취소됐어요. 환불 ${refundAmount.toLocaleString()}원 (환불율 ${refundRate}%)`
+          : '1명 취소됐어요.',
+      )
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '개별 취소에 실패했습니다.')
+    } finally {
+      setCancellingTicketId(null)
     }
   }
 
@@ -450,7 +482,7 @@ export default function MyPage() {
         {filtered.map((r) => {
           const session = sessionMap[r.sessionId]
           const amount = session?.price ? session.price * r.headcount : 0
-          const ticket = tickets[r.reservationId]
+          const ticketList = tickets[r.reservationId]
           const isOpen = expandedId === r.reservationId
           const status = STATUS_STYLE[categoryOf(r.status)]
 
@@ -511,21 +543,49 @@ export default function MyPage() {
               </div>
 
               {isOpen && (
-                <div className="bg-bg border-t border-border p-5 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs text-text-faint tracking-wide mb-1">TECHCONF · 입장권</p>
-                    <p className="text-text font-medium mb-3">{session?.title ?? '세션'}</p>
-                    <p className="text-xs text-text-faint">일시</p>
-                    <p className="text-sm text-text mb-2">{formatDateTime(session?.sessionStartAt)}</p>
-                    <p className="text-xs text-text-faint">금액</p>
-                    <p className="text-sm text-text">{amount > 0 ? `${amount.toLocaleString()}원` : '무료'}</p>
-                    {ticket && <p className="text-xs text-text-faint font-mono mt-3">{ticket.code}</p>}
+                <div className="bg-bg border-t border-border p-5">
+                  <p className="text-xs text-text-faint tracking-wide mb-1">TECHCONF · 입장권</p>
+                  <p className="text-text font-medium mb-3">{session?.title ?? '세션'}</p>
+                  <p className="text-xs text-text-faint">일시</p>
+                  <p className="text-sm text-text mb-2">{formatDateTime(session?.sessionStartAt)}</p>
+                  <p className="text-xs text-text-faint">금액</p>
+                  <p className="text-sm text-text mb-4">{amount > 0 ? `${amount.toLocaleString()}원` : '무료'}</p>
+
+                  {!ticketList && <div className="w-full h-24 rounded-lg bg-surface2 animate-pulse" />}
+
+                  <div className="space-y-3">
+                    {ticketList?.map((t) => {
+                      const ageGroupLabel = AGE_GROUPS.find((o) => o.value === t.ageGroup)?.label
+                      const jobLabel = JOBS.find((o) => o.value === t.job)?.label
+                      const canCancelIndividually = !t.used && ticketList.length > 1
+                      return (
+                        <div key={t.id} className="flex items-center justify-between gap-4 bg-surface rounded-lg p-3 border border-border">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <QRCodeSVG value={t.code} size={64} />
+                            <div className="min-w-0">
+                              <p className="text-xs text-text-faint font-mono truncate">{t.code}</p>
+                              <p className="text-sm text-text mt-0.5">{ageGroupLabel} · {jobLabel}</p>
+                              {t.used && (
+                                <span className="inline-flex items-center gap-1 text-xs text-success mt-0.5">
+                                  <CheckCircle2 size={12} /> 체크인 완료
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {canCancelIndividually && (
+                            <Button
+                              variant="ghost"
+                              className="shrink-0"
+                              loading={cancellingTicketId === t.id}
+                              onClick={() => handleCancelTicket(r, t)}
+                            >
+                              이 사람만 취소
+                            </Button>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
-                  {ticket ? (
-                    <QRCodeSVG value={ticket.code} size={96} />
-                  ) : (
-                    <div className="w-24 h-24 rounded-lg bg-surface2 animate-pulse shrink-0" />
-                  )}
                 </div>
               )}
             </div>
