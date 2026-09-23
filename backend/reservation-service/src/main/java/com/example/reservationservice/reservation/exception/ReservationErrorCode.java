@@ -26,7 +26,9 @@ public enum ReservationErrorCode implements ErrorCode {
     RESERVATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "RESERVATION_ACCESS_DENIED", "본인의 예약만 취소할 수 있습니다."),
     WEBHOOK_SIGNATURE_INVALID(HttpStatus.UNAUTHORIZED, "RESERVATION_WEBHOOK_SIGNATURE_INVALID", "웹훅 서명 검증에 실패했습니다."),
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "RESERVATION_NOT_FOUND", "존재하지 않는 예약입니다."),
-    PG_CONFIG_NOT_FOUND(HttpStatus.NOT_FOUND, "RESERVATION_PG_CONFIG_NOT_FOUND", "등록된 PG 연동 정보가 없습니다.");
+    PG_CONFIG_NOT_FOUND(HttpStatus.NOT_FOUND, "RESERVATION_PG_CONFIG_NOT_FOUND", "등록된 PG 연동 정보가 없습니다."),
+    RESERVATION_NOT_CONFIRMED(HttpStatus.CONFLICT, "RESERVATION_NOT_CONFIRMED", "결제 완료된 예약만 인원을 개별 취소할 수 있습니다."),
+    LAST_TICKET_CANNOT_BE_CANCELLED_INDIVIDUALLY(HttpStatus.CONFLICT, "RESERVATION_LAST_TICKET_CANNOT_BE_CANCELLED_INDIVIDUALLY", "마지막 남은 인원은 개별 취소할 수 없습니다. 전체 취소를 이용해주세요.");
 
     private final HttpStatus httpStatus;
     private final String code;
