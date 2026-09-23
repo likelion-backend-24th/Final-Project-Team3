@@ -7,19 +7,21 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "member")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member extends BaseEntity {
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(unique = true, length = 255)
     private String email;
 
     @Column(length = 100)
     private String password;
 
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String name;
 
     @Enumerated(EnumType.STRING)
@@ -39,6 +41,12 @@ public class Member extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private Job job;
+
+    @Column(nullable = false)
+    private boolean withdrawn;
+
+    @Column(name = "withdrawn_at")
+    private LocalDateTime withdrawnAt;
 
     @Builder
     private Member(String email, String password, String name, Role role, String organizationName, String businessNo, AgeGroup ageGroup, Job job) {
@@ -90,6 +98,22 @@ public class Member extends BaseEntity {
     public void updateProfile(AgeGroup ageGroup, Job job) {
         this.ageGroup = ageGroup;
         this.job = job;
+    }
+
+    // 탈퇴 처리 — row는 남기고(결제·정산 이력 참조 무결성 유지) 개인식별정보만 비운다.
+    // email을 비우면 findByEmail이 더 이상 이 계정을 찾지 못해 로그인도 자연히 막힌다.
+    public void withdraw() {
+        this.withdrawn = true;
+        this.withdrawnAt = LocalDateTime.now();
+        this.email = null;
+        this.password = null;
+        this.name = null;
+        this.organizationName = null;
+        this.businessNo = null;
+    }
+
+    public boolean isOrganizer() {
+        return this.role == Role.ORGANIZER;
     }
 
     public void changePassword(String encodedPassword) {
