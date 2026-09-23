@@ -1,7 +1,7 @@
 package com.example.memberservice;
 
-import com.example.memberservice.auth.dto.PasswordResetRequest;
-import com.example.memberservice.auth.dto.SocialLoginRequest;
+import com.example.memberservice.auth.passwordreset.dto.PasswordResetRequest;
+import com.example.memberservice.auth.session.dto.SocialLoginRequest;
 import com.example.memberservice.member.entity.AgeGroup;
 import com.example.memberservice.member.entity.Job;
 import org.junit.jupiter.api.Test;

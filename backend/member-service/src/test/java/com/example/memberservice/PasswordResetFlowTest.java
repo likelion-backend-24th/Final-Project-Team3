@@ -1,10 +1,10 @@
 package com.example.memberservice;
 
-import com.example.memberservice.auth.dto.LoginRequest;
-import com.example.memberservice.auth.dto.PasswordResetConfirm;
-import com.example.memberservice.auth.dto.PasswordResetRequest;
-import com.example.memberservice.auth.entity.EmailVerification;
-import com.example.memberservice.auth.repository.EmailVerificationRepository;
+import com.example.memberservice.auth.session.dto.LoginRequest;
+import com.example.memberservice.auth.passwordreset.dto.PasswordResetConfirm;
+import com.example.memberservice.auth.passwordreset.dto.PasswordResetRequest;
+import com.example.memberservice.auth.emailverification.entity.EmailVerification;
+import com.example.memberservice.auth.emailverification.repository.EmailVerificationRepository;
 import com.example.memberservice.auth.service.EmailSender;
 import com.example.memberservice.member.dto.SignupRequest;
 import com.example.memberservice.member.entity.AgeGroup;

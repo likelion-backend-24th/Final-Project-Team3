@@ -1,8 +1,8 @@
 package com.example.memberservice;
 
-import com.example.memberservice.auth.dto.PasswordResetConfirm;
-import com.example.memberservice.auth.entity.PasswordResetToken;
-import com.example.memberservice.auth.repository.PasswordResetTokenRepository;
+import com.example.memberservice.auth.passwordreset.dto.PasswordResetConfirm;
+import com.example.memberservice.auth.passwordreset.entity.PasswordResetToken;
+import com.example.memberservice.auth.passwordreset.repository.PasswordResetTokenRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
