@@ -16,6 +16,7 @@ const organizerNav = [
   { to: '/organizer/applications', label: '신청 현황' },
   { to: '/organizer/checkin', label: 'QR 체크인' },
   { to: '/organizer/settlements', label: '정산 내역' },
+  { to: '/organizer/settings', label: '계정' },
 ]
 
 const adminNav = [

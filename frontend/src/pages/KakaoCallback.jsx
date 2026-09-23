@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Button from '../components/Button'
 import SelectField from '../components/SelectField'
 import { useAuth } from '../context/AuthContext'
-import { linkSocialAccount } from '../api/auth'
+import { linkSocialAccount, withdrawMember } from '../api/auth'
 import { ApiError } from '../api/client'
 import { AGE_GROUPS, JOBS } from '../utils/profileOptions'
 import { kakaoAuthorize, kakaoRedirectUri, decodeKakaoState } from '../utils/socialAuth'
@@ -12,7 +12,7 @@ import { kakaoAuthorize, kakaoRedirectUri, decodeKakaoState } from '../utils/soc
 // 인가 코드(code)는 1회용이라, "추가 정보 필요" 상황이면 재시도가 아니라 값만 state에 실어서
 // authorize()를 처음부터 다시 호출해야 한다(그래야 새 인가 코드를 받는다).
 export default function KakaoCallback() {
-  const { socialLogin } = useAuth()
+  const { socialLogin, logout } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [status, setStatus] = useState('processing') // processing | profileRequired | error
@@ -56,6 +56,17 @@ export default function KakaoCallback() {
         .catch((err) => {
           setStatus('error')
           setError(err instanceof ApiError ? err.message : '계정 연동에 실패했습니다.')
+        })
+      return
+    }
+
+    if (state.intent === 'withdraw') {
+      withdrawMember({ provider: 'kakao', socialToken: code, redirectUri })
+        .then(() => logout())
+        .then(() => navigate('/login', { replace: true, state: { withdrawDone: true } }))
+        .catch((err) => {
+          setStatus('error')
+          setError(err instanceof ApiError ? err.message : '탈퇴에 실패했습니다.')
         })
       return
     }
