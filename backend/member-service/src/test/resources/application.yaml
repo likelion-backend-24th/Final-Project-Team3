@@ -48,3 +48,7 @@ nts:
 
 social:
   mode: mock
+
+services:
+  conference-service:
+    url: ${SERVICES_CONFERENCE_SERVICE_URL:http://localhost:8082}

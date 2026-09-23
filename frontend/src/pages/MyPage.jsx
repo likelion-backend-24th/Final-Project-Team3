@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Ticket, CheckCircle2, User, Briefcase, Link2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getMyReservations, getQueuePosition, getQrTickets, cancelReservation } from '../api/reservations'
 import { listConferences, getConference } from '../api/conferences'
-import { getProfile, updateProfile, linkSocialAccount, getLinkedSocialAccounts } from '../api/auth'
+import { getProfile, updateProfile, linkSocialAccount, getLinkedSocialAccounts, withdrawMember } from '../api/auth'
 import { ApiError } from '../api/client'
 import Button from '../components/Button'
 import GoogleIcon from '../components/GoogleIcon'
 import KakaoIcon from '../components/KakaoIcon'
 import SelectField from '../components/SelectField'
+import TextField from '../components/TextField'
 import { AGE_GROUPS, JOBS } from '../utils/profileOptions'
 import { isGoogleConfigured, isKakaoConfigured, googleLogin, kakaoAuthorize } from '../utils/socialAuth'
 
@@ -42,7 +43,8 @@ const STATUS_STYLE = {
 }
 
 export default function MyPage() {
-  const { claims } = useAuth()
+  const { claims, logout } = useAuth()
+  const navigate = useNavigate()
   const [reservations, setReservations] = useState(null)
   const [sessionMap, setSessionMap] = useState({})
   const [queuePositions, setQueuePositions] = useState({})
@@ -71,6 +73,14 @@ export default function MyPage() {
   const [linkError, setLinkError] = useState('')
   const [mockLinkName, setMockLinkName] = useState('')
 
+  // 회원 탈퇴 — hasPassword는 프로필 조회 결과로 채워지기 전까지 true(비밀번호 계정)로 가정해서
+  // 소셜 재인증 UI가 잠깐 잘못 보이는 걸 막는다(더 안전한 쪽으로 기본값을 둠).
+  const [hasPassword, setHasPassword] = useState(true)
+  const [withdrawOpen, setWithdrawOpen] = useState(false)
+  const [withdrawPassword, setWithdrawPassword] = useState('')
+  const [withdrawing, setWithdrawing] = useState(false)
+  const [withdrawError, setWithdrawError] = useState('')
+
   useEffect(() => {
     if (!claims?.memberId) return
     getLinkedSocialAccounts()
@@ -90,6 +100,7 @@ export default function MyPage() {
       .then((res) => {
         setAgeGroup(res.data.ageGroup ?? '')
         setJob(res.data.job ?? '')
+        setHasPassword(res.data.hasPassword)
       })
       .catch(() => {
         // 조회 실패해도 예약 목록은 정상 표시해야 하니, 프로필 칸만 빈 채로 둔다
@@ -199,6 +210,52 @@ export default function MyPage() {
   const handleGoogleLinkClick = () => {
     setLinkError('')
     googleLogin((idToken) => handleLinkSocial('google', idToken))
+  }
+
+  // 탈퇴 성공 후엔 서버가 이미 Refresh Token을 전부 무효화했지만, 클라이언트 세션(accessToken 등)도
+  // 같이 정리해야 해서 기존 logout()을 재사용한다 — 이미 폐기된 토큰을 한 번 더 폐기 시도하는 것뿐이라 안전하다.
+  const finishWithdraw = async () => {
+    await logout()
+    navigate('/login', { state: { withdrawDone: true } })
+  }
+
+  const submitPasswordWithdraw = async (e) => {
+    e.preventDefault()
+    if (!window.confirm('정말 탈퇴하시겠어요? 이 작업은 되돌릴 수 없어요.')) return
+    setWithdrawError('')
+    setWithdrawing(true)
+    try {
+      await withdrawMember({ password: withdrawPassword })
+      await finishWithdraw()
+    } catch (err) {
+      setWithdrawError(err instanceof ApiError ? err.message : '탈퇴에 실패했습니다.')
+      setWithdrawing(false)
+    }
+  }
+
+  const handleSocialWithdraw = async (provider, token) => {
+    if (!token) return
+    setWithdrawError('')
+    setWithdrawing(true)
+    try {
+      await withdrawMember({ provider, socialToken: token })
+      await finishWithdraw()
+    } catch (err) {
+      setWithdrawError(err instanceof ApiError ? err.message : '탈퇴에 실패했습니다.')
+      setWithdrawing(false)
+    }
+  }
+
+  const handleGoogleWithdrawClick = () => {
+    if (!window.confirm('정말 탈퇴하시겠어요? 이 작업은 되돌릴 수 없어요.')) return
+    setWithdrawError('')
+    googleLogin((idToken) => handleSocialWithdraw('google', idToken))
+  }
+
+  // Kakao는 페이지 전체가 리다이렉트되므로, 결과는 KakaoCallback의 intent:'withdraw' 분기가 처리한다.
+  const handleKakaoWithdrawClick = () => {
+    if (!window.confirm('정말 탈퇴하시겠어요? 이 작업은 되돌릴 수 없어요.')) return
+    kakaoAuthorize({ intent: 'withdraw' })
   }
 
   const startEditingProfile = () => {
@@ -317,6 +374,71 @@ export default function MyPage() {
                 <CheckCircle2 size={16} /> 저장됐어요
               </span>
             )}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-surface border border-border rounded-xl p-5 mb-8">
+        <h2 className="text-sm font-semibold text-text mb-1">회원 탈퇴</h2>
+        <p className="text-xs text-text-muted mb-4">
+          탈퇴하면 계정 정보가 삭제되고 다시 로그인할 수 없게 돼요. 이 작업은 되돌릴 수 없어요.
+        </p>
+
+        {!withdrawOpen ? (
+          <Button variant="secondary" onClick={() => setWithdrawOpen(true)}>
+            탈퇴하기
+          </Button>
+        ) : hasPassword ? (
+          <form onSubmit={submitPasswordWithdraw} className="space-y-3 max-w-sm">
+            <TextField
+              label="현재 비밀번호"
+              type="password"
+              placeholder="본인 확인을 위해 입력해주세요"
+              value={withdrawPassword}
+              onChange={(e) => setWithdrawPassword(e.target.value)}
+              required
+            />
+            {withdrawError && <p className="text-sm text-danger">{withdrawError}</p>}
+            <div className="flex gap-2">
+              <Button type="submit" variant="danger" loading={withdrawing}>
+                탈퇴 확정
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setWithdrawOpen(false)}>
+                취소
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-text-muted">
+              소셜 로그인 전용 계정이라, 연동된 소셜 계정으로 본인 확인 후 탈퇴할 수 있어요.
+            </p>
+            <div className="flex items-center gap-2">
+              {googleLinkStatus === 'linked' && (
+                <Button
+                  variant="google"
+                  className="inline-flex items-center gap-1.5"
+                  loading={withdrawing}
+                  onClick={handleGoogleWithdrawClick}
+                >
+                  <GoogleIcon size={18} /> Google로 탈퇴
+                </Button>
+              )}
+              {kakaoLinkStatus === 'linked' && (
+                <Button
+                  variant="kakao"
+                  className="inline-flex items-center gap-1.5"
+                  loading={withdrawing}
+                  onClick={handleKakaoWithdrawClick}
+                >
+                  <KakaoIcon size={18} /> Kakao로 탈퇴
+                </Button>
+              )}
+              <Button type="button" variant="secondary" onClick={() => setWithdrawOpen(false)}>
+                취소
+              </Button>
+            </div>
+            {withdrawError && <p className="text-sm text-danger">{withdrawError}</p>}
           </div>
         )}
       </div>

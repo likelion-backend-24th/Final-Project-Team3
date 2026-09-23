@@ -69,6 +69,11 @@ export function confirmPasswordReset(email, code, newPassword) {
   return apiFetch('/auth/password/reset-confirm', { method: 'POST', body: { email, code, newPassword } })
 }
 
+// 회원 탈퇴. 비밀번호 계정은 password만, 소셜 전용 계정은 provider·socialToken(카카오는 redirectUri도)만 채운다.
+export function withdrawMember({ password, provider, socialToken, redirectUri } = {}) {
+  return apiFetch('/members/me', { method: 'DELETE', body: { password, provider, socialToken, redirectUri } })
+}
+
 // JWT는 서명 검증 없이 payload만 디코드한다 — 화면 분기용이며 실제 인가는 서버가 매 요청마다 검증한다.
 export function decodeJwt(token) {
   try {
