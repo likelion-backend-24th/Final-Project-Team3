@@ -43,6 +43,7 @@ services:
       GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
       KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}
       KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
+      SERVICES_CONFERENCE_SERVICE_URL: http://conference-service:8082
     depends_on:
       mysql:
         condition: service_healthy

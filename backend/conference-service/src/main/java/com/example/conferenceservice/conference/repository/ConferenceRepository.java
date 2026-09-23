@@ -19,4 +19,7 @@ public interface ConferenceRepository extends JpaRepository<Conference, UUID> {
 
     // Story 21: 주최자 프로필용 — 승인된 컨퍼런스만, 페이징 없이 전체
     List<Conference> findByOrganizerIdAndStatus(UUID organizerId, ConferenceStatus status);
+
+    // 주최자 탈퇴 가능 여부 내부 API에 이용
+    boolean existsByOrganizerIdAndStatusIn(UUID organizerId, List<ConferenceStatus> statuses);
 }
