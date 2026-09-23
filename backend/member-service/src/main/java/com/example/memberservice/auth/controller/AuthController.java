@@ -1,14 +1,12 @@
 package com.example.memberservice.auth.controller;
 
-import com.example.memberservice.auth.dto.LoginRequest;
-import com.example.memberservice.auth.dto.LoginResponse;
-import com.example.memberservice.auth.dto.SocialLinkRequest;
-import com.example.memberservice.auth.dto.SocialLoginRequest;
+import com.example.memberservice.auth.dto.*;
 import com.example.memberservice.auth.entity.SocialProvider;
 import com.example.memberservice.auth.exception.AuthErrorCode;
 import com.example.memberservice.auth.security.CookieProvider;
 import com.example.memberservice.auth.security.CustomUserDetails;
 import com.example.memberservice.auth.service.AuthService;
+import com.example.memberservice.auth.service.PasswordResetService;
 import com.example.memberservice.common.TraceIdProvider;
 import com.example.memberservice.common.dto.ApiResponse;
 import com.example.memberservice.common.exception.BusinessException;
@@ -36,6 +34,7 @@ public class AuthController {
     private final AuthService authService;
     private final TraceIdProvider traceIdProvider;
     private final CookieProvider cookieProvider;
+    private final PasswordResetService passwordResetService;
 
     @Operation(summary = "로그인", description = "이메일/비밀번호로 로그인하고 Access Token을 발급받는다. Refresh Token은 HttpOnly 쿠키로 별도 발급됨.")
     @PostMapping("/login")
@@ -99,6 +98,30 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshTokenCookie(tokens.refreshToken()).toString())
                 .body(ApiResponse.success("토큰이 재발급되었습니다.", tokens.body(), traceId));
+    }
+
+    @Operation(summary = "비밀번호 재설정 코드 발송", description = "6자리 인증코드를 이메일로 발송한다(유효기간 10분). 존재하지 않는 이메일이거나 소셜 전용 계정이면 거절되고, 재발송 쿨다운(1분) 내 재요청도 거절된다.")
+    @PostMapping("/password/reset-request")
+    public ResponseEntity<ApiResponse<Void>> requestPasswordReset(
+            @Valid @RequestBody PasswordResetRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        passwordResetService.requestReset(request.email());
+        String traceId = traceIdProvider.resolve(httpRequest);
+
+        return ResponseEntity.ok(ApiResponse.success("비밀번호 재설정 코드를 발송했습니다.", traceId));
+    }
+
+    @Operation(summary = "비밀번호 재설정 확인", description = "발송된 인증코드를 검증하고 새 비밀번호로 변경한다. 성공 시 해당 계정의 모든 Refresh Token이 무효화된다(전체 기기 재로그인 필요). 5회 실패 시 재발송이 필요하다.")
+    @PostMapping("/password/reset-confirm")
+    public ResponseEntity<ApiResponse<Void>> confirmPasswordReset(
+            @Valid @RequestBody PasswordResetConfirm request,
+            HttpServletRequest httpRequest
+    ) {
+        passwordResetService.confirmReset(request.email(), request.code(), request.newPassword());
+        String traceId = traceIdProvider.resolve(httpRequest);
+
+        return ResponseEntity.ok(ApiResponse.success("비밀번호가 재설정되었습니다.", traceId));
     }
 
     @Operation(summary = "로그아웃", description = "제출된 Refresh Token을 폐기하고 refreshToken 쿠키를 삭제한다.")
