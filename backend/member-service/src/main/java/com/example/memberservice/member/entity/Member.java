@@ -92,6 +92,10 @@ public class Member extends BaseEntity {
         this.job = job;
     }
 
+    public void changeRole(Role role) {
+        this.role = role;
+    }
+
     public void changePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
