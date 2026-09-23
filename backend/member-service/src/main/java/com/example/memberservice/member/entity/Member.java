@@ -80,4 +80,8 @@ public class Member extends BaseEntity {
         this.ageGroup = ageGroup;
         this.job = job;
     }
+
+    public void changeRole(Role role) {
+        this.role = role;
+    }
 }
