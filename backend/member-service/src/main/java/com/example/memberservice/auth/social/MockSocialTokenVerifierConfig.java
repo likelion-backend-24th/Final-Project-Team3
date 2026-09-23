@@ -1,6 +1,6 @@
 package com.example.memberservice.auth.social;
 
-import com.example.memberservice.auth.entity.SocialProvider;
+import com.example.memberservice.auth.social.SocialProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

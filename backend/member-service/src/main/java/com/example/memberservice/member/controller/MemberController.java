@@ -1,8 +1,8 @@
 package com.example.memberservice.member.controller;
 
-import com.example.memberservice.auth.dto.LinkedSocialAccountResponse;
-import com.example.memberservice.auth.security.CustomUserDetails;
-import com.example.memberservice.auth.service.AuthService;
+import com.example.memberservice.auth.session.dto.LinkedSocialAccountResponse;
+import com.example.memberservice.auth.session.security.CustomUserDetails;
+import com.example.memberservice.auth.session.service.AuthService;
 import com.example.memberservice.common.TraceIdProvider;
 import com.example.memberservice.common.dto.ApiResponse;
 import com.example.memberservice.member.dto.*;
