@@ -68,8 +68,8 @@ function ConferenceDetailModal({ conferenceId, onClose }) {
 
         {detail && (
           <div className="space-y-5">
-            {detail.imageUrl && (
-              <img src={detail.imageUrl} alt={detail.title} className="w-full rounded-lg object-cover max-h-48" />
+            {detail.detailImageUrl && (
+              <img src={detail.detailImageUrl} alt={detail.title} className="w-full rounded-lg object-cover max-h-48" />
             )}
 
             <div>

@@ -1,7 +1,7 @@
 import { apiFetch, apiDownload } from './client'
 
 // conference-service: organizerName은 이제 클라이언트가 안 보내도 서버가 JWT(주최자 조직명)로
-// 채운다. tags는 최소 1개 필수(@NotEmpty), imageUrl은 선택.
+// 채운다. tags는 최소 1개 필수(@NotEmpty), image는 선택.
 export function listConferences() {
   return apiFetch('/conferences')
 }
@@ -47,20 +47,22 @@ export function createConference({
   parkingInfo,
   amenities,
   description,
-  imageUrl,
   tags,
   proofFile,
+  image,
 }) {
-  // 백엔드는 multipart/form-data만 받는다: JSON 본문은 "request" 파트, 증빙 파일은 선택 "proofFile" 파트.
+  // 백엔드는 multipart/form-data만 받는다: JSON 본문은 "request" 파트, 증빙 파일은 선택 "proofFile" 파트,
+  // 대표 이미지는 선택 "image" 파트. 서버가 업로드 시점에 썸네일/상세용으로 각각 리사이징해서 저장한다.
   const form = new FormData()
   form.append(
     'request',
     new Blob(
-      [JSON.stringify({ title, capacity, startAt, endAt, location, transportation, parkingInfo, amenities, description, imageUrl, tags })],
+      [JSON.stringify({ title, capacity, startAt, endAt, location, transportation, parkingInfo, amenities, description, tags })],
       { type: 'application/json' },
     ),
   )
   if (proofFile) form.append('proofFile', proofFile)
+  if (image) form.append('image', image)
   return apiFetch('/conferences', { method: 'POST', body: form })
 }
 

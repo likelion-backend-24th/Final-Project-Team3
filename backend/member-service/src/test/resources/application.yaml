@@ -37,6 +37,14 @@ email:
   max-attempts: 5
   resend-cooldown-ms: 0
 
+password:
+  reset-code-validity-ms: 600000
+  max-attempts: 5
+  resend-cooldown-ms: 0
+
 nts:
   verify:
     mode: mock
+
+social:
+  mode: mock

@@ -39,11 +39,28 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # matrix 안에서는 secrets 컨텍스트를 못 써서(별도 평가 컨텍스트), 여기서 먼저 값을 만들어
+      # 스텝 출력(GITHUB_OUTPUT)으로 넘긴다. frontend가 아니면 빈 값.
+      - name: Prepare frontend build args
+        id: build_args
+        if: matrix.service == 'frontend'
+        run: |
+          {
+            echo 'value<<EOF'
+            echo "VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}"
+            echo "VITE_KAKAO_JS_KEY=${VITE_KAKAO_JS_KEY}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_KAKAO_JS_KEY: ${{ secrets.VITE_KAKAO_JS_KEY }}
+
       - name: Build and push ${{ matrix.service }}
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           push: true
+          build-args: ${{ steps.build_args.outputs.value }}
           tags: |
             ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
             ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.sha }}

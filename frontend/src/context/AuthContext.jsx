@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { getAccessToken, setAccessToken, setUnauthorizedHandler, tryRefresh } from '../api/client'
-import { login as loginApi, logout as logoutApi, decodeJwt } from '../api/auth'
+import { login as loginApi, logout as logoutApi, socialLogin as socialLoginApi, decodeJwt } from '../api/auth'
 
 const AuthContext = createContext(null)
 
@@ -54,6 +54,13 @@ export function AuthProvider({ children }) {
     return claimsFromToken(res.data.accessToken)
   }
 
+  const socialLogin = async (provider, token, extra) => {
+    const res = await socialLoginApi(provider, token, extra)
+    applyToken(res.data.accessToken)
+    setStatus('authenticated')
+    return claimsFromToken(res.data.accessToken)
+  }
+
   const logout = async () => {
     try {
       await logoutApi()
@@ -62,7 +69,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const value = { status, claims, login, logout, isAuthenticated: status === 'authenticated' }
+  const value = { status, claims, login, socialLogin, logout, isAuthenticated: status === 'authenticated' }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -39,6 +39,10 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
       NTS_SERVICE_KEY: ${NTS_SERVICE_KEY}
+      SOCIAL_MODE: ${SOCIAL_MODE:-mock}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
     depends_on:
       mysql:
         condition: service_healthy
@@ -54,9 +58,11 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       SERVICES_RESERVATION_SERVICE_URL: http://reservation-service:8083
       CONFERENCE_PROOF_UPLOAD_DIR: /app/uploads/conference-proof
+      CONFERENCE_IMAGE_UPLOAD_DIR: /app/uploads/conference-image
     volumes:
-      # 컨테이너가 재배포돼도(docker compose up -d) 증명 파일이 유지되도록 호스트에 마운트
+      # 컨테이너가 재배포돼도(docker compose up -d) 증명 파일·이미지가 유지되도록 호스트에 마운트
       - ./uploads/conference-proof:/app/uploads/conference-proof
+      - ./uploads/conference-image:/app/uploads/conference-image
     depends_on:
       mysql:
         condition: service_healthy
@@ -80,7 +86,11 @@ services:
         condition: service_healthy
 
   frontend:
-    build: ../frontend
+    build:
+      context: ../frontend
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+        VITE_KAKAO_JS_KEY: ${VITE_KAKAO_JS_KEY:-}
     restart: unless-stopped
     ports:
       - "80:80"

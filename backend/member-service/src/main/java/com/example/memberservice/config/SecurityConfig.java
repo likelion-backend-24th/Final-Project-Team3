@@ -1,7 +1,7 @@
 package com.example.memberservice.config;
 
-import com.example.memberservice.auth.security.JwtAuthenticationFilter;
-import com.example.memberservice.auth.security.JwtTokenValidator;
+import com.example.memberservice.auth.session.security.JwtAuthenticationFilter;
+import com.example.memberservice.auth.session.security.JwtTokenValidator;
 import com.example.memberservice.config.security.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -46,10 +46,13 @@ public class SecurityConfig {
                                 "/api/members/signup",
                                 "/api/members/organizers/signup",
                                 "/api/auth/login",
+                                "/api/auth/social/*",
                                 "/api/auth/refresh",
                                 "/api/auth/logout",
                                 "/api/auth/email/send-code",
                                 "/api/auth/email/verify",
+                                "/api/auth/password/reset-request",
+                                "/api/auth/password/reset-confirm",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
