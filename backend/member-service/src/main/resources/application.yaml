@@ -52,3 +52,6 @@ social:
   kakao:
     rest-api-key: ${KAKAO_REST_API_KEY:}   # Kakao Developers 앱의 REST API 키(JavaScript 키 아님). authorize() 인가 코드를 토큰으로 교환할 때 사용
     client-secret: ${KAKAO_CLIENT_SECRET:} # Kakao 콘솔에서 "Client Secret 코드 발급" 활성화한 경우에만 필요, 기본은 비활성화라 비워둬도 됨
+services:
+  conference-service:
+    url: ${SERVICES_CONFERENCE_SERVICE_URL:http://localhost:8082}

@@ -2,6 +2,7 @@ package com.example.conferenceservice.organizerprofile.service;
 
 import com.example.conferenceservice.attendeesummary.entity.ConferenceAttendeeSummary;
 import com.example.conferenceservice.attendeesummary.repository.ConferenceAttendeeSummaryRepository;
+import com.example.conferenceservice.organizerprofile.dto.OrganizerWithdrawalEligibilityResponse;
 import com.example.conferenceservice.conference.entity.Conference;
 import com.example.conferenceservice.conference.entity.ConferenceStatus;
 import com.example.conferenceservice.conference.repository.ConferenceRepository;
@@ -45,6 +46,13 @@ public class OrganizerProfileService {
                 .toList();
 
         return new OrganizerProfileResponse(organizerId, organizerName, pastConferences, ongoingConferences);
+    }
+
+    public OrganizerWithdrawalEligibilityResponse getWithdrawalEligibility(UUID organizerId) {
+        boolean hasActiveConference = conferenceRepository.existsByOrganizerIdAndStatusIn(
+                organizerId, List.of(ConferenceStatus.PENDING, ConferenceStatus.APPROVED)
+        );
+        return new OrganizerWithdrawalEligibilityResponse(organizerId, hasActiveConference);
     }
 
     private OrganizerConferenceResponse toOrganizerConferenceResponse(Conference conference) {

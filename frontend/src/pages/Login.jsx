@@ -162,6 +162,12 @@ export default function Login() {
             </p>
           )}
 
+          {location.state?.withdrawDone && (
+            <p className="mb-4 text-sm text-text-muted bg-surface2 rounded-lg px-3 py-2">
+              탈퇴가 완료됐어요. 그동안 이용해주셔서 감사합니다.
+            </p>
+          )}
+
           <form onSubmit={submit} className="space-y-4">
             <TextField
               label="이메일"

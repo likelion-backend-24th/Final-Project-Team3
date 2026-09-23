@@ -19,6 +19,7 @@ import QueueStatus from './pages/QueueStatus'
 import MyPage from './pages/MyPage'
 
 import OrganizerDashboard from './pages/organizer/Dashboard'
+import OrganizerSettings from './pages/organizer/Settings'
 import ConferenceCreate from './pages/organizer/ConferenceCreate'
 import Applications from './pages/organizer/Applications'
 import ConferenceSettings from './pages/organizer/ConferenceSettings'
@@ -219,6 +220,14 @@ export default function App() {
               element={
                 <ProtectedRoute role="ORGANIZER">
                   <Settlements />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/settings"
+              element={
+                <ProtectedRoute role="ORGANIZER">
+                  <OrganizerSettings />
                 </ProtectedRoute>
               }
             />

@@ -35,6 +35,12 @@ export function getQrTickets(reservationId) {
   return apiFetch(`/qr-tickets/${reservationId}`)
 }
 
+// 예약 인원 개별 취소(Task 12-5). 응답은 {ticketId, refundRate, refundAmount, remainingHeadcount}.
+// 체크인된 티켓이거나 남은 유효 티켓이 1장뿐이면 서버가 거부한다(전체 취소 API로 유도).
+export function cancelTicket(reservationId, ticketId) {
+  return apiFetch(`/reservations/${reservationId}/tickets/${ticketId}/cancel`, { method: 'POST' })
+}
+
 // QR 코드 문자열(발급 시 대시 없는 UUID)로 입장 처리. 응답은 {code, used, usedAt}뿐 -
 // 참가자 이름/세션 정보는 이 엔드포인트가 안 줘서 프론트에서 못 붙인다.
 export function scanQrTicket(code) {
