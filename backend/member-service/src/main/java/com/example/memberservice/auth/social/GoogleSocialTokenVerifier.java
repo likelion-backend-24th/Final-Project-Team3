@@ -1,6 +1,6 @@
 package com.example.memberservice.auth.social;
 
-import com.example.memberservice.auth.entity.SocialProvider;
+import com.example.memberservice.auth.social.SocialProvider;
 import com.example.memberservice.auth.exception.AuthErrorCode;
 import com.example.memberservice.common.exception.BusinessException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
