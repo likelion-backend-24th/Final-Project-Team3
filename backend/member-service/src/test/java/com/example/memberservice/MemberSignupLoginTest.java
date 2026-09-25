@@ -1,8 +1,8 @@
 package com.example.memberservice;
 
-import com.example.memberservice.auth.dto.LoginRequest;
-import com.example.memberservice.auth.entity.EmailVerification;
-import com.example.memberservice.auth.repository.EmailVerificationRepository;
+import com.example.memberservice.auth.session.dto.LoginRequest;
+import com.example.memberservice.auth.emailverification.entity.EmailVerification;
+import com.example.memberservice.auth.emailverification.repository.EmailVerificationRepository;
 import com.example.memberservice.member.dto.SignupRequest;
 import com.example.memberservice.member.entity.AgeGroup;
 import com.example.memberservice.member.entity.Job;

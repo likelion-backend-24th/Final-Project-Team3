@@ -1,6 +1,6 @@
 package com.example.memberservice.member.service;
 
-import com.example.memberservice.auth.service.EmailVerificationService;
+import com.example.memberservice.auth.emailverification.service.EmailVerificationService;
 import com.example.memberservice.common.exception.BusinessException;
 import com.example.memberservice.member.dto.*;
 import com.example.memberservice.member.entity.Member;
@@ -8,6 +8,8 @@ import com.example.memberservice.member.exception.MemberErrorCode;
 import com.example.memberservice.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -99,7 +101,7 @@ public class MemberService {
     public MemberProfileResponse getProfile(UUID memberId) {
         // 클래스 레벨 @Transactional(readOnly = true)를 그대로 씀 — 조회 전용이라 별도 트랜잭션 지정 불필요
         Member member = memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
-        return new MemberProfileResponse(member.getId(), member.getEmail(), member.getName(), member.getAgeGroup(), member.getJob());
+        return toProfileResponse(member);
     }
 
     @Transactional
@@ -108,7 +110,33 @@ public class MemberService {
         Member member = memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         member.updateProfile(request.ageGroup(), request.job());
-        return new MemberProfileResponse(member.getId(), member.getEmail(), member.getName(), member.getAgeGroup(), member.getJob());
+        return toProfileResponse(member);
+    }
+
+    private MemberProfileResponse toProfileResponse(Member member) {
+        return new MemberProfileResponse(
+                member.getId(), member.getEmail(), member.getName(), member.getAgeGroup(), member.getJob(),
+                member.getPassword() != null, member.getOrganizationName(), member.getBusinessNo()
+        );
+    }
+
+    public Page<MemberListResponse> getMembers(String keyword, Pageable pageable) {
+        return memberRepository.searchMembers(keyword, pageable)
+                .map(MemberListResponse::from);
+    }
+
+    public MemberDetailResponse getMemberDetail(UUID memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+        return MemberDetailResponse.from(member);
+    }
+
+    @Transactional
+    public MemberDetailResponse changeRole(UUID memberId, ChangeRoleRequest request) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+        member.changeRole(request.role());
+        return MemberDetailResponse.from(member);
     }
 
     private String normalize(String email) {

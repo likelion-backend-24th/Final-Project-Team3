@@ -1,8 +1,8 @@
 package com.example.memberservice;
 
-import com.example.memberservice.auth.dto.SendCodeRequest;
-import com.example.memberservice.auth.dto.VerifyCodeRequest;
-import com.example.memberservice.auth.repository.EmailVerificationRepository;
+import com.example.memberservice.auth.emailverification.dto.SendCodeRequest;
+import com.example.memberservice.auth.emailverification.dto.VerifyCodeRequest;
+import com.example.memberservice.auth.emailverification.repository.EmailVerificationRepository;
 import com.example.memberservice.auth.service.EmailSender;
 import com.example.memberservice.common.exception.BusinessException;
 import com.example.memberservice.member.dto.OrganizerSignupRequest;

@@ -70,4 +70,9 @@ public class Reservation {
     public void markAsCancelled() {
         this.status = ReservationStatus.CANCELLED;
     }
+
+    // 예약 인원 개별 취소(Task 12-5): 티켓 1장 취소될 때마다 headcount를 1씩 줄인다.
+    public void decreaseHeadcount(int amount) {
+        this.headcount -= amount;
+    }
 }

@@ -18,4 +18,12 @@ public class EmailSender {
         message.setText("인증코드: " + code + "\n" + validityMinutes + "분 이내에 입력해주세요.");
         mailSender.send(message);
     }
+
+    public void sendPasswordResetCode(String to, String code, long validityMinutes) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject("[컨퍼런스] 비밀번호 재설정 코드");
+        message.setText("비밀번호 재설정 코드: " + code + "\n" + validityMinutes + "분 이내에 입력해주세요.\n본인이 요청하지 않았다면 이 메일을 무시하세요.");
+        mailSender.send(message);
+    }
 }

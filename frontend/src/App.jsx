@@ -7,6 +7,8 @@ import SignupChoice from './pages/SignupChoice'
 import SignupParticipant from './pages/SignupParticipant'
 import SignupOrganizer from './pages/SignupOrganizer'
 import Login from './pages/Login'
+import ForgotPassword from './pages/ForgotPassword'
+import KakaoCallback from './pages/KakaoCallback'
 import Home from './pages/Home'
 import ConferenceDetail from './pages/ConferenceDetail'
 import OrganizerProfile from './pages/OrganizerProfile'
@@ -17,6 +19,7 @@ import QueueStatus from './pages/QueueStatus'
 import MyPage from './pages/MyPage'
 
 import OrganizerDashboard from './pages/organizer/Dashboard'
+import OrganizerSettings from './pages/organizer/Settings'
 import ConferenceCreate from './pages/organizer/ConferenceCreate'
 import Applications from './pages/organizer/Applications'
 import ConferenceSettings from './pages/organizer/ConferenceSettings'
@@ -31,12 +34,28 @@ import Settlements from './pages/organizer/Settlements'
 import AdminApprovals from './pages/admin/Approvals'
 import AdminPgSettings from './pages/admin/PgSettings'
 import AdminSettlementDashboard from './pages/admin/SettlementDashboard'
+import AdminUsers from './pages/admin/Users'
+import AdminSidebar from './components/AdminSidebar'
 
 function Layout() {
   return (
     <div className="min-h-screen bg-bg">
       <Header />
       <Outlet />
+    </div>
+  )
+}
+
+function AdminLayout() {
+  return (
+    <div className="min-h-screen bg-bg">
+      <Header />
+      <div className="flex">
+        <AdminSidebar />
+        <main className="flex-1 min-w-0">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }
@@ -64,6 +83,8 @@ export default function App() {
             <Route path="/signup/participant" element={<SignupParticipant />} />
             <Route path="/signup/organizer" element={<SignupOrganizer />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
 
             <Route
               path="/conferences/:id/sessions/:sessionId/apply"
@@ -202,7 +223,18 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/organizer/settings"
+              element={
+                <ProtectedRoute role="ORGANIZER">
+                  <OrganizerSettings />
+                </ProtectedRoute>
+              }
+            />
 
+          </Route>
+
+          <Route element={<AdminLayout />}>
             <Route
               path="/admin"
               element={
@@ -227,9 +259,17 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute role="ADMIN">
+                  <AdminUsers />
+                </ProtectedRoute>
+              }
+            />
           </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

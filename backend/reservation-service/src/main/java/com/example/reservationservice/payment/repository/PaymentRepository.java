@@ -1,6 +1,8 @@
 package com.example.reservationservice.payment.repository;
 
 import com.example.reservationservice.payment.entity.Payment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +15,15 @@ import java.util.UUID;
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     Optional<Payment> findByReservationId(UUID reservationId);
+
+    // 정산 상세 목록(Task 18-3): 취소된 건도 포함해서 최신 결제 순으로 보여준다.
+    @Query("SELECT p FROM Payment p " +
+            "WHERE (:startDate IS NULL OR p.paidAt >= :startDate) " +
+            "AND (:endDate IS NULL OR p.paidAt < :endDate) " +
+            "ORDER BY p.paidAt DESC")
+    Page<Payment> findAllByPaidAtBetween(@Param("startDate") LocalDateTime startDate,
+                                          @Param("endDate") LocalDateTime endDate,
+                                          Pageable pageable);
 
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
             "JOIN Reservation r ON p.reservationId = r.id " +

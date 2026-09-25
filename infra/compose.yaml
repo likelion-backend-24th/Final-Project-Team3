@@ -39,6 +39,11 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
       NTS_SERVICE_KEY: ${NTS_SERVICE_KEY}
+      SOCIAL_MODE: ${SOCIAL_MODE:-mock}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
+      SERVICES_CONFERENCE_SERVICE_URL: http://conference-service:8082
     depends_on:
       mysql:
         condition: service_healthy
@@ -82,7 +87,11 @@ services:
         condition: service_healthy
 
   frontend:
-    build: ../frontend
+    build:
+      context: ../frontend
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+        VITE_KAKAO_JS_KEY: ${VITE_KAKAO_JS_KEY:-}
     restart: unless-stopped
     ports:
       - "80:80"

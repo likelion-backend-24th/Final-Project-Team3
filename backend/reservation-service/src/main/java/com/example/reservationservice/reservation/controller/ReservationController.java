@@ -137,6 +137,20 @@ public class ReservationController {
                 ApiResponse.success("예약 취소 완료", result, traceIdProvider.resolve(httpRequest)));
     }
 
+    @Operation(summary = "예약 인원 개별 취소", description = "한 예약(headcount>1)에 여러 명이 묶여 있을 때 QR 티켓 1장(=1명) 단위로 취소·부분 환불한다. "
+            + "결제 완료(CONFIRMED) 예약에서만 가능하고, 체크인(used=true)된 티켓은 취소할 수 없다. "
+            + "남은 유효 티켓이 1장뿐이면 거부되므로 마지막 1명은 전체 취소 API를 이용해야 한다")
+    @PostMapping("/{reservationId}/tickets/{ticketId}/cancel")
+    public ResponseEntity<ApiResponse<TicketCancelResult>> cancelTicket(
+            @PathVariable UUID reservationId,
+            @PathVariable UUID ticketId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            HttpServletRequest httpRequest) {
+        TicketCancelResult result = reservationService.cancelTicket(reservationId, ticketId, userDetails.getMemberId());
+        return ResponseEntity.ok(
+                ApiResponse.success("예약 인원 취소 완료", result, traceIdProvider.resolve(httpRequest)));
+    }
+
     @Schema(description = "결제 요청 정보")
     public record PaymentRequest(
             @Schema(description = "PortOne 결제 고유 ID (프론트에서 결제 완료 후 전달)")

@@ -31,7 +31,9 @@ public class RouteConfig {
         return route("member-service")
                 .route(
                         RequestPredicates.path("/api/auth/**")
-                                .or(RequestPredicates.path("/api/members/**")),
+                                .or(RequestPredicates.path("/api/members/**"))
+                                .or(RequestPredicates.path("/api/admin/members"))
+                                .or(RequestPredicates.path("/api/admin/members/**")),
                         http()
                 )
                 .before(uri(memberServiceUrl))
