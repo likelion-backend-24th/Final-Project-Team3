@@ -6,6 +6,7 @@ import { getCapacityStatus } from '../api/reservations'
 import { formatDateRange } from '../utils/date'
 import StatusBadge from '../components/StatusBadge'
 import Button from '../components/Button'
+import DescriptionText from '../components/DescriptionText'
 
 const INFO_TABS = [
   { key: 'sessions', label: '세션 목록' },
@@ -182,8 +183,13 @@ export default function ConferenceDetail() {
 
         {infoTab === 'description' && (
           <div className="bg-surface border border-border rounded-xl p-6">
+            {conference.aiSummary && (
+              <p className="text-sm text-text bg-surface2 border border-border rounded-lg px-4 py-3 mb-4">
+                {conference.aiSummary}
+              </p>
+            )}
             {conference.description ? (
-              <p className="text-sm text-text-muted whitespace-pre-wrap">{conference.description}</p>
+              <DescriptionText text={conference.description} className="text-sm text-text-muted whitespace-pre-wrap" />
             ) : (
               <p className="text-text-muted text-sm">등록된 소개글이 없어요.</p>
             )}

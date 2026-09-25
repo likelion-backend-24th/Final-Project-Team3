@@ -18,6 +18,10 @@ final class ConferenceImageUrls {
         return toUrl(conference.getDetailImageName());
     }
 
+    static String of(String storedFilename) {
+        return toUrl(storedFilename);
+    }
+
     private static String toUrl(String storedFilename) {
         return storedFilename == null ? null : IMAGE_PATH_PREFIX + storedFilename;
     }

@@ -66,6 +66,14 @@ export function createConference({
   return apiFetch('/conferences', { method: 'POST', body: form })
 }
 
+// 소개글 본문에 삽입할 이미지를 업로드하고 URL을 돌려받는다(컨퍼런스 생성/수정과 별개 요청).
+// 받은 URL은 소개글 텍스트 안에 `![alt](url)` 마크다운 문법으로 그대로 붙여넣는다.
+export function uploadDescriptionImage(file) {
+  const form = new FormData()
+  form.append('image', file)
+  return apiFetch('/conferences/description-images', { method: 'POST', body: form })
+}
+
 // 승인 심사용 증빙 파일. 소유 주최자 본인과 관리자만 받을 수 있다(403). 첨부된 컨퍼런스에만 호출할 것.
 export function downloadProofFile(conferenceId) {
   return apiDownload(`/conferences/${conferenceId}/proof-file`)

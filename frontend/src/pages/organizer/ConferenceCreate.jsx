@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft, Paperclip, X } from 'lucide-react'
 import TextField from '../../components/TextField'
 import Button from '../../components/Button'
+import DescriptionEditor from '../../components/DescriptionEditor'
 import { createConference } from '../../api/conferences'
 import { ApiError } from '../../api/client'
 import { CATEGORY_TAGS } from '../../utils/categoryTags'
@@ -181,16 +182,16 @@ export default function ConferenceCreate() {
               />
             </div>
 
-            <label className="block">
+            <div>
               <span className="block mb-2 text-sm text-text">컨퍼런스 소개</span>
-              <textarea
+              <DescriptionEditor
                 rows={4}
                 placeholder="컨퍼런스 주제, 대상, 예상 참가자 수 등을 적어주세요."
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={setDescription}
                 className="w-full bg-bg border border-border rounded-lg px-4 py-3 text-sm text-text placeholder:text-text-faint focus:outline-none focus:border-primary resize-none"
               />
-            </label>
+            </div>
 
             <div>
               <span className="block mb-2 text-sm text-text">대표 이미지 (선택)</span>

@@ -46,11 +46,14 @@ class AdminConferenceDetailTest {
     @Mock
     private FileStorageService fileStorageService;
 
+    @Mock
+    private ConferenceContentSummaryService conferenceContentSummaryService;
+
     private ConferenceService conferenceService;
 
     @BeforeEach
     void setUp() {
-        conferenceService = new ConferenceService(conferenceRepository, conferenceTagRepository, sessionRepository, organizerProfileService, fileStorageService);
+        conferenceService = new ConferenceService(conferenceRepository, conferenceTagRepository, sessionRepository, organizerProfileService, fileStorageService, conferenceContentSummaryService);
     }
 
     @Test

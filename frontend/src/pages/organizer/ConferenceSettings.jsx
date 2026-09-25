@@ -16,6 +16,7 @@ import { ApiError } from '../../api/client'
 import { formatDateRange } from '../../utils/date'
 import Button from '../../components/Button'
 import TextField from '../../components/TextField'
+import DescriptionEditor from '../../components/DescriptionEditor'
 
 const TABS = [
   { key: 'description', label: '소개글' },
@@ -114,10 +115,10 @@ function DescriptionTab({ conferenceId, conference }) {
   return (
     <div className="bg-surface border border-border rounded-xl p-6">
       <h2 className="text-sm font-medium text-text mb-3">컨퍼런스 소개글</h2>
-      <textarea
+      <DescriptionEditor
         rows={8}
         value={description}
-        onChange={(e) => setDescription(e.target.value)}
+        onChange={setDescription}
         placeholder="참가자에게 보여줄 컨퍼런스 소개를 적어주세요."
         className={textareaClass}
       />

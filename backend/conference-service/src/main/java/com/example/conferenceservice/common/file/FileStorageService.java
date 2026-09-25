@@ -36,6 +36,8 @@ public class FileStorageService {
 
     private static final Set<String> ALLOWED_PROOF_EXTENSIONS = Set.of("pdf", "png", "jpg", "jpeg");
     private static final Set<String> ALLOWED_IMAGE_EXTENSIONS = Set.of("png", "jpg", "jpeg");
+    // 소개글 본문 이미지 파일명 접두사 - 대표 이미지(thumb_/detail_)와 구분하기 위함.
+    private static final String DESCRIPTION_IMAGE_PREFIX = "desc_";
 
     // 목록 카드용 썸네일 - 트래픽 절약이 목적이라 원본보다 훨씬 작게 잡는다.
     private static final int THUMBNAIL_MAX_DIMENSION = 400;
@@ -123,6 +125,35 @@ public class FileStorageService {
         } catch (RuntimeException e) {
             deleteQuietly(thumbnailTarget);
             deleteQuietly(detailTarget);
+            throw e;
+        }
+    }
+
+    // 소개글 본문에 삽입하는 이미지 - 대표 이미지(썸네일+상세 두 장)와 달리 본문 안에 한 장만
+    // 필요해서 상세용 상한(DETAIL_MAX_DIMENSION) 하나만 적용해 저장한다.
+    public String storeDescriptionImage(MultipartFile file) {
+        String originalFilename = cleanOriginalFilename(file);
+        validateExtension(originalFilename, ALLOWED_IMAGE_EXTENSIONS, ConferenceErrorCode.IMAGE_INVALID_TYPE);
+
+        Path target = null;
+        try {
+            byte[] bytes = file.getBytes();
+            ImageHeader header = readImageHeader(bytes);
+            String filename = DESCRIPTION_IMAGE_PREFIX + UUID.randomUUID() + "." + header.extension();
+            target = resolveWithinRoot(imageRootDir, filename, ConferenceErrorCode.IMAGE_UPLOAD_FAILED);
+
+            if (header.width() <= DETAIL_MAX_DIMENSION && header.height() <= DETAIL_MAX_DIMENSION) {
+                Files.write(target, bytes);
+            } else {
+                writeCapped(decode(bytes), bytes, DETAIL_MAX_DIMENSION, 0.9, target);
+            }
+            return filename;
+        } catch (IOException e) {
+            log.error("소개글 이미지 저장 실패: {}", originalFilename, e);
+            deleteQuietly(target);
+            throw new BusinessException(ConferenceErrorCode.IMAGE_UPLOAD_FAILED);
+        } catch (RuntimeException e) {
+            deleteQuietly(target);
             throw e;
         }
     }
@@ -224,6 +255,22 @@ public class FileStorageService {
 
     public Resource loadImageAsResource(String storedFilename) {
         return loadAsResource(imageRootDir, storedFilename, ConferenceErrorCode.IMAGE_NOT_FOUND);
+    }
+
+    // AI 요약 생성용으로 이미지 바이트를 직접 읽어야 할 때 쓴다(Gemini에 base64로 실어 보내기 위함).
+    public byte[] loadImageBytes(String storedFilename) {
+        Path path = resolveWithinRoot(imageRootDir, storedFilename, ConferenceErrorCode.IMAGE_NOT_FOUND);
+        try {
+            return Files.readAllBytes(path);
+        } catch (IOException e) {
+            throw new BusinessException(ConferenceErrorCode.IMAGE_NOT_FOUND);
+        }
+    }
+
+    // 저장 파일명은 항상 디코딩된 실제 포맷을 근거로 지어지므로(storeImage/storeDescriptionImage),
+    // 확장자만 보고 mimeType을 판별해도 사용자가 올린 원본 확장자와 실제 포맷이 어긋날 위험이 없다.
+    public String resolveImageMimeType(String storedFilename) {
+        return storedFilename.toLowerCase(Locale.ROOT).endsWith(".png") ? "image/png" : "image/jpeg";
     }
 
     private Resource loadAsResource(Path root, String storedFilename, ConferenceErrorCode notFoundErrorCode) {

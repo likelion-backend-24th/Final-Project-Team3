@@ -43,6 +43,7 @@ public class ConferenceService {
     private final SessionRepository sessionRepository;
     private final OrganizerProfileService organizerProfileService;
     private final FileStorageService fileStorageService;
+    private final ConferenceContentSummaryService conferenceContentSummaryService;
 
     @Transactional
     public ConferenceResponse applyConference(CustomUserDetails currentUser, ConferenceRequest request, MultipartFile proofFile, MultipartFile image) {
@@ -52,6 +53,7 @@ public class ConferenceService {
         if (!request.endAt().isAfter(request.startAt())) {
             throw new BusinessException(ConferenceErrorCode.INVALID_CONFERENCE_PERIOD);
         }
+        conferenceContentSummaryService.validateImageLimit(request.description());
 
         Conference conference = Conference.builder()
                 .organizerId(currentUser.getMemberId())
@@ -98,6 +100,9 @@ public class ConferenceService {
                 throw e;
             }
         }
+
+        // 배너 이미지(썸네일) attach까지 끝난 뒤에 호출해야 AI 요약이 그 이미지를 함께 참고할 수 있다.
+        conferenceContentSummaryService.generateAndAttach(savedConference);
 
         return ConferenceResponse.from(savedConference, 0, tagNames);
     }
@@ -197,7 +202,9 @@ public class ConferenceService {
     public ConferenceResponse updateDescription(UUID id, ConferenceDescriptionUpdateRequest request, UUID requesterId) {
         Conference conference = findConference(id);
         OwnerScopeGuard.verify(requesterId, conference.getOrganizerId(), ConferenceErrorCode.CONFERENCE_ACCESS_DENIED);
+        conferenceContentSummaryService.validateImageLimit(request.description());
         conference.updateDescription(request.description());
+        conferenceContentSummaryService.generateAndAttach(conference);
         return ConferenceResponse.from(conference, countApprovedSessions(conference), tagsOf(conference));
     }
 
