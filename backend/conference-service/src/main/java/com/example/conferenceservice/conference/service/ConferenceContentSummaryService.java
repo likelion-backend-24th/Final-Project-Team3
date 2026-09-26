@@ -55,11 +55,17 @@ public class ConferenceContentSummaryService {
         return images;
     }
 
+    // 이미지 하나를 못 읽어도(파일 누락 등) 소개글 텍스트만으로는 여전히 요약이 가능하므로,
+    // 여기서 실패를 삼켜 이 이미지만 제외하고 넘어간다 - generateAndAttach 전체를 포기하지 않는다.
     private void addImageIfPresent(List<ImagePart> images, String storedFilename) {
         if (storedFilename == null) {
             return;
         }
-        byte[] bytes = fileStorageService.loadImageBytes(storedFilename);
-        images.add(new ImagePart(bytes, fileStorageService.resolveImageMimeType(storedFilename)));
+        try {
+            byte[] bytes = fileStorageService.loadImageBytes(storedFilename);
+            images.add(new ImagePart(bytes, fileStorageService.resolveImageMimeType(storedFilename)));
+        } catch (RuntimeException e) {
+            log.warn("이미지 로드 실패로 AI 요약 분석 대상에서 제외합니다: storedFilename={}", storedFilename, e);
+        }
     }
 }
