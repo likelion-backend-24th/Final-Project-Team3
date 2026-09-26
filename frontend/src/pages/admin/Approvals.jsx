@@ -15,6 +15,7 @@ import { formatDateRange } from '../../utils/date'
 import { saveBlob } from '../../utils/download'
 import Button from '../../components/Button'
 import StatusBadge from '../../components/StatusBadge'
+import DescriptionText from '../../components/DescriptionText'
 
 // 승인/반려 결정 전에 세션·태그·장소까지 전부 보여주는 상세 모달.
 function ConferenceDetailModal({ conferenceId, onClose }) {
@@ -95,7 +96,7 @@ function ConferenceDetailModal({ conferenceId, onClose }) {
             {detail.description && (
               <div>
                 <h4 className="text-sm font-medium text-text mb-1">소개글</h4>
-                <p className="text-sm text-text-muted whitespace-pre-wrap">{detail.description}</p>
+                <DescriptionText text={detail.description} className="text-sm text-text-muted whitespace-pre-wrap" />
               </div>
             )}
 

@@ -141,7 +141,8 @@ export default function Home() {
                   )}
 
                   <h3 className="text-text font-medium mb-1">{c.title}</h3>
-                  {c.organizerName && <p className="text-text-muted text-sm mb-3">{c.organizerName}</p>}
+                  {c.organizerName && <p className="text-text-muted text-sm mb-1">{c.organizerName}</p>}
+                  {c.aiSummary && <p className="text-text-muted text-sm mb-3 line-clamp-2">{c.aiSummary}</p>}
 
                   <div className="space-y-1.5 text-sm text-text-muted">
                     {dateLabel && (

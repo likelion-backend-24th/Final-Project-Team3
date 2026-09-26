@@ -74,6 +74,12 @@ public class Conference {
     @Column(name = "detail_image_name")
     private String detailImageName;
 
+    // 소개글 저장 시점에 소개글 텍스트+이미지를 분석해 생성하는 AI 요약. LLM 호출이 실패하면 갱신하지
+    // 않고 이전 값(최초 생성 실패 시 null)을 그대로 둔다 - 소개글 저장 자체를 막지 않기 위함.
+    @Lob
+    @Column(name = "ai_summary", columnDefinition = "TEXT")
+    private String aiSummary;
+
     // 등록 신청 시 첨부한 컨퍼런스 증명 파일의 저장 파일명({UUID}_{원본파일명}). 관리자 승인 심사용.
     @Column(name = "proof_file_name")
     private String proofFileName;
@@ -106,6 +112,10 @@ public class Conference {
 
     public void updateDescription(String description) {
         this.description = description;
+    }
+
+    public void updateAiSummary(String aiSummary) {
+        this.aiSummary = aiSummary;
     }
 
     public void updateLocation(String location, String transportation, String parkingInfo, String amenities) {

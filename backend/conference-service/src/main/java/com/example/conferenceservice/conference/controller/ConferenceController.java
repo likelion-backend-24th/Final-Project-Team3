@@ -8,6 +8,7 @@ import com.example.conferenceservice.common.dto.ApiResponse;
 import com.example.conferenceservice.common.dto.Meta;
 import com.example.conferenceservice.common.dto.PageMeta;
 import com.example.conferenceservice.common.file.FileStorageService;
+import com.example.conferenceservice.conference.dto.ConferenceDescriptionImageResponse;
 import com.example.conferenceservice.conference.dto.ConferenceDescriptionUpdateRequest;
 import com.example.conferenceservice.conference.dto.ConferenceDetailResponse;
 import com.example.conferenceservice.conference.dto.ConferenceLocationUpdateRequest;
@@ -48,7 +49,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 @RestController
@@ -113,12 +113,23 @@ public class ConferenceController {
                 .body(resource);
     }
 
+    // 소개글 본문에 이미지를 삽입할 때 쓴다 - 컨퍼런스가 아직 만들어지기 전(등록 신청 폼 작성 중)에도
+    // 눌러서 바로 업로드하고 URL을 돌려받아, 그 URL을 소개글 텍스트 안에 직접 붙여넣는 방식이라
+    // 컨퍼런스 엔티티와 독립적인 엔드포인트로 둔다.
+    @PostMapping(value = "/description-images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ORGANIZER')")
+    public ResponseEntity<ApiResponse<ConferenceDescriptionImageResponse>> uploadDescriptionImage(
+            @RequestPart("image") MultipartFile image,
+            HttpServletRequest httpRequest
+    ) {
+        String storedFilename = fileStorageService.storeDescriptionImage(image);
+        ConferenceDescriptionImageResponse response = ConferenceDescriptionImageResponse.of(storedFilename);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("소개글 이미지 업로드 성공", response, traceIdProvider.resolve(httpRequest)));
+    }
+
     private MediaType resolveImageMediaType(String filename) {
-        String lower = filename.toLowerCase(Locale.ROOT);
-        if (lower.endsWith(".png")) {
-            return MediaType.IMAGE_PNG;
-        }
-        return MediaType.IMAGE_JPEG;
+        return MediaType.parseMediaType(fileStorageService.resolveImageMimeType(filename));
     }
 
     // 증명 파일은 승인 심사용 자료라 공개하지 않고, 소유 주최자 본인과 관리자만 내려받을 수 있다.

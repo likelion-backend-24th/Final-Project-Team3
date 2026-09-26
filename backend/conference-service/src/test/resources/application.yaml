@@ -32,3 +32,5 @@ llm:
   summary:
     attendee-stats:
       model: gemini-3.6-flash
+    content:
+      model: gemini-3.6-flash

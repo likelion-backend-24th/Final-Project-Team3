@@ -21,7 +21,8 @@ public enum ConferenceErrorCode implements ErrorCode {
     IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE_UPLOAD_FAILED", "이미지 업로드에 실패했습니다."),
     IMAGE_INVALID_TYPE(HttpStatus.BAD_REQUEST, "IMAGE_INVALID_TYPE", "이미지는 png, jpg, jpeg 형식만 첨부할 수 있습니다."),
     IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "IMAGE_NOT_FOUND", "존재하지 않는 이미지입니다."),
-    IMAGE_DIMENSIONS_TOO_LARGE(HttpStatus.BAD_REQUEST, "IMAGE_DIMENSIONS_TOO_LARGE", "이미지의 가로*세로 픽셀 수가 너무 큽니다.");
+    IMAGE_DIMENSIONS_TOO_LARGE(HttpStatus.BAD_REQUEST, "IMAGE_DIMENSIONS_TOO_LARGE", "이미지의 가로*세로 픽셀 수가 너무 큽니다."),
+    DESCRIPTION_IMAGE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "DESCRIPTION_IMAGE_LIMIT_EXCEEDED", "소개글에는 이미지를 최대 1장까지만 넣을 수 있습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
