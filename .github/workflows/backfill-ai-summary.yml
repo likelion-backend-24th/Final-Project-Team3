@@ -1,0 +1,149 @@
+name: Backfill AI Summary
+
+on:
+  workflow_dispatch:
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run one-off backfill script on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/Final-Project-Team3/infra
+            cat > prod_backfill_ai_summary.py <<'PYEOF'
+            #!/usr/bin/env python3
+            import json
+            import mimetypes
+            import subprocess
+            import urllib.request
+            import urllib.error
+            import base64
+
+            ENV_PATH = ".env"
+            IMAGE_DIR = "uploads/conference-image"
+
+
+            def read_env_var(name):
+                with open(ENV_PATH, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.startswith(name + "="):
+                            return line.strip().split("=", 1)[1]
+                raise RuntimeError(f"{name} not found in {ENV_PATH}")
+
+
+            def run_sql(sql, capture=True):
+                db_user = read_env_var("CONFERENCE_DB_USER")
+                db_password = read_env_var("CONFERENCE_DB_PASSWORD")
+                cmd = [
+                    "docker", "compose", "exec", "-T", "mysql",
+                    "mysql", "-N", "--raw", "--batch",
+                    f"-u{db_user}", f"-p{db_password}", "conference_service",
+                ]
+                result = subprocess.run(cmd, input=sql, capture_output=capture, text=True)
+                if result.returncode != 0:
+                    raise RuntimeError(f"mysql 실행 실패: {result.stderr}")
+                return result.stdout if capture else None
+
+
+            def sql_escape(value):
+                return value.replace("\\", "\\\\").replace("'", "\'")
+
+
+            def build_prompt(description):
+                text = description if description and description.strip() else "(작성되지 않음)"
+                return (
+                    "다음은 참가자에게 공개될 컨퍼런스 소개글입니다.\n"
+                    f"소개글: {text}\n\n"
+                    "첨부된 이미지가 있다면 함께 참고해서, 참가자가 이 컨퍼런스가 어떤 자리인지 한눈에 알 수 있도록 "
+                    "자연스러운 한국어 1~2문장으로 요약해주세요. 소개글 문장을 그대로 반복하지 말고 핵심만 요약하세요.\n\n"
+                    "반드시 지킬 것:\n"
+                    "- 완성된 요약 문장만 출력하고, 그 외의 말은 절대 덧붙이지 않는다.\n"
+                    "- 선택지(옵션)를 제시하거나, 입력이 부족·부적절하다고 지적하거나, 추가 정보를 요청하는 문장을 절대 쓰지 않는다.\n"
+                    "- 소개글이 짧거나 모호해도 주어진 내용만으로 최선의 요약을 만들어낸다.\n"
+                    "- 글머리 기호, 굵게, 인용 같은 마크다운 문법 없이 순수한 문장으로만 답한다."
+                )
+
+
+            def load_image_part(thumbnail_filename):
+                if not thumbnail_filename:
+                    return None
+                path = f"{IMAGE_DIR}/{thumbnail_filename}"
+                try:
+                    with open(path, "rb") as f:
+                        data = f.read()
+                except OSError:
+                    print(f"  [경고] 이미지 파일을 찾을 수 없어 제외함: {path}")
+                    return None
+                mime_type = mimetypes.guess_type(thumbnail_filename)[0] or "image/jpeg"
+                return {"inlineData": {"mimeType": mime_type, "data": base64.b64encode(data).decode("ascii")}}
+
+
+            def call_gemini(api_key, model, base_url, description, image_part):
+                parts = [{"text": build_prompt(description)}]
+                if image_part:
+                    parts.append(image_part)
+
+                body = json.dumps({
+                    "contents": [{"parts": parts}],
+                    "generationConfig": {"maxOutputTokens": 512, "thinkingConfig": {"thinkingBudget": 0}},
+                }).encode("utf-8")
+
+                url = f"{base_url}/v1beta/models/{model}:generateContent?key={api_key}"
+                req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
+                try:
+                    with urllib.request.urlopen(req, timeout=15) as resp:
+                        payload = json.loads(resp.read().decode("utf-8"))
+                except urllib.error.HTTPError as e:
+                    raise RuntimeError(f"Gemini API 호출 실패: HTTP {e.code} {e.read().decode('utf-8', 'ignore')[:300]}")
+
+                candidates = payload.get("candidates")
+                if not candidates:
+                    raise RuntimeError("Gemini 응답에 candidates가 없습니다")
+                return candidates[0]["content"]["parts"][0]["text"].strip()
+
+
+            def main():
+                api_key = read_env_var("GEMINI_API_KEY")
+                base_url = "https://generativelanguage.googleapis.com"
+                model = "gemini-3.6-flash"
+
+                rows_raw = run_sql(
+                    "SELECT JSON_OBJECT('id', id, 'title', title, 'description', description, "
+                    "'thumbnail', thumbnail_image_name) "
+                    "FROM conference WHERE ai_summary IS NULL "
+                    "AND (description IS NOT NULL AND description != '' OR thumbnail_image_name IS NOT NULL);"
+                )
+                rows = [json.loads(line) for line in rows_raw.splitlines() if line.strip()]
+                print(f"백필 대상 {len(rows)}건")
+
+                for row in rows:
+                    conference_id = row["id"]
+                    title = row["title"]
+                    description = row.get("description")
+                    thumbnail = row.get("thumbnail")
+
+                    image_part = load_image_part(thumbnail)
+                    try:
+                        summary = call_gemini(api_key, model, base_url, description, image_part)
+                    except RuntimeError as e:
+                        print(f"[FAIL] {title} ({conference_id}) - {e}")
+                        continue
+
+                    run_sql(
+                        f"UPDATE conference SET ai_summary = '{sql_escape(summary)}' WHERE id = '{conference_id}';",
+                        capture=False,
+                    )
+                    print(f"[OK] {title} -> {summary}")
+
+
+            if __name__ == "__main__":
+                main()
+            PYEOF
+            python3 prod_backfill_ai_summary.py
+            rm -f prod_backfill_ai_summary.py
