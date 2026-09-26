@@ -43,16 +43,17 @@ jobs:
                 cmd = [
                     "docker", "compose", "exec", "-T", "mysql",
                     "mysql", "-N", "--raw", "--batch",
+                    "--default-character-set=utf8mb4",
                     f"-u{db_user}", f"-p{db_password}", "conference_service",
                 ]
-                result = subprocess.run(cmd, input=sql, capture_output=capture, text=True)
+                result = subprocess.run(cmd, input=sql.encode("utf-8"), capture_output=capture)
                 if result.returncode != 0:
-                    raise RuntimeError(f"mysql 실행 실패: {result.stderr}")
-                return result.stdout if capture else None
+                    raise RuntimeError(f"mysql 실행 실패: {result.stderr.decode('utf-8', 'ignore')}")
+                return result.stdout.decode("utf-8") if capture else None
 
 
             def sql_escape(value):
-                return value.replace("\\", "\\\\").replace("'", "\'")
+                return value.replace("\\", "\\\\").replace("'", "\\'")
 
 
             def build_prompt(description):
@@ -113,7 +114,8 @@ jobs:
                 base_url = "https://generativelanguage.googleapis.com"
                 model = "gemini-3.6-flash"
 
-                # id는 binary(16)로 저장되므로 HEX()로 32자리 16진 문자열로 뽑아온다.
+                run_sql("UPDATE conference SET ai_summary = NULL WHERE ai_summary IS NOT NULL;", capture=False)
+
                 rows_raw = run_sql(
                     "SELECT JSON_OBJECT('id', HEX(id), 'title', title, 'description', description, "
                     "'thumbnail', thumbnail_image_name) "
@@ -136,7 +138,6 @@ jobs:
                         print(f"[FAIL] {title} ({conference_id_hex}) - {e}")
                         continue
 
-                    # UNHEX()로 다시 binary(16)로 되돌려서 매칭하고, 실제로 몇 행이 바뀌었는지 확인한다.
                     result = run_sql(
                         f"UPDATE conference SET ai_summary = '{sql_escape(summary)}' "
                         f"WHERE id = UNHEX('{conference_id_hex}'); SELECT ROW_COUNT();"
