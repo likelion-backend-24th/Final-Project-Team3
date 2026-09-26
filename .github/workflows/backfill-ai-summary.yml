@@ -113,8 +113,9 @@ jobs:
                 base_url = "https://generativelanguage.googleapis.com"
                 model = "gemini-3.6-flash"
 
+                # id는 binary(16)로 저장되므로 HEX()로 32자리 16진 문자열로 뽑아온다.
                 rows_raw = run_sql(
-                    "SELECT JSON_OBJECT('id', id, 'title', title, 'description', description, "
+                    "SELECT JSON_OBJECT('id', HEX(id), 'title', title, 'description', description, "
                     "'thumbnail', thumbnail_image_name) "
                     "FROM conference WHERE ai_summary IS NULL "
                     "AND (description IS NOT NULL AND description != '' OR thumbnail_image_name IS NOT NULL);"
@@ -123,7 +124,7 @@ jobs:
                 print(f"백필 대상 {len(rows)}건")
 
                 for row in rows:
-                    conference_id = row["id"]
+                    conference_id_hex = row["id"]
                     title = row["title"]
                     description = row.get("description")
                     thumbnail = row.get("thumbnail")
@@ -132,14 +133,19 @@ jobs:
                     try:
                         summary = call_gemini(api_key, model, base_url, description, image_part)
                     except RuntimeError as e:
-                        print(f"[FAIL] {title} ({conference_id}) - {e}")
+                        print(f"[FAIL] {title} ({conference_id_hex}) - {e}")
                         continue
 
-                    run_sql(
-                        f"UPDATE conference SET ai_summary = '{sql_escape(summary)}' WHERE id = '{conference_id}';",
-                        capture=False,
+                    # UNHEX()로 다시 binary(16)로 되돌려서 매칭하고, 실제로 몇 행이 바뀌었는지 확인한다.
+                    result = run_sql(
+                        f"UPDATE conference SET ai_summary = '{sql_escape(summary)}' "
+                        f"WHERE id = UNHEX('{conference_id_hex}'); SELECT ROW_COUNT();"
                     )
-                    print(f"[OK] {title} -> {summary}")
+                    affected = result.strip().splitlines()[-1] if result.strip() else "0"
+                    if affected != "1":
+                        print(f"[WARN] {title} - UPDATE 행 영향 없음(affected={affected})")
+                    else:
+                        print(f"[OK] {title} -> {summary}")
 
 
             if __name__ == "__main__":
