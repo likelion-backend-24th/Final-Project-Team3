@@ -10,6 +10,7 @@ export default function QueueStatus() {
   const location = useLocation()
   const { sessionTitle, queuePosition: initialPosition, conferenceTitle, headcount, price } = location.state ?? {}
   const [position, setPosition] = useState(initialPosition ?? null)
+  const [estimatedWaitMinutes, setEstimatedWaitMinutes] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -17,7 +18,11 @@ export default function QueueStatus() {
     const poll = async () => {
       try {
         const res = await getQueuePosition(id)
-        if (!cancelled) setPosition(res.data)
+        if (cancelled) return
+        // 응답은 {position, estimatedWaitMinutes} — 예상 대기 시간은 컨퍼런스 평균 결제 소요 시간 기준
+        setPosition(res.data.position)
+        setEstimatedWaitMinutes(res.data.estimatedWaitMinutes)
+        setError('')
       } catch {
         if (!cancelled) setError('순번 조회에 실패했습니다.')
       }
@@ -44,6 +49,12 @@ export default function QueueStatus() {
         <div className="flex items-center justify-between">
           <span className="text-sm text-text-muted">세션</span>
           <span className="text-sm text-text">{sessionTitle ?? '-'}</span>
+        </div>
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-sm text-text-muted">예상 대기 시간</span>
+          <span className="text-sm text-text">
+            {estimatedWaitMinutes != null ? `약 ${estimatedWaitMinutes}분` : '-'}
+          </span>
         </div>
       </div>
 

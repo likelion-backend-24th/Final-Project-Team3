@@ -631,8 +631,13 @@ export default function MyPage() {
                     <div>
                       <p className="text-text-faint mb-1">대기 순번</p>
                       <p className="text-warning font-medium">
-                        {queuePositions[r.reservationId] != null ? `${queuePositions[r.reservationId]}번` : '-'}
+                        {queuePositions[r.reservationId] != null ? `${queuePositions[r.reservationId].position}번` : '-'}
                       </p>
+                      {queuePositions[r.reservationId] != null && (
+                        <p className="text-xs text-text-muted mt-0.5">
+                          예상 대기 약 {queuePositions[r.reservationId].estimatedWaitMinutes}분
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <div>
