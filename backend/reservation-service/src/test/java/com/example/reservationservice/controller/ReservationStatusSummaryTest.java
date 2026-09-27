@@ -107,6 +107,21 @@ public class ReservationStatusSummaryTest {
                 .andExpect(jsonPath("$.data.checkedInCount").value(1));
     }
 
+    // Conference-Service(운영 현황)는 사용자 토큰 없이 호출하므로, 내부 경로는 인증 없이 열려 있어야 한다
+    @Test
+    @DisplayName("서비스 간 내부 경로는 인증 없이 상태별 건수를 조회할 수 있다")
+    void 내부_경로는_인증_없이_조회된다() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+
+        createReservation(sessionId, ReservationStatus.CONFIRMED);
+        createReservation(sessionId, ReservationStatus.QUEUED);
+
+        mockMvc.perform(get("/internal/sessions/{sessionId}/status-summary", sessionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.confirmedCount").value(1))
+                .andExpect(jsonPath("$.data.queuedCount").value(1));
+    }
+
     private Reservation createReservation(UUID sessionId, ReservationStatus status) {
         Reservation reservation = Reservation.builder()
                 .sessionId(sessionId)

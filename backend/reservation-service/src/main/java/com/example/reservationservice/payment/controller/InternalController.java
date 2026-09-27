@@ -5,11 +5,13 @@ import com.example.reservationservice.common.dto.ApiResponse;
 import com.example.reservationservice.payment.dto.PaymentSummaryResponse;
 import com.example.reservationservice.payment.service.PaymentService;
 import com.example.reservationservice.reservation.dto.AttendeeCheckinStatsResponse;
+import com.example.reservationservice.reservation.dto.SessionStatusSummaryResponse;
 import com.example.reservationservice.reservation.service.ReservationService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -61,5 +63,22 @@ public class InternalController {
         AttendeeCheckinStatsResponse result = reservationService.getAttendeeCheckinStats(sessionIds);
         return ResponseEntity.ok(
                 ApiResponse.success("체크인 집계 조회 완료", result, traceIdProvider.resolve(httpRequest)));
+    }
+
+    /**
+     * 세션 신청 상태(HOLD/QUEUED/CONFIRMED/CANCELLED)·체크인 건수 집계 조회.
+     * Conference-Service가 주최자 운영 현황(Story 16) 조회 시 호출한다.
+     * 서비스 간 호출에는 사용자 토큰이 없어서 인증이 필요한 /api 경로 대신 이 내부 경로를 쓴다.
+     *
+     * @param sessionId 집계할 세션 ID
+     * @return 상태별 건수와 체크인 완료 건수
+     */
+    @GetMapping("/{sessionId}/status-summary")
+    public ResponseEntity<ApiResponse<SessionStatusSummaryResponse>> getStatusSummary(
+            @PathVariable UUID sessionId,
+            HttpServletRequest httpRequest) {
+        SessionStatusSummaryResponse result = reservationService.getStatusSummary(sessionId);
+        return ResponseEntity.ok(
+                ApiResponse.success("세션 상태 집계 조회 완료", result, traceIdProvider.resolve(httpRequest)));
     }
 }

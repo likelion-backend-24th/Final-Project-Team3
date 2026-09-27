@@ -23,7 +23,8 @@ public class ReservationServiceClient {
     public SessionStatusSummaryResponse getStatusSummary(UUID sessionId) {
         try {
             ApiResponseEnvelope<SessionStatusSummaryResponse> response = restClient.get()
-                    .uri("/api/reservations/sessions/{sessionId}/status-summary", sessionId)
+                    // 서비스 간 호출엔 사용자 토큰이 없어서 인증이 필요한 /api 경로가 아니라 내부 경로를 쓴다
+                    .uri("/internal/sessions/{sessionId}/status-summary", sessionId)
                     .retrieve()
                     .body(new ParameterizedTypeReference<>() {});
 
