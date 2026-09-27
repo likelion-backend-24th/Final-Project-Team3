@@ -8,6 +8,8 @@ import org.springframework.web.client.RestClientException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Component
 public class AttendeeSummaryLlmClient {
@@ -61,11 +63,28 @@ public class AttendeeSummaryLlmClient {
         }
     }
 
+    // Gemini는 답변을 여러 part로 나눠 보낼 수 있어서 첫 part만 읽으면 문장이 중간에 잘린 채 저장됐다
+    // ("이번 컨"처럼) -> 추론(thought) part를 뺀 텍스트 part를 전부 이어 붙인다.
+    // 정상 종료(STOP)가 아니거나(토큰 한도·안전 필터 등) 내용이 비면 잘린 문장을 저장하지 않도록 실패로 본다.
     private String extractText(GeminiResponse response) {
         if (response == null || response.candidates() == null || response.candidates().isEmpty()) {
             throw new AttendeeSummaryLlmException("Gemini 응답에 candidates가 없습니다", null);
         }
-        return response.candidates().get(0).content().parts().get(0).text();
+        Candidate candidate = response.candidates().get(0);
+        if (candidate.finishReason() != null && !"STOP".equals(candidate.finishReason())) {
+            throw new AttendeeSummaryLlmException("Gemini 응답이 정상 종료되지 않았습니다: finishReason=" + candidate.finishReason(), null);
+        }
+        List<ResponsePart> parts = candidate.content() == null ? null : candidate.content().parts();
+        String text = parts == null ? "" : parts.stream()
+                .filter(part -> !Boolean.TRUE.equals(part.thought()))
+                .map(ResponsePart::text)
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining())
+                .trim();
+        if (text.isEmpty()) {
+            throw new AttendeeSummaryLlmException("Gemini 응답에 요약 텍스트가 없습니다", null);
+        }
+        return text;
     }
 
     private String buildPrompt(Map<String, Long> ageGroupDistribution,
@@ -91,5 +110,7 @@ public class AttendeeSummaryLlmClient {
     private record Part(String text) {}
 
     private record GeminiResponse(List<Candidate> candidates) {}
-    private record Candidate(Content content) {}
+    private record Candidate(ResponseContent content, String finishReason) {}
+    private record ResponseContent(List<ResponsePart> parts) {}
+    private record ResponsePart(String text, Boolean thought) {}
 }

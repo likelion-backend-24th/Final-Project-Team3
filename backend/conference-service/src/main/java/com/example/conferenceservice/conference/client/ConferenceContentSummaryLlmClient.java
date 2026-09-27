@@ -12,6 +12,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 // AttendeeSummaryLlmClient(참석자 통계 - 텍스트 전용)와 별개 클라이언트다: 이 클라이언트는 소개글 텍스트에
 // 이미지(대표 배너 + 소개글 본문 이미지, 최대 2장)를 함께 실어 보내는 멀티모달 요청을 다룬다.
@@ -35,7 +37,9 @@ public class ConferenceContentSummaryLlmClient {
                 .connectTimeout(Duration.ofSeconds(2))
                 .build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(Duration.ofSeconds(5));
+        // 이미지 2장을 함께 보내는 멀티모달 요청은 5초를 넘기는 경우가 있어서(실측 2~5초+) 요약이 비어버렸다 -
+        // 등록·수정 요청 안에서 동기로 기다리는 호출이라 너무 길게 잡진 않고 15초로 둔다.
+        requestFactory.setReadTimeout(Duration.ofSeconds(15));
 
         this.restClient = builder
                 .baseUrl(baseUrl)
@@ -92,11 +96,27 @@ public class ConferenceContentSummaryLlmClient {
         return sb.toString();
     }
 
+    // AttendeeSummaryLlmClient와 같은 이유로 텍스트 part를 전부 이어 붙이고, 정상 종료(STOP)가 아니거나
+    // 비어 있으면 실패로 본다 - 잘린 요약이 참가자 화면에 그대로 노출되는 걸 막는다(실패 시 이전 요약 유지).
     private String extractText(GeminiResponse response) {
         if (response == null || response.candidates() == null || response.candidates().isEmpty()) {
             throw new ConferenceContentSummaryLlmException("Gemini 응답에 candidates가 없습니다", null);
         }
-        return response.candidates().get(0).content().parts().get(0).text();
+        Candidate candidate = response.candidates().get(0);
+        if (candidate.finishReason() != null && !"STOP".equals(candidate.finishReason())) {
+            throw new ConferenceContentSummaryLlmException("Gemini 응답이 정상 종료되지 않았습니다: finishReason=" + candidate.finishReason(), null);
+        }
+        List<ResponsePart> parts = candidate.content() == null ? null : candidate.content().parts();
+        String text = parts == null ? "" : parts.stream()
+                .filter(part -> !Boolean.TRUE.equals(part.thought()))
+                .map(ResponsePart::text)
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining())
+                .trim();
+        if (text.isEmpty()) {
+            throw new ConferenceContentSummaryLlmException("Gemini 응답에 요약 텍스트가 없습니다", null);
+        }
+        return text;
     }
 
     public record ImagePart(byte[] bytes, String mimeType) {
@@ -113,5 +133,7 @@ public class ConferenceContentSummaryLlmClient {
     private record InlineData(String mimeType, String data) {}
 
     private record GeminiResponse(List<Candidate> candidates) {}
-    private record Candidate(Content content) {}
+    private record Candidate(ResponseContent content, String finishReason) {}
+    private record ResponseContent(List<ResponsePart> parts) {}
+    private record ResponsePart(String text, Boolean thought) {}
 }
