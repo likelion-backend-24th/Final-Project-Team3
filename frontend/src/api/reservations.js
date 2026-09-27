@@ -41,6 +41,12 @@ export function cancelTicket(reservationId, ticketId) {
   return apiFetch(`/reservations/${reservationId}/tickets/${ticketId}/cancel`, { method: 'POST' })
 }
 
+// 후기 작성(Story 20). 체크인된 티켓이 1장이라도 있는 본인 예약만 가능하고, 예약당 1개라
+// 다시 보내면 기존 후기를 덮어쓴다. 내 후기 조회 API는 없어서 저장 전 내용을 불러올 수는 없다.
+export function writeReview(reservationId, content) {
+  return apiFetch(`/reservations/${reservationId}/reviews`, { method: 'POST', body: { content } })
+}
+
 // QR 코드 문자열(발급 시 대시 없는 UUID)로 입장 처리. 응답은 {code, used, usedAt}뿐 -
 // 참가자 이름/세션 정보는 이 엔드포인트가 안 줘서 프론트에서 못 붙인다.
 export function scanQrTicket(code) {

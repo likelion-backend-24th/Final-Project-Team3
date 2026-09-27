@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { Ticket, CheckCircle2, User, Briefcase, Link2 } from 'lucide-react'
+import { Ticket, CheckCircle2, User, Briefcase, Link2, MessageSquareText } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getMyReservations, getQueuePosition, getQrTickets, cancelReservation, cancelTicket } from '../api/reservations'
+import { getMyReservations, getQueuePosition, getQrTickets, cancelReservation, cancelTicket, writeReview } from '../api/reservations'
 import { listConferences, getConference } from '../api/conferences'
 import { getProfile, updateProfile, linkSocialAccount, getLinkedSocialAccounts, withdrawMember } from '../api/auth'
 import { ApiError } from '../api/client'
@@ -42,6 +42,9 @@ const STATUS_STYLE = {
   WAITING: { label: '대기 중', className: 'text-warning bg-warning/10' },
 }
 
+// 서버(content는 TEXT)엔 길이 제한이 없지만, AI 요약 입력이 한 사람 후기로 쏠리지 않게 화면에서 막아둔다.
+const REVIEW_MAX_LENGTH = 1000
+
 export default function MyPage() {
   const { claims, logout } = useAuth()
   const navigate = useNavigate()
@@ -55,6 +58,12 @@ export default function MyPage() {
   const [notice, setNotice] = useState('')
   const [cancellingId, setCancellingId] = useState(null)
   const [cancellingTicketId, setCancellingTicketId] = useState(null)
+  // 후기 작성 패널(Story 20). 내 후기 조회 API가 없어서 저장한 내용은 이 화면에 있는 동안만 기억한다.
+  const [reviewOpenId, setReviewOpenId] = useState(null)
+  const [reviewDrafts, setReviewDrafts] = useState({})
+  const [reviewSavedIds, setReviewSavedIds] = useState({})
+  const [reviewSavingId, setReviewSavingId] = useState(null)
+  const [reviewError, setReviewError] = useState('')
 
   // 프로필(연령대·직무) 수정 — ageGroup/job은 저장된 값(뱃지 표시용),
   // draftAgeGroup/draftJob은 "프로필 수정" 모드에서만 쓰는 편집 중 값
@@ -147,19 +156,53 @@ export default function MyPage() {
     }
   }, [claims?.memberId])
 
+  const loadTickets = async (reservationId) => {
+    if (tickets[reservationId]) return
+    try {
+      const res = await getQrTickets(reservationId)
+      setTickets((t) => ({ ...t, [reservationId]: res.data ?? [] }))
+    } catch {
+      // 조회 실패해도 패널은 열어두고 QR 자리만 비워둔다
+    }
+  }
+
   const toggleTicket = async (reservationId) => {
     if (expandedId === reservationId) {
       setExpandedId(null)
       return
     }
     setExpandedId(reservationId)
-    if (!tickets[reservationId]) {
-      try {
-        const res = await getQrTickets(reservationId)
-        setTickets((t) => ({ ...t, [reservationId]: res.data ?? [] }))
-      } catch {
-        // 조회 실패해도 패널은 열어두고 QR 자리만 비워둔다
-      }
+    await loadTickets(reservationId)
+  }
+
+  // 후기는 체크인된 티켓이 있는 예약만 쓸 수 있다 — 목록 응답엔 체크인 여부가 없어서 티켓을 불러와 판단한다.
+  const toggleReview = async (reservationId) => {
+    setReviewError('')
+    if (reviewOpenId === reservationId) {
+      setReviewOpenId(null)
+      return
+    }
+    setReviewOpenId(reservationId)
+    await loadTickets(reservationId)
+  }
+
+  const handleSubmitReview = async (reservationId) => {
+    const content = (reviewDrafts[reservationId] ?? '').trim()
+    if (!content) {
+      setReviewError('후기 내용을 입력해주세요.')
+      return
+    }
+    setReviewError('')
+    setReviewSavingId(reservationId)
+    try {
+      await writeReview(reservationId, content)
+      setReviewSavedIds((s) => ({ ...s, [reservationId]: true }))
+      setReviewOpenId(null)
+      setNotice('후기가 저장됐어요. 소중한 후기 감사합니다!')
+    } catch (err) {
+      setReviewError(err instanceof ApiError ? err.message : '후기 저장에 실패했습니다.')
+    } finally {
+      setReviewSavingId(null)
     }
   }
 
@@ -606,6 +649,11 @@ export default function MyPage() {
           const amount = session?.price ? session.price * r.headcount : 0
           const ticketList = tickets[r.reservationId]
           const isOpen = expandedId === r.reservationId
+          const isReviewOpen = reviewOpenId === r.reservationId
+          // 체크인은 세션 시작 이후에만 가능하니, 시작 전 예약엔 후기 버튼 자체를 보여주지 않는다.
+          const sessionStarted = session?.sessionStartAt && new Date(session.sessionStartAt) <= new Date()
+          const canReview = r.status === 'CONFIRMED' && sessionStarted
+          const hasCheckedIn = ticketList?.some((t) => t.used)
           const status = STATUS_STYLE[categoryOf(r.status)]
 
           return (
@@ -661,6 +709,12 @@ export default function MyPage() {
                       <Button variant="secondary">결제하러 가기</Button>
                     </Link>
                   )}
+                  {canReview && (
+                    <Button variant="secondary" className="inline-flex items-center gap-1.5" onClick={() => toggleReview(r.reservationId)}>
+                      <MessageSquareText size={15} />
+                      {isReviewOpen ? '닫기' : reviewSavedIds[r.reservationId] ? '후기 수정' : '후기 작성'}
+                    </Button>
+                  )}
                   {r.status !== 'CANCELLED' && (
                     <Button variant="ghost" loading={cancellingId === r.reservationId} onClick={() => handleCancel(r)}>
                       취소·환불
@@ -713,6 +767,48 @@ export default function MyPage() {
                       )
                     })}
                   </div>
+                </div>
+              )}
+
+              {isReviewOpen && (
+                <div className="bg-bg border-t border-border p-5">
+                  <p className="text-text font-medium mb-1">세션 후기</p>
+                  {!ticketList && <div className="w-full h-24 rounded-lg bg-surface2 animate-pulse" />}
+                  {ticketList && !hasCheckedIn && (
+                    <p className="text-sm text-text-muted">
+                      QR 입장(체크인)을 한 예약만 후기를 남길 수 있어요. 현장에서 체크인한 뒤 다시 와주세요.
+                    </p>
+                  )}
+                  {ticketList && hasCheckedIn && (
+                    <>
+                      <p className="text-xs text-text-faint mb-3">
+                        {reviewSavedIds[r.reservationId]
+                          ? '이미 후기를 남겼어요. 다시 저장하면 기존 후기를 새 내용으로 바꿔요.'
+                          : '세션은 어땠나요? 남겨주신 후기는 주최자에게 전달되고, 참석자 요약에도 반영돼요.'}
+                      </p>
+                      <label htmlFor={`review-${r.reservationId}`} className="sr-only">후기 내용</label>
+                      <textarea
+                        id={`review-${r.reservationId}`}
+                        className="w-full bg-surface border border-border rounded-lg px-4 py-3 text-sm text-text placeholder:text-text-faint focus:outline-none focus:border-primary"
+                        rows={4}
+                        maxLength={REVIEW_MAX_LENGTH}
+                        placeholder="좋았던 점, 아쉬웠던 점을 자유롭게 적어주세요."
+                        value={reviewDrafts[r.reservationId] ?? ''}
+                        onChange={(e) => setReviewDrafts((d) => ({ ...d, [r.reservationId]: e.target.value }))}
+                      />
+                      <div className="flex items-center justify-between gap-3 mt-2">
+                        <p className="text-xs text-danger min-h-4">{reviewError}</p>
+                        <span className="text-xs text-text-faint shrink-0">
+                          {(reviewDrafts[r.reservationId] ?? '').length} / {REVIEW_MAX_LENGTH}
+                        </span>
+                      </div>
+                      <div className="flex justify-end mt-3">
+                        <Button loading={reviewSavingId === r.reservationId} onClick={() => handleSubmitReview(r.reservationId)}>
+                          후기 저장
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
