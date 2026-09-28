@@ -5,6 +5,7 @@ import com.example.reservationservice.reservation.entity.Reservation;
 import com.example.reservationservice.reservation.entity.ReservationStatus;
 import com.example.reservationservice.reservation.entity.WaitingQueue;
 import com.example.reservationservice.reservation.repository.ReservationRepository;
+import com.example.reservationservice.reservation.repository.QueuePositionCounterRepository;
 import com.example.reservationservice.reservation.repository.SessionCapacityLockRepository;
 import com.example.reservationservice.reservation.repository.WaitingQueueRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class QueuePromotionService {
     private final ReservationRepository reservationRepository;
     private final SessionCapacityLockRepository sessionCapacityLockRepository;
     private final WaitingQueueRepository waitingQueueRepository;
+    private final QueuePositionCounterRepository queuePositionCounterRepository;
     private final ConferenceServiceClient conferenceServiceClient;
 
     @Transactional
@@ -41,9 +43,12 @@ public class QueuePromotionService {
         return sessionIds;
     }
 
+    // 이미 대기 상태가 아닌(취소 등) 예약의 대기열 항목 정리 — 다른 이탈과 똑같이 뒷사람 순번과 다음 순번을 당긴다
     @Transactional
-    public void deleteQueueEntry(UUID reservationId) {
-        waitingQueueRepository.deleteByReservationId(reservationId);
+    public void deleteQueueEntry(WaitingQueue entry) {
+        queuePositionCounterRepository.decrement(entry.getSessionId());
+        waitingQueueRepository.deleteByReservationId(entry.getReservationId());
+        waitingQueueRepository.decrementPositionAfter(entry.getSessionId(), entry.getPosition());
     }
 
     @Transactional
@@ -56,6 +61,7 @@ public class QueuePromotionService {
 
         Reservation queuedReservation = reservationRepository.findById(reservationId).orElseThrow();
         queuedReservation.markAsHold();
+        queuePositionCounterRepository.decrement(sessionId);
         waitingQueueRepository.deleteByReservationId(reservationId);
         waitingQueueRepository.decrementPositionAfter(sessionId, position);
         return true;
@@ -77,7 +83,7 @@ public class QueuePromotionService {
             Reservation queuedReservation = reservationRepository.findById(front.getReservationId())
                     .orElse(null);
             if (queuedReservation == null || queuedReservation.getStatus() != ReservationStatus.QUEUED) {
-                deleteQueueEntry(front.getReservationId());
+                deleteQueueEntry(front);
                 continue;
             }
 

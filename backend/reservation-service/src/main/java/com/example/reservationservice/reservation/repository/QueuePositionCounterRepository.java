@@ -27,6 +27,16 @@ public interface QueuePositionCounterRepository extends JpaRepository<QueuePosit
     @Query("UPDATE QueuePositionCounter c SET c.nextPosition = c.nextPosition + 1 WHERE c.sessionId = :sessionId")
     void increment(@Param("sessionId") UUID sessionId);
 
+    // 대기열에서 누가 빠지면(취소·승격·결제) 뒷사람 순번을 한 칸씩 당기므로, 다음에 줄 순번도 한 칸 당긴다.
+    // 안 그러면 1번이 빠진 뒤 새로 들어온 사람이 앞에 아무도 없는데 2번을 받는다.
+    // 빠지는 쪽 트랜잭션에서 순번 당기기보다 먼저 호출해 카운터 행을 잠가야, 그 사이 끼어든 등록이
+    // 당겨지기 전 값을 받아 순번이 겹치는 일이 없다.
+    @Modifying
+    @Transactional
+    @Query("UPDATE QueuePositionCounter c SET c.nextPosition = c.nextPosition - 1 " +
+            "WHERE c.sessionId = :sessionId AND c.nextPosition > 1")
+    void decrement(@Param("sessionId") UUID sessionId);
+
     @Query("SELECT c.nextPosition - 1 FROM QueuePositionCounter c WHERE c.sessionId = :sessionId")
     int getLastAssignedPosition(@Param("sessionId") UUID sessionId);
 }

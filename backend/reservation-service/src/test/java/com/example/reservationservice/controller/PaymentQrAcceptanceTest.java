@@ -626,6 +626,58 @@ public class PaymentQrAcceptanceTest {
                 .andExpect(jsonPath("$.data.estimatedWaitMinutes").value(nullValue()));
     }
 
+    @Test
+    @DisplayName("대기 1번이 취소하고 다시 대기를 걸면 앞에 아무도 없으니 다시 1번을 받는다")
+    void 대기_취소_후_재등록하면_다시_1번이다() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID member1 = UUID.randomUUID();
+        UUID member2 = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
+
+        holdAndGetReservationId(sessionId, member1, 1);   // 마지막 좌석 결제 대기
+        String firstQueuedId = holdAndGetReservationId(sessionId, member2, 1);
+
+        mockMvc.perform(post("/api/reservations/{id}/cancel", firstQueuedId)
+                        .with(asUser(member2)))
+                .andExpect(status().isOk());
+
+        String requeuedId = holdAndGetReservationId(sessionId, member2, 1);
+
+        mockMvc.perform(get("/api/reservations/{id}/queue-position", requeuedId)
+                        .with(asUser(member2)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.position").value(1));
+    }
+
+    @Test
+    @DisplayName("앞사람이 승격돼 대기열에서 빠진 뒤 새로 들어온 사람은 남은 대기자 바로 다음 순번을 받는다")
+    void 승격_후_새로_들어오면_순번이_이어진다() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID member1 = UUID.randomUUID();
+        UUID member2 = UUID.randomUUID();
+        UUID member3 = UUID.randomUUID();
+        UUID member4 = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
+
+        String holdId = holdAndGetReservationId(sessionId, member1, 1);
+        holdAndGetReservationId(sessionId, member2, 1);                 // 대기 1번
+        String thirdId = holdAndGetReservationId(sessionId, member3, 1); // 대기 2번
+
+        // 결제 대기 좌석이 취소되면 대기 1번(member2)이 승격되고, member3이 1번이 된다
+        mockMvc.perform(post("/api/reservations/{id}/cancel", holdId)
+                        .with(asUser(member1)))
+                .andExpect(status().isOk());
+
+        String fourthId = holdAndGetReservationId(sessionId, member4, 1);
+
+        mockMvc.perform(get("/api/reservations/{id}/queue-position", thirdId)
+                        .with(asUser(member3)))
+                .andExpect(jsonPath("$.data.position").value(1));
+        mockMvc.perform(get("/api/reservations/{id}/queue-position", fourthId)
+                        .with(asUser(member4)))
+                .andExpect(jsonPath("$.data.position").value(2));
+    }
+
     private String holdAndGetReservationId(UUID sessionId, UUID memberId, int headcount) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/reservations/hold")
                         .with(asUser(memberId))

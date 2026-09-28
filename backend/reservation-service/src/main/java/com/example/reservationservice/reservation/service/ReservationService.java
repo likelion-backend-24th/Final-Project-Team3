@@ -329,6 +329,7 @@ public class ReservationService {
         paymentService.recordPayment(reservationId, paymentMethod, expectedAmount);
 
         if (wasQueued && leftPosition != null) {
+            queuePositionCounterRepository.decrement(reservation.getSessionId());
             waitingQueueRepository.deleteByReservationId(reservationId);
             waitingQueueRepository.decrementPositionAfter(reservation.getSessionId(), leftPosition);
         }
@@ -425,6 +426,7 @@ public class ReservationService {
             int leftPosition = waitingQueueRepository.findByReservationId(reservationId)
                     .map(WaitingQueue::getPosition)
                     .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_IN_QUEUE));
+            queuePositionCounterRepository.decrement(reservation.getSessionId());
             waitingQueueRepository.deleteByReservationId(reservationId);
             waitingQueueRepository.decrementPositionAfter(reservation.getSessionId(), leftPosition);
         }
