@@ -176,22 +176,53 @@ public class ReservationService {
         }
 
         int position = queueEntry.getPosition();
-        int estimatedWaitMinutes = calculateEstimatedWaitMinutes(queueEntry.getSessionId(), position);
+        Integer estimatedWaitMinutes = calculateEstimatedWaitMinutes(queueEntry.getSessionId(), position);
 
         return new QueuePositionResponse(position, estimatedWaitMinutes);
     }
 
-    private int calculateEstimatedWaitMinutes(UUID sessionId, int position) {
+    // 대기자에게 자리가 나는 건 (1) 결제 대기(HOLD)가 결제 없이 만료되거나 (2) 누가 취소할 때뿐이다.
+    // 결제를 마친 좌석은 취소 전까지 계속 차 있으므로, 예측할 수 있는 건 (1)뿐이다:
+    // 내 순번까지 필요한 좌석 수만큼 HOLD를 만료가 빠른 순으로 쌓았을 때, 마지막으로 필요한 HOLD의 만료 시각이
+    // "늦어도 이때까지는 자리가 날지 결과가 나오는" 시점이다(만료 처리 스케줄러 주기 1분 포함).
+    // HOLD만으로 좌석이 모자라면(= 대부분 결제 완료) 취소를 기다려야 해서 예측할 수 없으므로 null을 돌려준다.
+    private Integer calculateEstimatedWaitMinutes(UUID sessionId, int position) {
+        int seatsNeeded = waitingQueueRepository.findBySessionIdAndPositionLessThanEqualOrderByPositionAsc(sessionId, position)
+                .stream()
+                .map(entry -> reservationRepository.findById(entry.getReservationId())
+                        .map(Reservation::getHeadcount)
+                        .orElse(0))
+                .mapToInt(Integer::intValue)
+                .sum();
+
+        int freeSeats;
         try {
-            UUID conferenceId = conferenceServiceClient.getConferenceId(sessionId);
-            List<UUID> sessionIds = conferenceServiceClient.getSessionIdsByConference(conferenceId);
-            Double avgSeconds = paymentRepository.findAveragePaymentSecondsBySessionIds(sessionIds);
-            double avgMinutesPerPerson = (avgSeconds == null) ? 5.0 : avgSeconds / 60.0;
-            return (int) Math.ceil(position * avgMinutesPerPerson);
+            int capacity = conferenceServiceClient.getSessionCapacity(sessionId);
+            int active = sessionCapacityLockRepository.findById(sessionId)
+                    .map(SessionCapacityLock::getCurrentActive)
+                    .orElse(0);
+            freeSeats = Math.max(capacity - active, 0);
         } catch (ConferenceServiceUnavailableException e) {
-            return (int) Math.ceil(position * 5.0);
+            return null;
         }
+
+        int releasable = freeSeats;
+        if (releasable >= seatsNeeded) {
+            return HOLD_EXPIRATION_CHECK_MINUTES;   // 빈자리가 이미 있다 — 다음 승격 처리 때 바로 올라간다
+        }
+        LocalDateTime now = LocalDateTime.now();
+        for (Reservation hold : reservationRepository.findBySessionIdAndStatusOrderByExpiresAtAsc(sessionId, ReservationStatus.HOLD)) {
+            releasable += hold.getHeadcount();
+            if (releasable >= seatsNeeded) {
+                long secondsLeft = Math.max(ChronoUnit.SECONDS.between(now, hold.getExpiresAt()), 0);
+                return (int) Math.ceil(secondsLeft / 60.0) + HOLD_EXPIRATION_CHECK_MINUTES;
+            }
+        }
+        return null;
     }
+
+    // HoldExpirationScheduler가 만료된 HOLD를 정리하고 대기열을 승격하는 주기(1분)
+    private static final int HOLD_EXPIRATION_CHECK_MINUTES = 1;
 
     // session_capacity_lock.tryIncrease와 같은 패턴: 카운터 행에 원자적 UPDATE로 순번을 배정하므로
     // findMax+1 방식과 달리 경쟁 상태·재시도가 필요 없다(대량 동시 등록 시 재시도 소진으로 인한 실패도 없다).

@@ -277,7 +277,7 @@ export default function MyPage() {
   }
 
   // Kakao는 페이지 전체가 리다이렉트되므로, 결과는 이 화면이 아니라 KakaoCallback에서 처리하고
-  // 성공하면 /mypage로 돌아온다(location.state.kakaoLinked로 확인 가능).
+  // 성공하면 /my로 돌아온다(location.state.kakaoLinked로 확인 가능).
   const handleKakaoLinkClick = () => {
     kakaoAuthorize({ intent: 'link' })
   }

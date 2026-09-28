@@ -33,6 +33,7 @@ import java.util.UUID;
 
 import static java.util.UUID.randomUUID;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -539,64 +540,100 @@ public class PaymentQrAcceptanceTest {
     }
 
     @Test
-    @DisplayName("과거 결제 데이터가 있으면 평균 결제 시간을 기반으로 예상 대기 시간을 계산한다")
-    void 예상_대기_시간이_평균_결제_시간_기반으로_계산된다() throws Exception {
-        UUID pastSessionId = UUID.randomUUID();
-        UUID pastMemberId = UUID.randomUUID();
-        given(conferenceServiceClient.getSessionCapacity(pastSessionId)).willReturn(10);
-        given(conferenceServiceClient.getSessionPrice(pastSessionId)).willReturn(0);
-
-        // 과거에 결제 완료된 예약 하나 생성 (createdAt을 10분 전으로 조작)
-        Reservation pastReservation = Reservation.builder()
-                .sessionId(pastSessionId)
-                .memberId(pastMemberId)
-                .headcount(1)
-                .build();
-        reservationRepository.save(pastReservation);
-        ReflectionTestUtils.setField(pastReservation, "createdAt", LocalDateTime.now().minusMinutes(10));
-        ReflectionTestUtils.setField(pastReservation, "holdStartedAt", LocalDateTime.now().minusMinutes(10));
-        ReflectionTestUtils.setField(pastReservation, "status", ReservationStatus.CONFIRMED);
-        reservationRepository.saveAndFlush(pastReservation);
-
-        Payment payment = Payment.builder()
-                .reservationId(pastReservation.getId())
-                .amount(0)
-                .paymentMethod("FREE")
-                .build();
-        paymentRepository.save(payment);
-        ReflectionTestUtils.setField(payment, "paidAt", LocalDateTime.now());
-        paymentRepository.saveAndFlush(payment);
-
-        // 이제 새로운 세션에서 대기열 2번째로 등록
+    @DisplayName("결제 대기 중인 좌석이 있으면 그 좌석의 만료 시각까지 남은 시간(+승격 주기 1분)을 예상 대기 시간으로 준다")
+    void 결제_대기_좌석이_있으면_만료까지_남은_시간을_준다() throws Exception {
         UUID sessionId = UUID.randomUUID();
         UUID member1 = UUID.randomUUID();
         UUID member2 = UUID.randomUUID();
         given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
 
-        // 같은 컨퍼런스에 pastSessionId와 sessionId가 함께 속해 있다고 가정하고 Mock 설정
-        UUID conferenceId = UUID.randomUUID();
-        given(conferenceServiceClient.getConferenceId(sessionId)).willReturn(conferenceId);
-        given(conferenceServiceClient.getSessionIdsByConference(conferenceId))
-                .willReturn(List.of(sessionId, pastSessionId));
-
+        // member1이 마지막 좌석을 잡고 결제 대기(HOLD, 10분 뒤 만료) 중
         mockMvc.perform(post("/api/reservations/hold")
                 .with(asUser(member1))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createHoldJson(sessionId, 1)));
 
-        MvcResult queuedResult = mockMvc.perform(post("/api/reservations/hold")
-                        .with(asUser(member2))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(createHoldJson(sessionId, 1)))
-                .andReturn();
-        String reservationId = JsonPath.read(queuedResult.getResponse().getContentAsString(), "$.data.reservationId");
+        String queuedId = holdAndGetReservationId(sessionId, member2, 1);
 
-        mockMvc.perform(get("/api/reservations/{id}/queue-position", reservationId)
+        mockMvc.perform(get("/api/reservations/{id}/queue-position", queuedId)
                         .with(asUser(member2)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.position").value(1))
-                .andExpect(jsonPath("$.data.estimatedWaitMinutes").value(10));
-        }
+                .andExpect(jsonPath("$.data.estimatedWaitMinutes").value(11));
+    }
+
+    @Test
+    @DisplayName("대기 순번이 뒤일수록 앞사람 좌석까지 채울 만큼의 결제 대기 좌석이 만료되는 시각을 기준으로 한다")
+    void 뒤_순번은_더_늦게_만료되는_결제_대기_좌석을_기준으로_한다() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID member1 = UUID.randomUUID();
+        UUID member2 = UUID.randomUUID();
+        UUID member3 = UUID.randomUUID();
+        UUID member4 = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(2);
+
+        mockMvc.perform(post("/api/reservations/hold")
+                .with(asUser(member1))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createHoldJson(sessionId, 1)));
+        String soonExpiringHoldId = holdAndGetReservationId(sessionId, member2, 1);
+        // member2의 결제 대기는 3분 뒤 만료되도록 당겨둔다 (member1은 10분 뒤)
+        Reservation soonExpiring = reservationRepository.findById(UUID.fromString(soonExpiringHoldId)).orElseThrow();
+        ReflectionTestUtils.setField(soonExpiring, "expiresAt", LocalDateTime.now().plusMinutes(3));
+        reservationRepository.saveAndFlush(soonExpiring);
+
+        String firstQueuedId = holdAndGetReservationId(sessionId, member3, 1);
+        String secondQueuedId = holdAndGetReservationId(sessionId, member4, 1);
+
+        // 대기 1번은 먼저 만료되는 좌석(3분 뒤) 하나면 된다
+        mockMvc.perform(get("/api/reservations/{id}/queue-position", firstQueuedId)
+                        .with(asUser(member3)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.estimatedWaitMinutes").value(4));
+
+        // 대기 2번은 좌석이 2개 필요해서 두 번째 좌석(10분 뒤)까지 기다려야 한다
+        mockMvc.perform(get("/api/reservations/{id}/queue-position", secondQueuedId)
+                        .with(asUser(member4)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.position").value(2))
+                .andExpect(jsonPath("$.data.estimatedWaitMinutes").value(11));
+    }
+
+    @Test
+    @DisplayName("좌석이 모두 결제 완료됐으면 취소 말고는 자리가 나지 않으므로 예상 대기 시간을 주지 않는다")
+    void 모두_결제_완료면_예상_대기_시간이_없다() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID member1 = UUID.randomUUID();
+        UUID member2 = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
+        given(conferenceServiceClient.getSessionPrice(sessionId)).willReturn(0);
+
+        String paidId = holdAndGetReservationId(sessionId, member1, 1);
+        mockMvc.perform(post("/api/reservations/{id}/payment", paidId)
+                        .with(asUser(member1))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                        {"paymentId": "test-payment-id"}
+                        """))
+                .andExpect(status().isOk());
+
+        String queuedId = holdAndGetReservationId(sessionId, member2, 1);
+
+        mockMvc.perform(get("/api/reservations/{id}/queue-position", queuedId)
+                        .with(asUser(member2)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.position").value(1))
+                .andExpect(jsonPath("$.data.estimatedWaitMinutes").value(nullValue()));
+    }
+
+    private String holdAndGetReservationId(UUID sessionId, UUID memberId, int headcount) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(memberId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createHoldJson(sessionId, headcount)))
+                .andReturn();
+        return JsonPath.read(result.getResponse().getContentAsString(), "$.data.reservationId");
+    }
 
     private String createHoldJson(UUID sessionId, int headCount) {
         StringBuilder attendees = new StringBuilder();

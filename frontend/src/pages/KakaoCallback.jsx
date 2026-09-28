@@ -52,7 +52,7 @@ export default function KakaoCallback() {
 
     if (state.intent === 'link') {
       linkSocialAccount('kakao', code, redirectUri)
-        .then(() => navigate('/mypage', { replace: true, state: { kakaoLinked: true } }))
+        .then(() => navigate('/my', { replace: true, state: { kakaoLinked: true } }))
         .catch((err) => {
           setStatus('error')
           setError(err instanceof ApiError ? err.message : '계정 연동에 실패했습니다.')

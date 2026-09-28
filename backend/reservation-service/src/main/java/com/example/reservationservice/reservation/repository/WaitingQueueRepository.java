@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,6 +21,9 @@ public interface WaitingQueueRepository extends JpaRepository<WaitingQueue, UUID
 
     // 세션의 대기열 맨 앞(가장 낮은 순번) 조회 (좌석 반납 시 승격 대상 판단용)
     Optional<WaitingQueue> findFirstBySessionIdOrderByPositionAsc(UUID sessionId);
+
+    // 특정 순번까지(본인 포함) 대기열 항목 조회 (예상 대기 시간 계산 시 앞사람들이 필요로 하는 좌석 수 합산용)
+    List<WaitingQueue> findBySessionIdAndPositionLessThanEqualOrderByPositionAsc(UUID sessionId, Integer position);
 
     // 대기열에서 이탈(결제 완료 등)한 예약의 항목 삭제
     @Modifying

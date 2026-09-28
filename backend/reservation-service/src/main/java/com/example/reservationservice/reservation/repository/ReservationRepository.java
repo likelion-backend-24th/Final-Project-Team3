@@ -27,6 +27,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     int confirmIfNotAlready(@Param("id") UUID id);
 
     List<Reservation> findByStatusAndExpiresAtBefore(ReservationStatus status, LocalDateTime time);
+    // 세션의 결제 대기(HOLD) 예약을 만료가 빠른 순서로 조회 (대기자 예상 대기 시간 계산용)
+    List<Reservation> findBySessionIdAndStatusOrderByExpiresAtAsc(UUID sessionId, ReservationStatus status);
     List<Reservation> findByMemberIdOrderByCreatedAtDesc(UUID memberId);
     List<Reservation> findBySessionIdIn(List<UUID> sessionIds);
 
