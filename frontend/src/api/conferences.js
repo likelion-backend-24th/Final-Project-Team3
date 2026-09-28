@@ -2,8 +2,10 @@ import { apiFetch, apiDownload } from './client'
 
 // conference-service: organizerName은 이제 클라이언트가 안 보내도 서버가 JWT(주최자 조직명)로
 // 채운다. tags는 최소 1개 필수(@NotEmpty), image는 선택.
+// size를 안 주면 서버 기본 페이지 크기(10개)만 와서, 끝난 컨퍼런스가 앞자리를 차지하면 진행 예정 컨퍼런스가
+// 목록에서 빠진다. 홈은 전체를 받아 화면에서 걸러내므로 넉넉히 받고, 행사 날짜순으로 정렬한다.
 export function listConferences() {
-  return apiFetch('/conferences')
+  return apiFetch('/conferences?size=200&sort=startAt,asc')
 }
 
 // 주최자 본인 소유 컨퍼런스를 상태 무관(PENDING/APPROVED/REJECTED)으로 조회한다.
