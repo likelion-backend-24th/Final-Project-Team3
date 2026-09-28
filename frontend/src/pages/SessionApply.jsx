@@ -5,6 +5,7 @@ import Button from '../components/Button'
 import SelectField from '../components/SelectField'
 import { useAuth } from '../context/AuthContext'
 import { createHold, getCapacityStatus } from '../api/reservations'
+import { getProfile } from '../api/auth'
 import { ApiError } from '../api/client'
 import { AGE_GROUPS, JOBS } from '../utils/profileOptions'
 
@@ -43,6 +44,22 @@ export default function SessionApply() {
   const [capacity, setCapacity] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [prefilled, setPrefilled] = useState(false)
+
+  // 본인 좌석은 마이페이지 프로필(연령대·직무)로 미리 채운다. 이미 고른 값이 있으면 덮어쓰지 않고,
+  // 조회에 실패하거나 프로필이 비어 있으면 지금처럼 직접 고르면 된다.
+  useEffect(() => {
+    getProfile()
+      .then((res) => {
+        const { ageGroup, job } = res.data ?? {}
+        if (!ageGroup && !job) return
+        setAttendees((prev) =>
+          prev.map((a, i) => (i === 0 ? { ageGroup: a.ageGroup || ageGroup || '', job: a.job || job || '' } : a)),
+        )
+        setPrefilled(true)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!sessionId) return
@@ -211,6 +228,9 @@ export default function SessionApply() {
             </div>
           )}
 
+          {prefilled && !isGroup && (
+            <p className="text-xs text-text-faint mt-3">본인 정보는 마이페이지 프로필로 채웠어요. 필요하면 바꿀 수 있어요.</p>
+          )}
           <p className="flex items-center gap-1.5 text-xs text-text-muted mt-3">
             <AlertTriangle size={13} className="text-warning shrink-0" /> 모든 참석자의 연령대·직무를 선택해야 신청할 수 있습니다.
           </p>
