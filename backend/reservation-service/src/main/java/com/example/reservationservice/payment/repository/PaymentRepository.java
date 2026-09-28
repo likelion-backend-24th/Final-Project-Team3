@@ -16,6 +16,8 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     Optional<Payment> findByReservationId(UUID reservationId);
 
+    List<Payment> findByReservationIdIn(List<UUID> reservationIds);
+
     // 정산 상세 목록(Task 18-3): 취소된 건도 포함해서 최신 결제 순으로 보여준다.
     @Query("SELECT p FROM Payment p " +
             "WHERE (:startDate IS NULL OR p.paidAt >= :startDate) " +

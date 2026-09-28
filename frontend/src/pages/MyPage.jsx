@@ -221,10 +221,14 @@ export default function MyPage() {
         ...t,
         [r.reservationId]: (t[r.reservationId] ?? []).filter((x) => x.id !== ticket.id),
       }))
-      setReservations((list) =>
-        list.map((x) => (x.reservationId === r.reservationId ? { ...x, headcount: res.data.remainingHeadcount } : x)),
-      )
       const { refundRate, refundAmount } = res.data
+      setReservations((list) =>
+        list.map((x) =>
+          x.reservationId === r.reservationId
+            ? { ...x, headcount: res.data.remainingHeadcount, refundedAmount: (x.refundedAmount ?? 0) + (refundAmount ?? 0) }
+            : x,
+        ),
+      )
       setNotice(
         refundAmount > 0
           ? `1명 취소됐어요. 환불 ${refundAmount.toLocaleString()}원 (환불율 ${refundRate}%)`
@@ -240,7 +244,7 @@ export default function MyPage() {
   const handleCancel = async (r) => {
     const message = r.status === 'CONFIRMED'
       ? '예약을 취소할까요?\n세션 시작 7일 전까지 100%, 3~6일 전 50% 환불되고, 3일 미만이면 환불되지 않아요.'
-      : '신청을 취소할까요?'
+      : r.status === 'QUEUED' ? '대기를 취소할까요?' : '신청을 취소할까요?'
     if (!window.confirm(message)) return
 
     setError('')
@@ -248,12 +252,20 @@ export default function MyPage() {
     setCancellingId(r.reservationId)
     try {
       const res = await cancelReservation(r.reservationId)
-      setReservations((list) => list.map((x) => (x.reservationId === r.reservationId ? { ...x, status: 'CANCELLED' } : x)))
       const { refundRate, refundAmount } = res.data
+      setReservations((list) =>
+        list.map((x) =>
+          x.reservationId === r.reservationId
+            ? { ...x, status: 'CANCELLED', refundedAmount: x.paidAmount != null ? (x.refundedAmount ?? 0) + (refundAmount ?? 0) : x.refundedAmount }
+            : x,
+        ),
+      )
       setNotice(
-        refundAmount != null
-          ? `취소됐어요. 환불 ${refundAmount.toLocaleString()}원 (환불율 ${refundRate}%)`
-          : '취소됐어요.',
+        r.status === 'QUEUED'
+          ? '대기를 취소했어요.'
+          : r.paidAmount != null && refundAmount != null
+            ? `취소됐어요. 환불 ${refundAmount.toLocaleString()}원 (환불율 ${refundRate}%)`
+            : '신청을 취소했어요.',
       )
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '취소에 실패했습니다.')
@@ -365,19 +377,26 @@ export default function MyPage() {
   const ageLabel = AGE_GROUPS.find((o) => o.value === ageGroup)?.label
   const jobLabel = JOBS.find((o) => o.value === job)?.label
 
+  // 결제한 적 없이 끝난 신청(대기 취소, 결제하지 않아 만료된 홀드)은 "취소 내역"이 아니라 그냥 없던 신청이라 목록에서 뺀다.
+  // paidAmount는 실제 결제가 있을 때만 온다(무료 세션은 0).
+  const visibleReservations = useMemo(
+    () => (reservations ?? []).filter((r) => !(r.status === 'CANCELLED' && r.paidAmount == null)),
+    [reservations],
+  )
+
   const filtered = useMemo(
-    () => (reservations ?? []).filter((r) => tab === 'ALL' || categoryOf(r.status) === tab),
-    [reservations, tab],
+    () => visibleReservations.filter((r) => tab === 'ALL' || categoryOf(r.status) === tab),
+    [visibleReservations, tab],
   )
 
   const counts = useMemo(() => {
-    const list = reservations ?? []
+    const list = visibleReservations
     return {
       CONFIRMED: list.filter((r) => r.status === 'CONFIRMED').length,
       WAITING: list.filter((r) => categoryOf(r.status) === 'WAITING').length,
       CANCELLED: list.filter((r) => r.status === 'CANCELLED').length,
     }
-  }, [reservations])
+  }, [visibleReservations])
 
   const displayName = claims?.name ?? claims?.email?.split('@')[0] ?? '참가자'
 
@@ -646,7 +665,8 @@ export default function MyPage() {
       <div className="space-y-4">
         {filtered.map((r) => {
           const session = sessionMap[r.sessionId]
-          const amount = session?.price ? session.price * r.headcount : 0
+          // 결제한 예약은 실제 결제 금액, 아직 결제 전(결제 대기)은 결제할 금액을 보여준다
+          const amount = r.paidAmount ?? (session?.price ? session.price * r.headcount : 0)
           const ticketList = tickets[r.reservationId]
           const isOpen = expandedId === r.reservationId
           const isReviewOpen = reviewOpenId === r.reservationId
@@ -691,8 +711,11 @@ export default function MyPage() {
                     </div>
                   ) : (
                     <div>
-                      <p className="text-text-faint mb-1">결제 금액</p>
+                      <p className="text-text-faint mb-1">{r.status === 'HOLD' ? '결제할 금액' : '결제 금액'}</p>
                       <p className="text-text font-medium">{amount > 0 ? `${amount.toLocaleString()}원` : '무료'}</p>
+                      {r.status === 'CANCELLED' && amount > 0 && (
+                        <p className="text-xs text-text-muted mt-0.5">환불 {(r.refundedAmount ?? 0).toLocaleString()}원</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -719,7 +742,7 @@ export default function MyPage() {
                   )}
                   {r.status !== 'CANCELLED' && (
                     <Button variant="ghost" loading={cancellingId === r.reservationId} onClick={() => handleCancel(r)}>
-                      취소·환불
+                      {r.status === 'CONFIRMED' ? '취소·환불' : r.status === 'QUEUED' ? '대기 취소' : '신청 취소'}
                     </Button>
                   )}
                 </div>

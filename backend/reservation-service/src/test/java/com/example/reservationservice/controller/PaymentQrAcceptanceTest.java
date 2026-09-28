@@ -678,6 +678,68 @@ public class PaymentQrAcceptanceTest {
                 .andExpect(jsonPath("$.data.position").value(2));
     }
 
+    @Test
+    @DisplayName("결제를 마친 세션에 같은 사람이 다시 신청하면 중복 신청으로 막는다 (대기열에도 들어가지 않는다)")
+    void 결제_완료한_세션에_다시_신청하면_막는다() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(1);
+        given(conferenceServiceClient.getSessionPrice(sessionId)).willReturn(0);
+
+        String paidId = holdAndGetReservationId(sessionId, memberId, 1);
+        mockMvc.perform(post("/api/reservations/{id}/payment", paidId)
+                        .with(asUser(memberId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                        {"paymentId": "test-payment-id"}
+                        """))
+                .andExpect(status().isOk());
+
+        // 정원이 찼으니 막지 않으면 대기열로 들어가는 상황
+        mockMvc.perform(post("/api/reservations/hold")
+                        .with(asUser(memberId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createHoldJson(sessionId, 1)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("RESERVATION_DUPLICATE"));
+    }
+
+    @Test
+    @DisplayName("내 예약 목록은 결제한 예약엔 결제·환불 금액을, 결제 없이 끝난 대기 취소엔 null을 준다")
+    void 내_예약_목록은_결제_여부를_구분해_준다() throws Exception {
+        UUID paidSessionId = UUID.randomUUID();
+        UUID fullSessionId = UUID.randomUUID();
+        UUID memberId = UUID.randomUUID();
+        UUID otherMember = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(paidSessionId)).willReturn(10);
+        given(conferenceServiceClient.getSessionPrice(paidSessionId)).willReturn(0);
+        given(conferenceServiceClient.getSessionCapacity(fullSessionId)).willReturn(1);
+
+        String paidId = holdAndGetReservationId(paidSessionId, memberId, 1);
+        mockMvc.perform(post("/api/reservations/{id}/payment", paidId)
+                        .with(asUser(memberId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                        {"paymentId": "test-payment-id"}
+                        """))
+                .andExpect(status().isOk());
+
+        holdAndGetReservationId(fullSessionId, otherMember, 1);   // 정원 1을 다른 사람이 차지
+        String queuedId = holdAndGetReservationId(fullSessionId, memberId, 1);
+        mockMvc.perform(post("/api/reservations/{id}/cancel", queuedId)
+                        .with(asUser(memberId)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/reservations/my")
+                        .with(asUser(memberId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.reservationId == '%s')].paidAmount", paidId).value(0))
+                .andExpect(jsonPath("$.data[?(@.reservationId == '%s')].refundedAmount", paidId).value(0))
+                .andExpect(jsonPath("$.data[?(@.reservationId == '%s')].status", queuedId).value("CANCELLED"))
+                .andExpect(jsonPath("$.data[?(@.reservationId == '%s')].paidAmount", queuedId).value(org.hamcrest.Matchers.contains(nullValue())));
+    }
+
     private String holdAndGetReservationId(UUID sessionId, UUID memberId, int headcount) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/reservations/hold")
                         .with(asUser(memberId))

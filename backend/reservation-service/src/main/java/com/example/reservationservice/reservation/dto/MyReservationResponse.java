@@ -1,5 +1,6 @@
 package com.example.reservationservice.reservation.dto;
 
+import com.example.reservationservice.payment.entity.Payment;
 import com.example.reservationservice.reservation.entity.Reservation;
 import com.example.reservationservice.reservation.entity.ReservationStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -22,15 +23,23 @@ public record MyReservationResponse(
         int headcount,
 
         @Schema(description = "신청 생성 시각")
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+
+        @Schema(description = "실제 결제 금액. 결제한 적 없으면(결제 대기·대기열·결제 없이 취소) null", example = "60000", nullable = true)
+        Integer paidAmount,
+
+        @Schema(description = "환불된 금액 누계. 결제한 적 없으면 null", example = "30000", nullable = true)
+        Integer refundedAmount
 ) {
-    public static MyReservationResponse from(Reservation reservation) {
+    public static MyReservationResponse from(Reservation reservation, Payment payment) {
         return new MyReservationResponse(
                 reservation.getId(),
                 reservation.getSessionId(),
                 reservation.getStatus(),
                 reservation.getHeadcount(),
-                reservation.getCreatedAt()
+                reservation.getCreatedAt(),
+                payment == null ? null : payment.getAmount(),
+                payment == null ? null : (payment.getRefundedAmount() == null ? 0 : payment.getRefundedAmount())
         );
     }
 }

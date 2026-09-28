@@ -70,9 +70,11 @@ public class ReservationService {
             }
         }
 
-        // 중복 신청 방지
+        // 중복 신청 방지 — 결제 완료(CONFIRMED)도 포함한다. 빠지면 좌석을 가진 채로 같은 세션에 또 신청하거나
+        // 대기열에 들어가 다른 대기자 앞을 차지하고, 1인당 최대 신청 인원을 여러 번 나눠 신청해 우회할 수 있다.
+        // 취소(CANCELLED)한 뒤 다시 신청하는 건 허용한다.
         boolean alreadyReserved = reservationRepository.existsBySessionIdAndMemberIdAndStatusIn(
-                sessionId, memberId, List.of(ReservationStatus.HOLD, ReservationStatus.QUEUED));
+                sessionId, memberId, List.of(ReservationStatus.HOLD, ReservationStatus.QUEUED, ReservationStatus.CONFIRMED));
 
         if (alreadyReserved) {
             throw new BusinessException(ReservationErrorCode.DUPLICATE_RESERVATION);
@@ -340,8 +342,14 @@ public class ReservationService {
     }
 
     public List<MyReservationResponse> getMyReservations(UUID memberId) {
-        return reservationRepository.findByMemberIdOrderByCreatedAtDesc(memberId).stream()
-                .map(MyReservationResponse::from)
+        List<Reservation> reservations = reservationRepository.findByMemberIdOrderByCreatedAtDesc(memberId);
+        // 결제한 적 있는지(결제 금액·환불 금액)를 함께 줘야, 화면이 "결제 후 취소"와 "결제 없이 끝난 대기·홀드"를 구분한다
+        Map<UUID, Payment> paymentByReservation = paymentRepository
+                .findByReservationIdIn(reservations.stream().map(Reservation::getId).toList())
+                .stream()
+                .collect(Collectors.toMap(Payment::getReservationId, p -> p, (a, b) -> a));
+        return reservations.stream()
+                .map(r -> MyReservationResponse.from(r, paymentByReservation.get(r.getId())))
                 .toList();
     }
 
