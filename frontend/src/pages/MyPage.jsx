@@ -666,7 +666,7 @@ export default function MyPage() {
                   </div>
                   <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${status.className}`}>
                     <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                    {status.label}
+                    {r.status === 'HOLD' ? '결제 대기' : status.label}
                   </span>
                 </div>
 
@@ -683,7 +683,9 @@ export default function MyPage() {
                       </p>
                       {queuePositions[r.reservationId] != null && (
                         <p className="text-xs text-text-muted mt-0.5">
-                          예상 대기 약 {queuePositions[r.reservationId].estimatedWaitMinutes}분
+                          {queuePositions[r.reservationId].estimatedWaitMinutes != null
+                            ? `늦어도 약 ${queuePositions[r.reservationId].estimatedWaitMinutes}분 안에 결과`
+                            : '취소가 생기면 순서대로 안내'}
                         </p>
                       )}
                     </div>
