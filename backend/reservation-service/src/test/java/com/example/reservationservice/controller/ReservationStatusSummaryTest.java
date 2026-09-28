@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.UUID;
 
+import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -120,6 +121,27 @@ public class ReservationStatusSummaryTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.confirmedCount").value(1))
                 .andExpect(jsonPath("$.data.queuedCount").value(1));
+    }
+
+    // 컨퍼런스 상세 화면은 로그인 안 한 방문자에게도 세션별 잔여석을 보여준다
+    @Test
+    @DisplayName("잔여석 조회는 인증 없이 가능하다")
+    void 잔여석_조회는_인증_없이_가능하다() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        given(conferenceServiceClient.getSessionCapacity(sessionId)).willReturn(10);
+
+        mockMvc.perform(get("/api/reservations/sessions/{sessionId}/capacity-status", sessionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.capacity").value(10))
+                .andExpect(jsonPath("$.data.remaining").value(10));
+    }
+
+    // 잔여석만 공개하고, 상태별 집계(주최자 운영 현황용)는 계속 로그인이 필요하다
+    @Test
+    @DisplayName("상태별 집계는 인증 없이 조회할 수 없다")
+    void 상태별_집계는_인증이_필요하다() throws Exception {
+        mockMvc.perform(get("/api/reservations/sessions/{sessionId}/status-summary", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized());
     }
 
     private Reservation createReservation(UUID sessionId, ReservationStatus status) {

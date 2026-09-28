@@ -35,6 +35,8 @@ public class SecurityConfig {
                         .requestMatchers("/internal/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/payments/webhook").permitAll()
+                        // 잔여석은 방문자도 보는 공개 정보라 로그인 없이 조회 가능해야 한다 (컨퍼런스 상세 화면)
+                        .requestMatchers(HttpMethod.GET, "/api/reservations/sessions/*/capacity-status").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/qr-tickets/*/scan").hasRole("ORGANIZER")
                         .anyRequest().authenticated()
