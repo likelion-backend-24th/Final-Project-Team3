@@ -110,6 +110,8 @@ export default function SessionApply() {
   const remaining = capacity ? Math.max(capacity.remaining, 0) : null
   const percent = capacity?.capacity > 0 ? Math.min(100, Math.round((capacity.confirmedCount / capacity.capacity) * 100)) : null
   const nearFull = capacity?.capacity > 0 && remaining > 0 && remaining <= Math.max(1, Math.ceil(capacity.capacity * 0.1))
+  // 정원이 차도 신청은 받는다 — 백엔드가 대기열(QUEUED)로 등록하고, 자리가 나면 순서대로 결제 단계로 올려준다
+  const full = capacity?.capacity > 0 && remaining === 0
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
@@ -152,6 +154,11 @@ export default function SessionApply() {
               <div className="h-1.5 rounded-full bg-surface2 overflow-hidden">
                 <div className="h-full bg-warning rounded-full" style={{ width: `${percent}%` }} />
               </div>
+              {full && (
+                <p className="text-sm text-text-muted mt-2">
+                  정원이 모두 찼어요. 신청하면 대기열에 등록되고, 취소나 결제 시간 만료로 자리가 나면 순서대로 결제 안내를 드려요.
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -213,7 +220,7 @@ export default function SessionApply() {
 
         <div className="bg-surface border border-border rounded-xl p-3">
           <Button onClick={submit} loading={loading} disabled={!attendeesValid} className="w-full">
-            신청하고 결제하기
+            {full ? '대기 신청하기' : '신청하고 결제하기'}
           </Button>
         </div>
       </div>

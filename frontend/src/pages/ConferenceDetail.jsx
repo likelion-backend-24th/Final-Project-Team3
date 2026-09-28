@@ -165,13 +165,11 @@ export default function ConferenceDetail() {
                       <span className="font-medium text-text">{s.price > 0 ? `${s.price.toLocaleString()}원` : '무료'}</span>
                     </div>
                   </div>
-                  {soldOut ? (
-                    <Button disabled variant="secondary">마감</Button>
-                  ) : (
-                    <Link to={`/conferences/${conference.id}/sessions/${s.id}/apply`} state={{ session: s, conferenceTitle: conference.title }}>
-                      <Button>신청하기</Button>
-                    </Link>
-                  )}
+                  {/* 잔여 0이어도 막지 않는다 — 백엔드가 정원 초과 신청을 대기열(QUEUED)로 받고,
+                      취소·홀드 만료로 자리가 나면 순서대로 결제 단계로 올려준다. */}
+                  <Link to={`/conferences/${conference.id}/sessions/${s.id}/apply`} state={{ session: s, conferenceTitle: conference.title }}>
+                    {soldOut ? <Button variant="secondary">대기 신청</Button> : <Button>신청하기</Button>}
+                  </Link>
                 </div>
               )
             })}
