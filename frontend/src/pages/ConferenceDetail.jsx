@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Users, Calendar, Clock, MapPin, Mic } from 'lucide-react'
+import { Users, Calendar, Clock, MapPin, Mic, Sparkles } from 'lucide-react'
 import { getConference, listNotices, listFaqs } from '../api/conferences'
 import { getCapacityStatus } from '../api/reservations'
 import { formatDateRange } from '../utils/date'
 import StatusBadge from '../components/StatusBadge'
 import Button from '../components/Button'
 import DescriptionText from '../components/DescriptionText'
+import { isRealSummary } from '../utils/aiSummary'
 
 const INFO_TABS = [
   { key: 'sessions', label: '세션 목록' },
@@ -48,13 +49,14 @@ export default function ConferenceDetail() {
     listFaqs(id).then((res) => setFaqs(res.data)).catch(() => setFaqs([]))
   }, [id])
 
-  if (error) return <p className="max-w-6xl mx-auto px-6 py-16 text-danger">{error}</p>
-  if (!conference) return <p className="max-w-6xl mx-auto px-6 py-16 text-text-muted">불러오는 중...</p>
+  if (error) return <p className="max-w-4xl mx-auto px-6 py-16 text-danger">{error}</p>
+  if (!conference) return <p className="max-w-4xl mx-auto px-6 py-16 text-text-muted">불러오는 중...</p>
 
   const dateLabel = formatDateRange(conference.startAt, conference.endAt)
+  const hasRepresentativeSummary = isRealSummary(conference.organizerRepresentativeSummary)
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10">
+    <div className="max-w-4xl mx-auto px-6 py-10">
       <button onClick={() => navigate(-1)} className="text-sm text-text-muted hover:text-text">‹ 뒤로</button>
 
       {conference.detailImageUrl && (
@@ -75,7 +77,7 @@ export default function ConferenceDetail() {
             {conference.organizerPastConferenceCount > 0 && (
               <p className="text-xs text-text-faint mt-0.5">
                 지난 컨퍼런스 {conference.organizerPastConferenceCount}회
-                {conference.organizerRepresentativeSummary && ` · ${conference.organizerRepresentativeSummary}`}
+                {hasRepresentativeSummary && ` · ${conference.organizerRepresentativeSummary}`}
               </p>
             )}
           </Link>
@@ -182,12 +184,16 @@ export default function ConferenceDetail() {
         {infoTab === 'description' && (
           <div className="bg-surface border border-border rounded-xl p-6">
             {conference.aiSummary && (
-              <p className="text-sm text-text bg-surface2 border border-border rounded-lg px-4 py-3 mb-4">
-                {conference.aiSummary}
-              </p>
+              <div className="bg-surface2 border border-border rounded-lg px-4 py-3 mb-5 flex gap-2.5">
+                <Sparkles size={18} className="text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-primary mb-0.5">AI 요약</p>
+                  <p className="text-[15px] text-text leading-relaxed">{conference.aiSummary}</p>
+                </div>
+              </div>
             )}
             {conference.description ? (
-              <DescriptionText text={conference.description} className="text-sm text-text-muted whitespace-pre-wrap" />
+              <DescriptionText text={conference.description} className="text-base leading-7 text-text-muted whitespace-pre-wrap" />
             ) : (
               <p className="text-text-muted text-sm">등록된 소개글이 없어요.</p>
             )}

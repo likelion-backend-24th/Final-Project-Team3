@@ -16,7 +16,7 @@ export default function DescriptionText({ text, className }) {
     }
     const [, alt, url] = match
     nodes.push(
-      <img key={key++} src={url} alt={alt} className="max-w-full rounded-lg border border-border my-2 block" />,
+      <img key={key++} src={url} alt={alt} className="max-w-full rounded-lg border border-border my-3 mx-auto block" />,
     )
     lastIndex = match.index + match[0].length
   }

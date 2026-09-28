@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Building2, Calendar, MapPin, Sparkles } from 'lucide-react'
 import { getOrganizerProfile } from '../api/organizers'
 import { formatDateRange } from '../utils/date'
+import { isRealSummary } from '../utils/aiSummary'
 
 function ConferenceCard({ conference: c }) {
   return (
@@ -22,7 +23,7 @@ function ConferenceCard({ conference: c }) {
           )}
         </div>
       </Link>
-      {c.summaryText ? (
+      {isRealSummary(c.summaryText) ? (
         <div className="mt-3 bg-surface2 border border-border rounded-lg p-3 flex gap-2">
           <Sparkles size={16} className="text-primary shrink-0 mt-0.5" />
           <p className="text-sm text-text-muted">{c.summaryText}</p>
