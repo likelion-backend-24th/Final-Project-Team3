@@ -666,7 +666,11 @@ export default function MyPage() {
         {filtered.map((r) => {
           const session = sessionMap[r.sessionId]
           // 결제한 예약은 실제 결제 금액, 아직 결제 전(결제 대기)은 결제할 금액을 보여준다
-          const amount = r.paidAmount ?? (session?.price ? session.price * r.headcount : 0)
+          // 결제 기록의 원래 결제액은 그대로 두고 환불은 따로 쌓이므로(정산·PG 기록 보존), 화면에는 결제액 - 환불액을 보여준다.
+          // 아직 결제 전(결제 대기)은 결제할 금액(가격 x 인원)을 보여준다.
+          const paid = r.paidAmount
+          const refunded = r.refundedAmount ?? 0
+          const amount = paid != null ? paid - refunded : session?.price ? session.price * r.headcount : 0
           const ticketList = tickets[r.reservationId]
           const isOpen = expandedId === r.reservationId
           const isReviewOpen = reviewOpenId === r.reservationId
@@ -712,9 +716,13 @@ export default function MyPage() {
                   ) : (
                     <div>
                       <p className="text-text-faint mb-1">{r.status === 'HOLD' ? '결제할 금액' : '결제 금액'}</p>
-                      <p className="text-text font-medium">{amount > 0 ? `${amount.toLocaleString()}원` : '무료'}</p>
-                      {r.status === 'CANCELLED' && amount > 0 && (
-                        <p className="text-xs text-text-muted mt-0.5">환불 {(r.refundedAmount ?? 0).toLocaleString()}원</p>
+                      <p className="text-text font-medium">
+                        {paid === 0 || (paid == null && amount === 0) ? '무료' : `${amount.toLocaleString()}원`}
+                      </p>
+                      {paid > 0 && refunded > 0 && (
+                        <p className="text-xs text-text-muted mt-0.5">
+                          결제 {paid.toLocaleString()}원 중 {refunded.toLocaleString()}원 환불
+                        </p>
                       )}
                     </div>
                   )}
