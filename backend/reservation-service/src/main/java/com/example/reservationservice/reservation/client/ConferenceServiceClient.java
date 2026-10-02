@@ -50,6 +50,13 @@ public class ConferenceServiceClient {
         return fetch(conferenceId, "/api/conferences/{id}/session-ids", new ParameterizedTypeReference<ApiResponseEnvelope<List<UUID>>>() {});
     }
 
+    public UUID getOrganizerId(UUID sessionId) {
+        SessionOrganizerIdResponse data = fetch(sessionId, "/api/sessions/{id}/organizer-id", new ParameterizedTypeReference<ApiResponseEnvelope<SessionOrganizerIdResponse>>() {});
+        return data.organizerId();
+    }
+
+    public record SessionOrganizerIdResponse(UUID sessionId, UUID organizerId) {}
+
     // 5개 메서드가 공유하는 "요청 → 검증 → 데이터 추출" 패턴을 한 곳으로 모은 공통 헬퍼.
     // id는 URI 경로 변수이자, 실패 시 예외에 담을 식별자로 함께 쓰인다.
     private <T> T fetch(UUID id, String uriTemplate, ParameterizedTypeReference<ApiResponseEnvelope<T>> responseType) {

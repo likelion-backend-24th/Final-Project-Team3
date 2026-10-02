@@ -66,4 +66,12 @@ public class SessionController {
         SessionConferenceIdResponse response = sessionService.getConferenceId(sessionId);
         return ResponseEntity.ok(ApiResponse.success("세션 소속 컨퍼런스 조회 성공", response, traceIdProvider.resolve(request)));
     }
+
+    // 서비스 간 내부 API: Reservation-Service가 세션을 관리할 권한이 있는 주최자인지 검증할 때 호출한다.
+    @GetMapping("/{sessionId}/organizer-id")
+    public ResponseEntity<ApiResponse<SessionOrganizerIdResponse>> getOrganizerId(
+            @PathVariable UUID sessionId, HttpServletRequest request) {
+        SessionOrganizerIdResponse response = sessionService.getOrganizerId(sessionId);
+        return ResponseEntity.ok(ApiResponse.success("세션 소속 주최자 조회 성공", response, traceIdProvider.resolve(request)));
+    }
 }

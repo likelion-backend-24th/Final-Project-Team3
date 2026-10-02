@@ -1,6 +1,7 @@
 package com.example.reservationservice.qrticket.service;
 
 import com.example.reservationservice.common.exception.BusinessException;
+import com.example.reservationservice.qrticket.dto.QrTicketResponse;
 import com.example.reservationservice.qrticket.dto.QrTicketScanResponse;
 import com.example.reservationservice.qrticket.entity.QrTicket;
 import com.example.reservationservice.qrticket.exception.QrTicketErrorCode;
@@ -69,33 +70,51 @@ public class QrTicketService {
         return new AttendeeCheckinStatsResponse(checkedInTickets.size(), ageGroupDistribution, jobDistribution);
     }
 
-    public List<QrTicket> getConfirmedTickets(UUID reservationId) {
+    // 본인 예약의 QR 티켓만 조회할 수 있도록 소유자(requesterId)를 검증한다.
+    public List<QrTicketResponse> getConfirmedTickets(UUID reservationId, UUID requesterId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+
+        if (!reservation.getMemberId().equals(requesterId)) {
+            throw new BusinessException(ReservationErrorCode.RESERVATION_ACCESS_DENIED);
+        }
 
         if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
             throw new BusinessException(ReservationErrorCode.PAYMENT_NOT_COMPLETED);
         }
 
-        return qrTicketRepository.findByReservationId(reservationId);
+        return qrTicketRepository.findByReservationId(reservationId).stream()
+                .map(QrTicketResponse::from)
+                .toList();
     }
 
+    // 세션을 관리할 권한이 있는 주최자만 스캔할 수 있도록 검증하고,
+    // 조건부 UPDATE(markAsUsedIfNotUsed)로 동시 스캔을 원자적으로 방어한다.
     @Transactional
-    public QrTicketScanResponse scan(String code) {
+    public QrTicketScanResponse scan(String code, UUID requesterId) {
         QrTicket ticket = qrTicketRepository.findByCode(code)
                 .orElseThrow(() -> new QrTicketException(QrTicketErrorCode.QR_TICKET_NOT_FOUND));
 
         Reservation reservation = reservationRepository.findById(ticket.getReservationId())
-                        .orElseThrow(() -> new QrTicketException(QrTicketErrorCode.QR_TICKET_NOT_FOUND));
+                .orElseThrow(() -> new QrTicketException(QrTicketErrorCode.QR_TICKET_NOT_FOUND));
+
+        UUID organizerId = conferenceServiceClient.getOrganizerId(reservation.getSessionId());
+        if (organizerId == null || !organizerId.equals(requesterId)) {
+            throw new QrTicketException(QrTicketErrorCode.QR_TICKET_ACCESS_DENIED);
+        }
 
         LocalDateTime sessionStartAt = conferenceServiceClient.getSessionStartAt(reservation.getSessionId());
         if (LocalDateTime.now().isBefore(sessionStartAt)) {
             throw new QrTicketException(QrTicketErrorCode.SESSION_NOT_STARTED);
         }
 
-        ticket.scan();
+        LocalDateTime usedAt = LocalDateTime.now();
+        int updatedRows = qrTicketRepository.markAsUsedIfNotUsed(code, usedAt);
+        if (updatedRows == 0) {
+            throw new QrTicketException(QrTicketErrorCode.QR_TICKET_ALREADY_USED);
+        }
 
-        return QrTicketScanResponse.from(ticket);
+        return new QrTicketScanResponse(ticket.getCode(), true, usedAt);
     }
 
     private String generateQrCode() {

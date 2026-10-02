@@ -124,8 +124,8 @@ public class PaymentQrAcceptanceTest {
                         .with(asUser(memberId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                        {"paymentId": "test-payment-id"}
-                        """))
+                                {"paymentId": "test-payment-id"}
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("CONFIRMED"))
                 .andExpect(jsonPath("$.data.qrTicketCount").value(2));
@@ -155,7 +155,7 @@ public class PaymentQrAcceptanceTest {
         MvcResult secondQueued = mockMvc.perform(post("/api/reservations/hold")
                         .with(asUser(member3))
                         .contentType(MediaType.APPLICATION_JSON)
-                .content(createHoldJson(sessionId, 1)))
+                        .content(createHoldJson(sessionId, 1)))
                 .andReturn();
 
         String reservationId = JsonPath.read(secondQueued.getResponse().getContentAsString(), "$.data.reservationId");
@@ -163,9 +163,9 @@ public class PaymentQrAcceptanceTest {
         mockMvc.perform(post("/api/reservations/{id}/payment", reservationId)
                         .with(asUser(member3))
                         .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {"paymentId": "test-payment-id"}
-                        """))
+                        .content("""
+                                {"paymentId": "test-payment-id"}
+                                """))
                 .andExpect(status().isForbidden());
     }
 
@@ -188,11 +188,11 @@ public class PaymentQrAcceptanceTest {
                 .with(asUser(memberId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    {"paymentId": "test-payment-id"}
-                    """));
+                        {"paymentId": "test-payment-id"}
+                        """));
 
         mockMvc.perform(get("/api/qr-tickets/{id}", reservationId)
-                .with(asUser(memberId)))
+                        .with(asUser(memberId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(3));
     }
@@ -242,8 +242,8 @@ public class PaymentQrAcceptanceTest {
                         .with(asUser(member2))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                    {"paymentId": "test-payment-id"}
-                    """))
+                                {"paymentId": "test-payment-id"}
+                                """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("RESERVATION_SESSION_CAPACITY_EXCEEDED"));
 
@@ -303,16 +303,16 @@ public class PaymentQrAcceptanceTest {
                         .with(asUser(member2))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                    {"paymentId": "test-payment-id"}
-                    """))
+                                {"paymentId": "test-payment-id"}
+                                """))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/reservations/{id}/payment", thirdReservationId)
                         .with(asUser(member3))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                    {"paymentId": "test-payment-id"}
-                    """))
+                                {"paymentId": "test-payment-id"}
+                                """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("RESERVATION_SESSION_CAPACITY_EXCEEDED"));
     }
@@ -388,7 +388,7 @@ public class PaymentQrAcceptanceTest {
                 .content(createHoldJson(sessionId, 2)));
 
         mockMvc.perform(get("/api/reservations/sessions/{sessionId}/capacity-status", sessionId)
-                .with(asUser(member1)))
+                        .with(asUser(member1)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.capacity").value(10))
                 .andExpect(jsonPath("$.data.confirmedCount").value(5))
@@ -613,8 +613,8 @@ public class PaymentQrAcceptanceTest {
                         .with(asUser(member1))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                        {"paymentId": "test-payment-id"}
-                        """))
+                                {"paymentId": "test-payment-id"}
+                                """))
                 .andExpect(status().isOk());
 
         String queuedId = holdAndGetReservationId(sessionId, member2, 1);
@@ -691,8 +691,8 @@ public class PaymentQrAcceptanceTest {
                         .with(asUser(memberId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                        {"paymentId": "test-payment-id"}
-                        """))
+                                {"paymentId": "test-payment-id"}
+                                """))
                 .andExpect(status().isOk());
 
         // 정원이 찼으니 막지 않으면 대기열로 들어가는 상황
@@ -721,8 +721,8 @@ public class PaymentQrAcceptanceTest {
                         .with(asUser(memberId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                        {"paymentId": "test-payment-id"}
-                        """))
+                                {"paymentId": "test-payment-id"}
+                                """))
                 .andExpect(status().isOk());
 
         holdAndGetReservationId(fullSessionId, otherMember, 1);   // 정원 1을 다른 사람이 차지
@@ -754,10 +754,10 @@ public class PaymentQrAcceptanceTest {
         for (int i = 0; i < headCount; i++) {
             if (i > 0) attendees.append(",");
             attendees.append("""
-            {"ageGroup": "TWENTIES", "job": "DEVELOPER"}""");
+                    {"ageGroup": "TWENTIES", "job": "DEVELOPER"}""");
         }
         return """
-        {"sessionId": "%s", "headcount": %d, "attendees": [%s]}
-        """.formatted(sessionId, headCount, attendees);
+                {"sessionId": "%s", "headcount": %d, "attendees": [%s]}
+                """.formatted(sessionId, headCount, attendees);
     }
 }
