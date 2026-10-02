@@ -11,7 +11,8 @@ public enum QrTicketErrorCode implements ErrorCode {
 
     QR_TICKET_NOT_FOUND(HttpStatus.NOT_FOUND, "QR_TICKET_NOT_FOUND", "존재하지 않는 QR 티켓입니다."),
     QR_TICKET_ALREADY_USED(HttpStatus.CONFLICT, "QR_TICKET_ALREADY_USED", "이미 사용된 QR 티켓입니다."),
-    SESSION_NOT_STARTED(HttpStatus.FORBIDDEN, "QR_TICKET_SESSION_NOT_STARTED", "아직 세션이 시작되지 않았습니다");
+    SESSION_NOT_STARTED(HttpStatus.FORBIDDEN, "QR_TICKET_SESSION_NOT_STARTED", "아직 세션이 시작되지 않았습니다"),
+    QR_TICKET_ACCESS_DENIED(HttpStatus.FORBIDDEN, "QR_TICKET_ACCESS_DENIED", "해당 세션을 관리할 권한이 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

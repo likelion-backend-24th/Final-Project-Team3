@@ -218,6 +218,13 @@ public class SessionService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public SessionOrganizerIdResponse getOrganizerId(UUID sessionId) {
+        Session session = sessionRepository.findByIdAndConference_Status(sessionId, ConferenceStatus.APPROVED)
+                .orElseThrow(() -> new BusinessException(SessionErrorCode.SESSION_NOT_FOUND));
+        return SessionOrganizerIdResponse.from(session);
+    }
+
     private Session findSession(UUID id) {
         return sessionRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(SessionErrorCode.SESSION_NOT_FOUND));
