@@ -42,8 +42,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Story 9 인수 조건: 주최자가 컨퍼런스를 등록 신청하면 "신청(PENDING)" 상태로 저장되고,
- * 신청 상태 컨퍼런스는 승인 전까지 목록·상세 조회 어디에서도 노출되지 않는다.
+ - Story 9
+ 인수 조건: 주최자가 컨퍼런스를 등록 신청하면 "신청(PENDING)" 상태로 저장되고,
+ -
+ 신청 상태 컨퍼런스는 승인 전까지 목록·상세 조회 어디에서도 노출되지 않는다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -99,8 +101,8 @@ class ConferenceApplicationAcceptanceTest {
                                 {
                                   "title": "신청된 컨퍼런스",
                                   "capacity": 100,
-                                  "startAt": "2026-10-01T10:00:00",
-                                  "endAt": "2026-10-01T18:00:00",
+                                  "startAt": "2027-10-01T10:00:00",
+                                  "endAt": "2027-10-01T18:00:00",
                                   "location": "서울",
                                   "tags": ["개발"]
                                 }
@@ -122,8 +124,8 @@ class ConferenceApplicationAcceptanceTest {
                                 {
                                   "title": "주최기관명 검증용 컨퍼런스",
                                   "capacity": 100,
-                                  "startAt": "2026-10-01T10:00:00",
-                                  "endAt": "2026-10-01T18:00:00",
+                                  "startAt": "2027-10-01T10:00:00",
+                                  "endAt": "2027-10-01T18:00:00",
                                   "location": "서울",
                                   "tags": ["개발"]
                                 }
@@ -143,8 +145,8 @@ class ConferenceApplicationAcceptanceTest {
                                 {
                                   "title": "주최기관명 없는 토큰",
                                   "capacity": 100,
-                                  "startAt": "2026-10-01T10:00:00",
-                                  "endAt": "2026-10-01T18:00:00",
+                                  "startAt": "2027-10-01T10:00:00",
+                                  "endAt": "2027-10-01T18:00:00",
                                   "location": "서울",
                                   "tags": ["개발"]
                                 }
@@ -163,8 +165,8 @@ class ConferenceApplicationAcceptanceTest {
                                 {
                                   "title": "비공개 상태 확인용 컨퍼런스",
                                   "capacity": 50,
-                                  "startAt": "2026-11-01T10:00:00",
-                                  "endAt": "2026-11-01T18:00:00",
+                                  "startAt": "2027-11-01T10:00:00",
+                                  "endAt": "2027-11-01T18:00:00",
                                   "location": "부산",
                                   "tags": ["개발"]
                                 }
@@ -196,8 +198,8 @@ class ConferenceApplicationAcceptanceTest {
                                 {
                                   "title": "증명 파일 첨부 컨퍼런스",
                                   "capacity": 30,
-                                  "startAt": "2026-12-01T10:00:00",
-                                  "endAt": "2026-12-01T18:00:00",
+                                  "startAt": "2027-12-01T10:00:00",
+                                  "endAt": "2027-12-01T18:00:00",
                                   "location": "대전",
                                   "tags": ["개발"]
                                 }
@@ -232,8 +234,8 @@ class ConferenceApplicationAcceptanceTest {
                                 {
                                   "title": "경로 순회 시도 컨퍼런스",
                                   "capacity": 30,
-                                  "startAt": "2026-12-01T10:00:00",
-                                  "endAt": "2026-12-01T18:00:00",
+                                  "startAt": "2027-12-01T10:00:00",
+                                  "endAt": "2027-12-01T18:00:00",
                                   "location": "대전",
                                   "tags": ["개발"]
                                 }
@@ -261,8 +263,8 @@ class ConferenceApplicationAcceptanceTest {
                                 {
                                   "title": "잘못된 파일 형식 컨퍼런스",
                                   "capacity": 30,
-                                  "startAt": "2026-12-01T10:00:00",
-                                  "endAt": "2026-12-01T18:00:00",
+                                  "startAt": "2027-12-01T10:00:00",
+                                  "endAt": "2027-12-01T18:00:00",
                                   "location": "대전",
                                   "tags": ["개발"]
                                 }
@@ -285,8 +287,8 @@ class ConferenceApplicationAcceptanceTest {
                                 {
                                   "title": "이미지 첨부 컨퍼런스",
                                   "capacity": 30,
-                                  "startAt": "2026-12-01T10:00:00",
-                                  "endAt": "2026-12-01T18:00:00",
+                                  "startAt": "2027-12-01T10:00:00",
+                                  "endAt": "2027-12-01T18:00:00",
                                   "location": "대전",
                                   "tags": ["개발"]
                                 }
@@ -321,8 +323,8 @@ class ConferenceApplicationAcceptanceTest {
                                 {
                                   "title": "잘못된 이미지 형식 컨퍼런스",
                                   "capacity": 30,
-                                  "startAt": "2026-12-01T10:00:00",
-                                  "endAt": "2026-12-01T18:00:00",
+                                  "startAt": "2027-12-01T10:00:00",
+                                  "endAt": "2027-12-01T18:00:00",
                                   "location": "대전",
                                   "tags": ["개발"]
                                 }
