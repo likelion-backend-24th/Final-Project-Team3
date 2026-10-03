@@ -23,8 +23,15 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
 
     @Modifying
     @Query("UPDATE Reservation r SET r.status = 'CONFIRMED' " +
-            "WHERE r.id = :id AND r.status != 'CONFIRMED'")
+            "WHERE r.id = :id AND r.status = 'HOLD'")
     int confirmIfNotAlready(@Param("id") UUID id);
+
+    @Modifying
+    @Query("UPDATE Reservation r SET r.status = 'HOLD', r.expiresAt = :expiresAt, r.holdStartedAt = :holdStartedAt " +
+            "WHERE r.id = :id AND r.status = 'QUEUED'")
+    int promoteToHoldIfQueued(@Param("id") UUID id,
+                              @Param("expiresAt") LocalDateTime expiresAt,
+                              @Param("holdStartedAt") LocalDateTime holdStartedAt);
 
     List<Reservation> findByStatusAndExpiresAtBefore(ReservationStatus status, LocalDateTime time);
     // 세션의 결제 대기(HOLD) 예약을 만료가 빠른 순서로 조회 (대기자 예상 대기 시간 계산용)

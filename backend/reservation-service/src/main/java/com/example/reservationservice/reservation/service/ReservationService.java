@@ -324,6 +324,13 @@ public class ReservationService {
         // 조건부 UPDATE로 동시 결제 요청 방어
         int updatedRows = reservationRepository.confirmIfNotAlready(reservationId);
         if (updatedRows == 0) {
+            ReservationStatus currentStatus = reservationRepository.findById(reservationId)
+                    .map(Reservation::getStatus)
+                    .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+            if (currentStatus == ReservationStatus.CONFIRMED) {
+                int ticketCount = qrTicketRepository.findByReservationId(reservationId).size();
+                return PaymentResult.confirmed(reservationId, ticketCount);
+            }
             throw new BusinessException(ReservationErrorCode.ALREADY_CONFIRMED);
         }
         activeReservationLockRepository.deleteByReservationId(reservationId);
