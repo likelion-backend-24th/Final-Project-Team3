@@ -10,6 +10,10 @@ services:
 
   member-service:
     image: ghcr.io/likelion-backend-24th/final-project-team3-member-service:latest
+    environment:
+      # 운영은 Nginx가 HTTPS를 처리하므로 Refresh Token 쿠키에 Secure를 붙여 HTTPS 요청에만 실리게 한다.
+      # (로컬 compose.yaml은 http://localhost라 기본값 false 유지)
+      COOKIE_SECURE: "true"
 
   conference-service:
     image: ghcr.io/likelion-backend-24th/final-project-team3-conference-service:latest
