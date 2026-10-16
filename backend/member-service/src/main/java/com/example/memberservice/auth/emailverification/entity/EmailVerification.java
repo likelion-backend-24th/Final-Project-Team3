@@ -1,17 +1,13 @@
 package com.example.memberservice.auth.emailverification.entity;
 
 import com.example.memberservice.common.BaseEntity;
-import com.github.f4b6a3.uuid.UuidCreator;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name="email_verification", indexes = @Index(name = "idx_email_verification_email", columnList = "email"))

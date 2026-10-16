@@ -3,7 +3,6 @@ package com.example.memberservice.auth.session.service;
 import com.example.memberservice.auth.session.dto.LinkedSocialAccountResponse;
 import com.example.memberservice.auth.session.dto.LoginRequest;
 import com.example.memberservice.auth.session.dto.LoginResponse;
-import com.example.memberservice.auth.session.dto.SocialLoginRequest;
 import com.example.memberservice.auth.session.entity.SocialAccount;
 import com.example.memberservice.auth.social.SocialProvider;
 import com.example.memberservice.auth.exception.AuthErrorCode;
