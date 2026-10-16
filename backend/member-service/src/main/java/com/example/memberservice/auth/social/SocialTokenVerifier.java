@@ -1,7 +1,5 @@
 package com.example.memberservice.auth.social;
 
-import com.example.memberservice.auth.social.SocialProvider;
-
 public interface SocialTokenVerifier {
 
     SocialProvider provider();

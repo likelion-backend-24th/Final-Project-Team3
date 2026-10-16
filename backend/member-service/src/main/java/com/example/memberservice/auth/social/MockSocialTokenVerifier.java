@@ -1,6 +1,5 @@
 package com.example.memberservice.auth.social;
 
-import com.example.memberservice.auth.social.SocialProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
