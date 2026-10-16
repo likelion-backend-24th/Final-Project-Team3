@@ -1,8 +1,8 @@
 package com.example.memberservice;
 
 import com.example.memberservice.auth.session.dto.LoginRequest;
-import com.example.memberservice.auth.passwordreset.dto.PasswordResetConfirm;
-import com.example.memberservice.auth.passwordreset.dto.PasswordResetRequest;
+import com.example.memberservice.auth.passwordreset.dto.PasswordResetConfirmRequest;
+import com.example.memberservice.auth.passwordreset.dto.PasswordResetSendCodeRequest;
 import com.example.memberservice.auth.emailverification.entity.EmailVerification;
 import com.example.memberservice.auth.emailverification.repository.EmailVerificationRepository;
 import com.example.memberservice.auth.service.EmailSender;
@@ -62,7 +62,7 @@ class PasswordResetRevokesRefreshTokenTest {
         String code = requestResetAndCapture(email);
         mockMvc.perform(post("/api/auth/password/reset-confirm")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new PasswordResetConfirm(email, code, "newPassword1234"))))
+                        .content(objectMapper.writeValueAsString(new PasswordResetConfirmRequest(email, code, "newPassword1234"))))
                 .andExpect(status().isOk());
 
         // 재설정 성공 시 기존 계정의 모든 Refresh Token이 revoked 처리되므로,
@@ -90,7 +90,7 @@ class PasswordResetRevokesRefreshTokenTest {
     private String requestResetAndCapture(String email) throws Exception {
         mockMvc.perform(post("/api/auth/password/reset-request")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new PasswordResetRequest(email))))
+                        .content(objectMapper.writeValueAsString(new PasswordResetSendCodeRequest(email))))
                 .andExpect(status().isOk());
 
         ArgumentCaptor<String> codeCaptor = ArgumentCaptor.forClass(String.class);

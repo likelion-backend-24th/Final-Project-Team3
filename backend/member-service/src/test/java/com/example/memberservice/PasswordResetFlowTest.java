@@ -1,8 +1,8 @@
 package com.example.memberservice;
 
 import com.example.memberservice.auth.session.dto.LoginRequest;
-import com.example.memberservice.auth.passwordreset.dto.PasswordResetConfirm;
-import com.example.memberservice.auth.passwordreset.dto.PasswordResetRequest;
+import com.example.memberservice.auth.passwordreset.dto.PasswordResetConfirmRequest;
+import com.example.memberservice.auth.passwordreset.dto.PasswordResetSendCodeRequest;
 import com.example.memberservice.auth.emailverification.entity.EmailVerification;
 import com.example.memberservice.auth.emailverification.repository.EmailVerificationRepository;
 import com.example.memberservice.auth.service.EmailSender;
@@ -54,7 +54,7 @@ class PasswordResetFlowTest {
 
         mockMvc.perform(post("/api/auth/password/reset-confirm")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new PasswordResetConfirm(email, code, "newPassword1234"))))
+                        .content(objectMapper.writeValueAsString(new PasswordResetConfirmRequest(email, code, "newPassword1234"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
@@ -75,7 +75,7 @@ class PasswordResetFlowTest {
     void 가입되지_않은_이메일로_재설정을_요청하면_거절된다() throws Exception {
         mockMvc.perform(post("/api/auth/password/reset-request")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new PasswordResetRequest("no-such-member@test.com"))))
+                        .content(objectMapper.writeValueAsString(new PasswordResetSendCodeRequest("no-such-member@test.com"))))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("MEMBER_NOT_FOUND"));
     }
@@ -89,7 +89,7 @@ class PasswordResetFlowTest {
 
         mockMvc.perform(post("/api/auth/password/reset-confirm")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new PasswordResetConfirm(email, wrongCode, "newPassword1234"))))
+                        .content(objectMapper.writeValueAsString(new PasswordResetConfirmRequest(email, wrongCode, "newPassword1234"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("AUTH_PASSWORD_RESET_CODE_INVALID"));
     }
@@ -104,7 +104,7 @@ class PasswordResetFlowTest {
         for (int i = 0; i < 5; i++) {
             mockMvc.perform(post("/api/auth/password/reset-confirm")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(new PasswordResetConfirm(email, wrongCode, "newPassword1234"))))
+                            .content(objectMapper.writeValueAsString(new PasswordResetConfirmRequest(email, wrongCode, "newPassword1234"))))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error.code").value("AUTH_PASSWORD_RESET_CODE_INVALID"));
         }
@@ -113,7 +113,7 @@ class PasswordResetFlowTest {
         // (attempts 증가가 각 실패 트랜잭션 롤백에도 살아남았는지 함께 검증됨)
         mockMvc.perform(post("/api/auth/password/reset-confirm")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new PasswordResetConfirm(email, code, "newPassword1234"))))
+                        .content(objectMapper.writeValueAsString(new PasswordResetConfirmRequest(email, code, "newPassword1234"))))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.error.code").value("AUTH_PASSWORD_RESET_ATTEMPTS_EXCEEDED"));
     }
@@ -128,13 +128,13 @@ class PasswordResetFlowTest {
 
         mockMvc.perform(post("/api/auth/password/reset-confirm")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new PasswordResetConfirm(email, firstCode, "newPassword1234"))))
+                        .content(objectMapper.writeValueAsString(new PasswordResetConfirmRequest(email, firstCode, "newPassword1234"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("AUTH_PASSWORD_RESET_CODE_INVALID"));
 
         mockMvc.perform(post("/api/auth/password/reset-confirm")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new PasswordResetConfirm(email, secondCode, "newPassword1234"))))
+                        .content(objectMapper.writeValueAsString(new PasswordResetConfirmRequest(email, secondCode, "newPassword1234"))))
                 .andExpect(status().isOk());
     }
 
@@ -155,7 +155,7 @@ class PasswordResetFlowTest {
     private String requestResetAndCapture(String email) throws Exception {
         mockMvc.perform(post("/api/auth/password/reset-request")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new PasswordResetRequest(email))))
+                        .content(objectMapper.writeValueAsString(new PasswordResetSendCodeRequest(email))))
                 .andExpect(status().isOk());
 
         // 같은 이메일로 재발송하는 테스트도 있어서 atLeastOnce로 검증하고, 가장 최근에 캡처된 코드를 반환한다

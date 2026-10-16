@@ -9,7 +9,7 @@ import com.example.memberservice.member.dto.*;
 import com.example.memberservice.member.service.MemberService;
 import com.example.memberservice.member.service.MemberWithdrawalService;
 import com.example.memberservice.member.service.OrganizerSignupFacade;
-import com.example.memberservice.member.service.WithdrawRequest;
+import com.example.memberservice.member.dto.WithdrawRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;

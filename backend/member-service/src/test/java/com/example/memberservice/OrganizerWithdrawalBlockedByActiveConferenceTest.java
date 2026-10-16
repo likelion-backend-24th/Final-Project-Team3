@@ -6,7 +6,7 @@ import com.example.memberservice.auth.emailverification.repository.EmailVerifica
 import com.example.memberservice.member.client.ConferenceServiceClient;
 import com.example.memberservice.member.client.ConferenceServiceUnavailableException;
 import com.example.memberservice.member.dto.OrganizerSignupRequest;
-import com.example.memberservice.member.service.WithdrawRequest;
+import com.example.memberservice.member.dto.WithdrawRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

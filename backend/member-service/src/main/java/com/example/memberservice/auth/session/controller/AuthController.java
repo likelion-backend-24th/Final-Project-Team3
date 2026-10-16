@@ -4,8 +4,8 @@ import com.example.memberservice.auth.session.dto.LoginRequest;
 import com.example.memberservice.auth.session.dto.LoginResponse;
 import com.example.memberservice.auth.session.dto.SocialLinkRequest;
 import com.example.memberservice.auth.session.dto.SocialLoginRequest;
-import com.example.memberservice.auth.passwordreset.dto.PasswordResetConfirm;
-import com.example.memberservice.auth.passwordreset.dto.PasswordResetRequest;
+import com.example.memberservice.auth.passwordreset.dto.PasswordResetConfirmRequest;
+import com.example.memberservice.auth.passwordreset.dto.PasswordResetSendCodeRequest;
 import com.example.memberservice.auth.social.SocialProvider;
 import com.example.memberservice.auth.exception.AuthErrorCode;
 import com.example.memberservice.auth.session.security.CookieProvider;
@@ -108,7 +108,7 @@ public class AuthController {
     @Operation(summary = "비밀번호 재설정 코드 발송", description = "6자리 인증코드를 이메일로 발송한다(유효기간 10분). 존재하지 않는 이메일이거나 소셜 전용 계정이면 거절되고, 재발송 쿨다운(1분) 내 재요청도 거절된다.")
     @PostMapping("/password/reset-request")
     public ResponseEntity<ApiResponse<Void>> requestPasswordReset(
-            @Valid @RequestBody PasswordResetRequest request,
+            @Valid @RequestBody PasswordResetSendCodeRequest request,
             HttpServletRequest httpRequest
     ) {
         passwordResetService.requestReset(request.email());
@@ -120,7 +120,7 @@ public class AuthController {
     @Operation(summary = "비밀번호 재설정 확인", description = "발송된 인증코드를 검증하고 새 비밀번호로 변경한다. 성공 시 해당 계정의 모든 Refresh Token이 무효화된다(전체 기기 재로그인 필요). 5회 실패 시 재발송이 필요하다.")
     @PostMapping("/password/reset-confirm")
     public ResponseEntity<ApiResponse<Void>> confirmPasswordReset(
-            @Valid @RequestBody PasswordResetConfirm request,
+            @Valid @RequestBody PasswordResetConfirmRequest request,
             HttpServletRequest httpRequest
     ) {
         passwordResetService.confirmReset(request.email(), request.code(), request.newPassword());
