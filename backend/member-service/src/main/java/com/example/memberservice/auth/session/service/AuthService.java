@@ -25,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+import static com.example.memberservice.common.EmailUtil.normalize;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -145,10 +147,6 @@ public class AuthService {
         LoginResponse body = new LoginResponse(accessToken, "Bearer", jwtTokenProvider.getValidityMs() / 1000);
 
         return new AuthTokens(body, refreshToken);
-    }
-
-    private String normalize(String email) {
-        return email.strip().toLowerCase();
     }
 
     /**

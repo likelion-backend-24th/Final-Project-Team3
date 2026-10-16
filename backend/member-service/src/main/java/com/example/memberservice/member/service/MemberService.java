@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static com.example.memberservice.common.EmailUtil.normalize;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -133,9 +135,5 @@ public class MemberService {
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
         member.changeRole(request.role());
         return MemberDetailResponse.from(member);
-    }
-
-    private String normalize(String email) {
-        return email.strip().toLowerCase();
     }
 }
