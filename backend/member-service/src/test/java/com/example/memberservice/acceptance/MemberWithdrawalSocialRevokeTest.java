@@ -1,4 +1,4 @@
-package com.example.memberservice;
+package com.example.memberservice.acceptance;
 
 import com.example.memberservice.auth.session.dto.SocialLoginRequest;
 import com.example.memberservice.member.entity.AgeGroup;

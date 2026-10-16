@@ -1,4 +1,4 @@
-package com.example.memberservice;
+package com.example.memberservice.acceptance;
 
 import com.example.memberservice.auth.passwordreset.dto.PasswordResetConfirmRequest;
 import com.example.memberservice.auth.passwordreset.entity.PasswordResetToken;

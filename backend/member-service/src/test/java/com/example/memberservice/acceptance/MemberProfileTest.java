@@ -1,4 +1,4 @@
-package com.example.memberservice;
+package com.example.memberservice.acceptance;
 
 import com.example.memberservice.auth.session.dto.LoginRequest;
 import com.example.memberservice.auth.emailverification.dto.SendCodeRequest;
