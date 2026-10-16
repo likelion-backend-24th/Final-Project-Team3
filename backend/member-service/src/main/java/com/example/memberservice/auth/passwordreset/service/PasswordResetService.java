@@ -3,7 +3,7 @@ package com.example.memberservice.auth.passwordreset.service;
 import com.example.memberservice.auth.passwordreset.entity.PasswordResetToken;
 import com.example.memberservice.auth.exception.AuthErrorCode;
 import com.example.memberservice.auth.passwordreset.repository.PasswordResetTokenRepository;
-import com.example.memberservice.auth.service.EmailSender;
+import com.example.memberservice.common.mail.EmailSender;
 import com.example.memberservice.auth.session.service.RefreshTokenRevoker;
 import com.example.memberservice.common.exception.BusinessException;
 import com.example.memberservice.member.entity.Member;

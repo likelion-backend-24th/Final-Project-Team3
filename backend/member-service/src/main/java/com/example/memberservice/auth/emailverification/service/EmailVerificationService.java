@@ -3,7 +3,7 @@ package com.example.memberservice.auth.emailverification.service;
 import com.example.memberservice.auth.emailverification.entity.EmailVerification;
 import com.example.memberservice.auth.exception.AuthErrorCode;
 import com.example.memberservice.auth.emailverification.repository.EmailVerificationRepository;
-import com.example.memberservice.auth.service.EmailSender;
+import com.example.memberservice.common.mail.EmailSender;
 import com.example.memberservice.common.exception.BusinessException;
 import com.example.memberservice.member.exception.MemberErrorCode;
 import com.example.memberservice.member.repository.MemberRepository;

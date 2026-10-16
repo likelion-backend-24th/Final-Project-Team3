@@ -1,4 +1,4 @@
-package com.example.memberservice.config.security;
+package com.example.memberservice.common.security;
 
 import com.example.memberservice.common.TraceIdProvider;
 import com.example.memberservice.common.dto.ApiResponse;

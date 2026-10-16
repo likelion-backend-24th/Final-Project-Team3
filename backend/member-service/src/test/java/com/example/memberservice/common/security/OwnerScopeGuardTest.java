@@ -1,4 +1,4 @@
-package com.example.memberservice.auth.session.security;
+package com.example.memberservice.common.security;
 
 import com.example.memberservice.auth.exception.AuthErrorCode;
 import com.example.memberservice.common.exception.BusinessException;
