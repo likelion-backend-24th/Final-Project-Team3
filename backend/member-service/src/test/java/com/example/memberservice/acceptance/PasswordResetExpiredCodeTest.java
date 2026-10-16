@@ -1,6 +1,6 @@
-package com.example.memberservice;
+package com.example.memberservice.acceptance;
 
-import com.example.memberservice.auth.passwordreset.dto.PasswordResetConfirm;
+import com.example.memberservice.auth.passwordreset.dto.PasswordResetConfirmRequest;
 import com.example.memberservice.auth.passwordreset.entity.PasswordResetToken;
 import com.example.memberservice.auth.passwordreset.repository.PasswordResetTokenRepository;
 import org.junit.jupiter.api.Test;
@@ -39,7 +39,7 @@ class PasswordResetExpiredCodeTest {
 
         mockMvc.perform(post("/api/auth/password/reset-confirm")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new PasswordResetConfirm(email, "123456", "newPassword1234"))))
+                        .content(objectMapper.writeValueAsString(new PasswordResetConfirmRequest(email, "123456", "newPassword1234"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("AUTH_PASSWORD_RESET_CODE_EXPIRED"));
     }
@@ -48,7 +48,7 @@ class PasswordResetExpiredCodeTest {
     void 발급된적_없는_이메일로_확인하면_거절된다() throws Exception {
         mockMvc.perform(post("/api/auth/password/reset-confirm")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new PasswordResetConfirm("never-requested@test.com", "123456", "newPassword1234"))))
+                        .content(objectMapper.writeValueAsString(new PasswordResetConfirmRequest("never-requested@test.com", "123456", "newPassword1234"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("AUTH_PASSWORD_RESET_CODE_INVALID"));
     }

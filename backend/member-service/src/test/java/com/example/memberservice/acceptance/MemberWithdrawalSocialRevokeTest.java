@@ -1,9 +1,9 @@
-package com.example.memberservice;
+package com.example.memberservice.acceptance;
 
 import com.example.memberservice.auth.session.dto.SocialLoginRequest;
 import com.example.memberservice.member.entity.AgeGroup;
 import com.example.memberservice.member.entity.Job;
-import com.example.memberservice.member.service.WithdrawRequest;
+import com.example.memberservice.member.dto.WithdrawRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

@@ -1,5 +1,6 @@
 package com.example.memberservice.member.service;
 
+import com.example.memberservice.member.dto.WithdrawRequest;
 import com.example.memberservice.auth.exception.AuthErrorCode;
 import com.example.memberservice.auth.session.repository.SocialAccountRepository;
 import com.example.memberservice.auth.session.service.RefreshTokenRevoker;

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 @Schema(description = "비밀번호 재설정 확인 요청")
-public record PasswordResetConfirm(
+public record PasswordResetConfirmRequest(
         @Schema(description = "재설정 대상 이메일", example = "user@example.com")
         @NotBlank @Email String email,
 

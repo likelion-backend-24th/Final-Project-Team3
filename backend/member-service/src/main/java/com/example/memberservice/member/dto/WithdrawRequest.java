@@ -1,4 +1,4 @@
-package com.example.memberservice.member.service;
+package com.example.memberservice.member.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

@@ -1,4 +1,4 @@
-package com.example.memberservice;
+package com.example.memberservice.acceptance;
 
 import com.example.memberservice.auth.session.dto.LoginRequest;
 import com.example.memberservice.auth.emailverification.entity.EmailVerification;
@@ -6,7 +6,7 @@ import com.example.memberservice.auth.emailverification.repository.EmailVerifica
 import com.example.memberservice.member.dto.SignupRequest;
 import com.example.memberservice.member.entity.AgeGroup;
 import com.example.memberservice.member.entity.Job;
-import com.example.memberservice.member.service.WithdrawRequest;
+import com.example.memberservice.member.dto.WithdrawRequest;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

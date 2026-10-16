@@ -1,6 +1,6 @@
-package com.example.memberservice;
+package com.example.memberservice.acceptance;
 
-import com.example.memberservice.auth.passwordreset.dto.PasswordResetRequest;
+import com.example.memberservice.auth.passwordreset.dto.PasswordResetSendCodeRequest;
 import com.example.memberservice.auth.session.dto.SocialLoginRequest;
 import com.example.memberservice.member.entity.AgeGroup;
 import com.example.memberservice.member.entity.Job;
@@ -38,7 +38,7 @@ class PasswordResetSocialOnlyAccountTest {
 
         mockMvc.perform(post("/api/auth/password/reset-request")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new PasswordResetRequest(email))))
+                        .content(objectMapper.writeValueAsString(new PasswordResetSendCodeRequest(email))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("AUTH_PASSWORD_RESET_SOCIAL_ONLY_ACCOUNT"));
     }

@@ -1,4 +1,4 @@
-package com.example.memberservice.auth.service;
+package com.example.memberservice.common.mail;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;

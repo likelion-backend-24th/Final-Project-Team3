@@ -1,4 +1,4 @@
-package com.example.memberservice.common.config;
+package com.example.memberservice.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;

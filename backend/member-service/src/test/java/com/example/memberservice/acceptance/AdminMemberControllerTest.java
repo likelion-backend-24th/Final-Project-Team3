@@ -1,8 +1,8 @@
-package com.example.memberservice;
+package com.example.memberservice.acceptance;
 
 import com.example.memberservice.auth.emailverification.dto.SendCodeRequest;
 import com.example.memberservice.auth.emailverification.dto.VerifyCodeRequest;
-import com.example.memberservice.auth.service.EmailSender;
+import com.example.memberservice.common.mail.EmailSender;
 import com.example.memberservice.auth.session.dto.LoginRequest;
 import com.example.memberservice.member.dto.SignupRequest;
 import com.example.memberservice.member.entity.AgeGroup;
