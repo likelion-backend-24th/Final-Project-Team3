@@ -7,6 +7,7 @@ import com.example.memberservice.auth.session.dto.SocialLoginRequest;
 import com.example.memberservice.auth.session.entity.SocialAccount;
 import com.example.memberservice.auth.social.SocialProvider;
 import com.example.memberservice.auth.exception.AuthErrorCode;
+import com.example.memberservice.auth.exception.RefreshTokenReusedException;
 import com.example.memberservice.auth.session.repository.SocialAccountRepository;
 import com.example.memberservice.auth.session.security.JwtTokenProvider;
 import com.example.memberservice.auth.social.SocialTokenVerifier;
@@ -116,7 +117,7 @@ public class AuthService {
                 .toList();
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = RefreshTokenReusedException.class)
     public AuthTokens reissue(String rawRefreshToken) {
         RefreshTokenService.RotationResult result = refreshTokenService.rotate(rawRefreshToken);
 
