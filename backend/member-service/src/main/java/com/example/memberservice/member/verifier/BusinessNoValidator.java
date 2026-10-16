@@ -1,4 +1,4 @@
-package com.example.memberservice.member.service;
+package com.example.memberservice.member.verifier;
 
 import org.springframework.stereotype.Component;
 

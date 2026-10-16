@@ -1,5 +1,6 @@
 package com.example.memberservice.member.service;
 
+import com.example.memberservice.member.verifier.BusinessNoValidator;
 import com.example.memberservice.auth.emailverification.service.EmailVerificationService;
 import com.example.memberservice.common.exception.BusinessException;
 import com.example.memberservice.member.dto.*;
