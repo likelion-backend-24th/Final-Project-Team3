@@ -1,6 +1,5 @@
 package com.example.memberservice.member.service;
 
-import com.example.memberservice.member.verifier.BusinessNoValidator;
 import com.example.memberservice.auth.emailverification.service.EmailVerificationService;
 import com.example.memberservice.common.exception.BusinessException;
 import com.example.memberservice.member.dto.*;
@@ -17,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static com.example.memberservice.common.EmailUtil.normalize;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -24,7 +25,6 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
-    private final BusinessNoValidator businessNoValidator;
     private final EmailVerificationService emailVerificationService;
 
     @Transactional
@@ -50,13 +50,10 @@ public class MemberService {
         return new SignupResponse(member.getId(), member.getEmail(), member.getName(), member.getRole().name());
     }
 
+    // 사업자번호 형식 검사와 국세청 상태조회는 트랜잭션 밖의 OrganizerSignupFacade에서 먼저 끝낸 뒤 호출된다.
     @Transactional
     public OrganizerSignupResponse signupOrganizer(OrganizerSignupRequest request) {
         String email = normalize(request.email());
-
-        if (!businessNoValidator.isValidFormat(request.businessNo())) {
-            throw new BusinessException(MemberErrorCode.INVALID_BUSINESS_NO);
-        }
 
         if (memberRepository.existsByEmail(email)) {
             throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL);
@@ -138,9 +135,5 @@ public class MemberService {
                 .orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
         member.changeRole(request.role());
         return MemberDetailResponse.from(member);
-    }
-
-    private String normalize(String email) {
-        return email.strip().toLowerCase();
     }
 }

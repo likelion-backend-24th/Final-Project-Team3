@@ -3,10 +3,10 @@ package com.example.memberservice.auth.session.service;
 import com.example.memberservice.auth.session.dto.LinkedSocialAccountResponse;
 import com.example.memberservice.auth.session.dto.LoginRequest;
 import com.example.memberservice.auth.session.dto.LoginResponse;
-import com.example.memberservice.auth.session.dto.SocialLoginRequest;
 import com.example.memberservice.auth.session.entity.SocialAccount;
 import com.example.memberservice.auth.social.SocialProvider;
 import com.example.memberservice.auth.exception.AuthErrorCode;
+import com.example.memberservice.auth.exception.RefreshTokenReusedException;
 import com.example.memberservice.auth.session.repository.SocialAccountRepository;
 import com.example.memberservice.auth.session.security.JwtTokenProvider;
 import com.example.memberservice.auth.social.SocialTokenVerifier;
@@ -23,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+
+import static com.example.memberservice.common.EmailUtil.normalize;
 
 @Service
 @RequiredArgsConstructor
@@ -116,7 +118,7 @@ public class AuthService {
                 .toList();
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = RefreshTokenReusedException.class)
     public AuthTokens reissue(String rawRefreshToken) {
         RefreshTokenService.RotationResult result = refreshTokenService.rotate(rawRefreshToken);
 
@@ -144,10 +146,6 @@ public class AuthService {
         LoginResponse body = new LoginResponse(accessToken, "Bearer", jwtTokenProvider.getValidityMs() / 1000);
 
         return new AuthTokens(body, refreshToken);
-    }
-
-    private String normalize(String email) {
-        return email.strip().toLowerCase();
     }
 
     /**

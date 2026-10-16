@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
+import static com.example.memberservice.common.EmailUtil.normalize;
 import static com.example.memberservice.common.HashUtil.sha256;
 
 @Service
@@ -96,9 +97,4 @@ public class EmailVerificationService {
     private String generateCode() {
         return String.format("%06d", RANDOM.nextInt(1_000_000));
     }
-
-    private String normalize(String email) {
-        return email.strip().toLowerCase();
-    }
-
 }
